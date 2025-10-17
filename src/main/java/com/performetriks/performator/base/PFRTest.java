@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 
+import com.performetriks.performator.executors.PFRExecutor;
+
 /***************************************************************************
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
@@ -12,7 +14,7 @@ import java.util.ArrayList;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PRFTest {
+public class PFRTest {
 	
 	
 	private ArrayList<PFRExecutor> executorList = new ArrayList<>();
@@ -25,7 +27,7 @@ public class PRFTest {
 	 * @param executor
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PRFTest(PFRContext context) {
+	public PFRTest(PFRContext context) {
 		
 	}
 	
@@ -35,7 +37,7 @@ public class PRFTest {
 	 * @param executor
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PRFTest add(PFRExecutor executor ){
+	public PFRTest add(PFRExecutor executor ){
 		executorList.add(executor);
 		return this;
 	}
@@ -45,7 +47,7 @@ public class PRFTest {
 	 * @param maxDuration
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PRFTest maxDuration(Duration maxDuration){
+	public PFRTest maxDuration(Duration maxDuration){
 		this.maxDuration = maxDuration;
 		return this;
 	}

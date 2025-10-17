@@ -8,25 +8,34 @@ package com.performetriks.performator.base;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public interface PFRUsecase {
+public abstract class PFRUsecase {
 
+	
+	/*****************************************************************
+	 * This method will return the name of the usecase.
+	 * 
+	 *****************************************************************/
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+	
 	/*****************************************************************
 	 * This method will be executed once when the test starts.
 	 * 
 	 *****************************************************************/
-	public void initialize(PFRContext context);
+	public abstract void initialize(PFRContext context);
 	
 	/*****************************************************************
 	 * This method will contain the main steps of your use case
 	 * 
 	 *****************************************************************/
-	public void execute(PFRContext context);
+	public abstract void execute(PFRContext context);
 	
 	/*****************************************************************
 	 * This method will be executed once when the test has finished.
 	 * 
 	 *****************************************************************/
-	public void terminate(PFRContext context);
+	public abstract void terminate(PFRContext context);
 	
 	
 }
