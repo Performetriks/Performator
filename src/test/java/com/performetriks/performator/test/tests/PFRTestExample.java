@@ -17,7 +17,7 @@ public class PFRTestExample extends PFRTest {
 		
 		int multiplier = 3;
 		int users = 10 * multiplier;
-		int executionsPerHour = 1000 * multiplier;
+		int executionsPerHour = 20000 * multiplier;
 		
 		this.add(new PFRExecutorStandard(new UsecaseExample(), users, executionsPerHour, 0, 2) );
 		

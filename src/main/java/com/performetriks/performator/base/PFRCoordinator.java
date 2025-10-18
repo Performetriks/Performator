@@ -164,7 +164,7 @@ public class PFRCoordinator {
 			//-------------------------------
 			// Kill remaining Threads
 			if(latch.getCount() > 0) {
-				killExecutorThreads();
+				killExecutorThreads(executorList);
 			}
 			
 			//-------------------------------
@@ -187,8 +187,16 @@ public class PFRCoordinator {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	private static void killExecutorThreads() {
+	private static void killExecutorThreads(ArrayList<PFRExecutor> executorList) {
 		
+		//-----------------------------------
+		// Terminate Executors
+		for(PFRExecutor executor : executorList) {
+			executor.terminate();
+		}
+		
+		//-----------------------------------
+		//
 		for(Thread thread : executorThreadList) {
 			
 			try {

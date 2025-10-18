@@ -51,7 +51,8 @@ public class PFRExecutorStandard extends PFRExecutor {
 	private int rampUpInterval = -1;
 	private int pacingSeconds = -1;
 	
-	private boolean stopped = false;
+	private boolean gracefulStopRequested = false;  
+	private boolean isTerminated = false;
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
@@ -214,7 +215,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 			
 			//-------------------------
 			// Start User Threads
-			for(int i = 0; i < users && !stopped ; i++) {
+			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
 				
 				try {
 					Thread userThread = createUserThread(context, latch);
@@ -302,13 +303,15 @@ public class PFRExecutorStandard extends PFRExecutor {
 		
 		int pacingMillis = pacingSeconds * 1000;
 		
+		Thread parent = Thread.currentThread();
+		
 		return new Thread(new Runnable() {
 			@Override
 			public void run() {
 				
 				try {
 					
-					while(!stopped){
+					while(!gracefulStopRequested && ! parent.isInterrupted()){
 						long start = System.currentTimeMillis();
 						
 						try {
@@ -345,26 +348,30 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 *****************************************************************/
 	@Override
 	public void gracefulStop() {
-		this.stopped = true;
+		this.gracefulStopRequested = true;
 	}
 	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
 	@Override
-	public void terminate(PFRContext context) {
+	public void terminate() {
 		
-		for(Thread thread : userThreadList) {
-			
-			try {
-				if(thread.isAlive() && !thread.isInterrupted()) {
-					thread.interrupt();
+		if(!isTerminated) {
+			isTerminated = true;
+			for(Thread thread : userThreadList) {
+				
+				try {
+					if(thread.isAlive() && !thread.isInterrupted()) {
+						thread.interrupt();
+					}
+				}catch(Throwable e) {
+					HSR.addException(e);
+					logger.error("Error while stopping user thread: " + e.getMessage(), e);
 				}
-			}catch(Throwable e) {
-				HSR.addException(e);
-				logger.error("Error while stopping user thread: " + e.getMessage(), e);
 			}
 		}
+			
 		
 	}
 	

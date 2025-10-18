@@ -98,7 +98,7 @@ public abstract class PFRExecutor {
 	 * Method to do any kind of termination before executeUsecase()
 	 * is called.
 	 *****************************************************************/
-	public abstract void terminate(PFRContext context);	
+	public abstract void terminate();
 	
 	
 	/*****************************************************************
@@ -113,7 +113,7 @@ public abstract class PFRExecutor {
 		
 		executeThreads(context);
 		
-		terminate(context);
+		terminate();
 	}
 
 	
