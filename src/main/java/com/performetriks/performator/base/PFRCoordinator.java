@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.LoggerFactory;
 
-import com.performetriks.performator.executors.PFRExecutor;
+import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
@@ -81,7 +81,7 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Get Executors
-		ArrayList<PFRExecutor> executorList = test.getExecutors();
+		ArrayList<PFRExec> executorList = test.getExecutors();
 		
 		if(executorList.size() == 0) {
 			logger.info("The test "+test.getName()+" did not have any executors defined, nothing to execute.");
@@ -101,7 +101,7 @@ public class PFRCoordinator {
 			//-------------------------
 			// Start Executor Threads
 			int i = 0;
-			for(PFRExecutor executor : executorList) {
+			for(PFRExec executor : executorList) {
 				
 				try {
 					Thread executorThread = createExecutorThread(test, executor, latch);
@@ -177,9 +177,9 @@ public class PFRCoordinator {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	private static void gracefullyStopExecutorThreads(ArrayList<PFRExecutor> executorList) {
+	private static void gracefullyStopExecutorThreads(ArrayList<PFRExec> executorList) {
 		
-		for(PFRExecutor executor : executorList) {
+		for(PFRExec executor : executorList) {
 			executor.gracefulStop();
 		}
 	}
@@ -187,11 +187,11 @@ public class PFRCoordinator {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	private static void killExecutorThreads(ArrayList<PFRExecutor> executorList) {
+	private static void killExecutorThreads(ArrayList<PFRExec> executorList) {
 		
 		//-----------------------------------
 		// Terminate Executors
-		for(PFRExecutor executor : executorList) {
+		for(PFRExec executor : executorList) {
 			executor.terminate();
 		}
 		
@@ -221,7 +221,7 @@ public class PFRCoordinator {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public static Thread createExecutorThread(PFRTest test, PFRExecutor executor, CountDownLatch latch) {
+	public static Thread createExecutorThread(PFRTest test, PFRExec executor, CountDownLatch latch) {
 		
 		return new Thread(new Runnable() {
 			@Override

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 
-import com.performetriks.performator.executors.PFRExecutor;
+import com.performetriks.performator.executors.PFRExec;
 
 /***************************************************************************
  * 
@@ -17,7 +17,7 @@ import com.performetriks.performator.executors.PFRExecutor;
 public abstract class PFRTest {
 	
 	private PFRContext context;
-	private ArrayList<PFRExecutor> executorList = new ArrayList<>();
+	private ArrayList<PFRExec> executorList = new ArrayList<>();
 	
 	private Duration maxDuration = Duration.ofHours(1);
 	private Duration gracefulStop = Duration.ofMinutes(1);
@@ -54,8 +54,9 @@ public abstract class PFRTest {
 	 * @param executor
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PFRTest add(PFRExecutor executor ){
+	public PFRTest add(PFRExec executor ){
 		executorList.add(executor);
+		executor.test(this);
 		return this;
 	}
 	
@@ -65,8 +66,8 @@ public abstract class PFRTest {
 	 * 
 	 * @return cloned list of executors
 	 ***************************************************************************/
-	public ArrayList<PFRExecutor> getExecutors(){
-		ArrayList<PFRExecutor> clone = new ArrayList<>();
+	public ArrayList<PFRExec> getExecutors(){
+		ArrayList<PFRExec> clone = new ArrayList<>();
 		clone.addAll(executorList);
 		return clone;
 	}

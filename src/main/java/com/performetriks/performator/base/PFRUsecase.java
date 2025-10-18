@@ -20,10 +20,10 @@ public abstract class PFRUsecase {
 	}
 	
 	/*****************************************************************
-	 * This method will be executed once when the test starts.
+	 * This method will be executed once when the user starts.
 	 * 
 	 *****************************************************************/
-	public abstract void initialize(PFRContext context);
+	public abstract void initializeUser(PFRContext context);
 	
 	/*****************************************************************
 	 * This method will contain the main steps of your use case

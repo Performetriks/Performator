@@ -21,7 +21,7 @@ public class Globals {
 		//--------------------------
 		// Log Levels
 		HSRConfig.setLogLevelRoot(Level.WARN);
-		HSRConfig.setLogLevel(Level.INFO, "com.performetriks.performator.base");
+		HSRConfig.setLogLevel(Level.INFO, "com.performetriks.performator");
 		HSRConfig.setLogLevel(Level.WARN, "com.xresch.hsr.reporting");
 		
 		//--------------------------

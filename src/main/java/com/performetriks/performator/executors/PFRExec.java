@@ -1,10 +1,14 @@
 package com.performetriks.performator.executors;
 
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
+
+import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
  * 
@@ -14,42 +18,64 @@ import com.xresch.hsr.base.HSR;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public abstract class PFRExecutor {
+public abstract class PFRExec {
 	
+	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExec.class.getName());
 	
 	private PFRTest test;
-	private PFRUsecase usecase;
+	private Class<? extends PFRUsecase> usecaseClass;
+	private String usecaseName;
 	
 	/*****************************************************************
 	 * Constructor
 	 * 
 	 *****************************************************************/
-	public PFRExecutor(PFRUsecase usecase){
-		this.usecase = usecase;
+	public PFRExec(Class<? extends PFRUsecase> usecaseClass){
+		this.usecaseClass = usecaseClass;
+		this.usecaseName = this.getUsecaseInstance().getName();
 	}
 	
 	/*****************************************************************
 	 * 
 	 * @return usecase
 	 *****************************************************************/
-	public PFRUsecase usecase(){
-		return usecase;
+	public PFRUsecase getUsecaseInstance(){
+		
+		try {
+			return (PFRUsecase) usecaseClass.getDeclaredConstructor()
+		    		.newInstance();
+
+		} catch (Exception e) {
+			logger.error("Error while creating instance for class "+usecaseClass.getName(), e);
+		}
+		
+		return null;
+		
 	}
 	
 	/*****************************************************************
 	 * 
 	 * @return test
 	 *****************************************************************/
-	public PFRExecutor test(PFRTest test){
+	public PFRExec test(PFRTest test){
 		this.test = test;
 		return this;
 	}
+	
 	/*****************************************************************
 	 * 
 	 * @return test
 	 *****************************************************************/
 	public PFRTest test(){
 		return test;
+	}
+	
+	/*****************************************************************
+	 * 
+	 * @return test
+	 *****************************************************************/
+	public String usecaseName(){
+		return usecaseName;
 	}
 	
 	/*****************************************************************
@@ -107,7 +133,7 @@ public abstract class PFRExecutor {
 	 *****************************************************************/
 	public void execute(PFRContext context) {
 		
-		HSR.setUsecase(usecase.getName());
+		HSR.setUsecase(usecaseName);
 		
 		initialize(context);
 		

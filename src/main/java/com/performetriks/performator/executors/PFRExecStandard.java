@@ -1,7 +1,11 @@
 package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +42,10 @@ import ch.qos.logback.classic.Logger;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PFRExecutorStandard extends PFRExecutor {
+public class PFRExecStandard extends PFRExec {
 	
-	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecutorStandard.class.getName());
+	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecStandard.class.getName());
 	
-	private PFRUsecase usecase;
-
 	private int users = 1;
 	private int execsHour = 60;
 	private long offsetSeconds = 0;
@@ -56,16 +58,15 @@ public class PFRExecutorStandard extends PFRExecutor {
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
+	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
 	
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
-	public PFRExecutorStandard(PFRUsecase usecase) {
-		super(usecase);
-		
-		this.usecase = usecase;
+	public PFRExecStandard(Class<? extends PFRUsecase> usecaseClass) {
+		super(usecaseClass);
 	}
 	
 	/*************************************************************************** 
@@ -93,8 +94,8 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 * @param rampUp    number of users to increase per ramp up
 	 * 
 	 ***************************************************************************/
-	public PFRExecutorStandard(
-						  PFRUsecase usecase
+	public PFRExecStandard(
+						  Class<? extends PFRUsecase> usecase
 						, int users
 						, int execsHour
 						, long offset
@@ -109,6 +110,50 @@ public class PFRExecutorStandard extends PFRExecutor {
 		
 		if(rampUp > users) { rampUp = users; } // prevent issues with ramp up
 		this.rampUp = rampUp;
+	}
+	
+	/*****************************************************************
+	 * Set the number of users.
+	 *****************************************************************/
+	public PFRExecStandard users(int users) {
+		this.users = users;
+		return this;
+	}
+	
+	/*****************************************************************
+	 * Set the executions per hour.
+	 *****************************************************************/
+	public PFRExecStandard execsHour(int execsHour) {
+		this.execsHour = execsHour;
+		return this;
+	}
+	
+	/*****************************************************************
+	 * Set the offset in seconds.
+	 *****************************************************************/
+	public PFRExecStandard offset(int offsetSeconds) {
+		this.offsetSeconds = offsetSeconds;
+		return this;
+	}
+	
+	/*****************************************************************
+	 * Set the amount of users to add per ramp up interval.
+	 *****************************************************************/
+	public PFRExecStandard rampUp(int rampUp) {
+		this.rampUp = rampUp;
+		return this;
+	}
+	
+	/*****************************************************************
+	 * Call this method after setting users and executions per hour
+	 * to run a percentage of that load.
+	 * 
+	 * @param percent 100 is 100%, you can go lower or higher, e.g. 50% or 200%
+	 *****************************************************************/
+	public PFRExecStandard percent(int percent) {
+		users = (int)Math.ceil( users * (percent / 100.0f) );
+		execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+		return this;
 	}
 
 	/*****************************************************************
@@ -141,7 +186,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 		// Log Warnings
 		// -----------------------------------------------
 		String sides = "=".repeat(16);
-		String title = " Load Config: "+usecase.getName()+" ";
+		String title = " Load Config: "+this.usecaseName()+" ";
 		logger.info(sides + title + sides);
 		
 		if(rampUpInterval == 0) {
@@ -168,7 +213,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 		// Log infos
 		// -----------------------------------------------
 
-		logger.info("Scenario: " + usecase);
+		logger.info("Usecase: " + this.usecaseName());
 		logger.info("Target Users: " + users);
 		logger.info("Executions/Hour: " + execsHour);
 		logger.info("StartOffset: " + offsetSeconds);
@@ -202,9 +247,22 @@ public class PFRExecutorStandard extends PFRExecutor {
 		}
 
 		//-------------------------
-		// Latch
-		CountDownLatch latch = new CountDownLatch(users);
+		// Create Scheduler
+		String executorName = this.getClass().getSimpleName();
+		ThreadFactory factory =  new ThreadFactory() {
+		    private final AtomicInteger count = new AtomicInteger(1);
+
+		    @Override
+		    public Thread newThread(Runnable r) {
+		        Thread t = new Thread(r);
+		        t.setName(executorName+"-User-" + count.getAndIncrement());
+		        return t;
+		    }
+		};
 		
+		scheduledUserThreadExecutor = 
+				(ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(users, factory);
+
 		try {
 			
 			//-------------------------
@@ -218,24 +276,72 @@ public class PFRExecutorStandard extends PFRExecutor {
 			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
 				
 				try {
-					Thread userThread = createUserThread(context, latch);
+					Thread userThread = createUserThread(context);
 					
-						userThread.setName(usecase.getName()+"-User-"+i);
-						userThread.start();
-						
+						userThread.setName(this.usecaseName()+"-User-"+i);
+						scheduledUserThreadExecutor.scheduleAtFixedRate(
+								  userThread
+								, offsetSeconds
+								, pacingSeconds
+								, TimeUnit.SECONDS
+							);
+												
 						userThreadList.add(userThread);
+						
 					HSR.increaseUsers(1);
 					
-					Thread.sleep(rampUpInterval * 1000);
+					//--------------------------
+					// Manage Ramp Up
+					if( rampUp > 0 
+					&&  ( (i+1) % rampUp ) == 0
+					){
+						Thread.sleep(rampUpInterval * 1000);
+					}
+					
 				}catch (Exception e) {
 					HSR.addException(e);
 					logger.info("Error While starting User Thread.");
-					latch.countDown();
 				}
 				
 			}
 			
-			latch.await();	
+			//--------------------------------
+			// Wait for graceful stop
+			while(!gracefulStopRequested) {
+				Thread.sleep(1000);
+			}
+			
+			//--------------------------------
+			// Initialize Graceful stop		
+			scheduledUserThreadExecutor.shutdown();
+			
+			int previousTasksCount = 
+					  scheduledUserThreadExecutor.getActiveCount()
+					+ scheduledUserThreadExecutor.getQueue().size();
+					;
+			
+			//--------------------------------
+			// Wait for Stopping
+			long shutdownStart = System.currentTimeMillis();
+			long shutdownEnd = shutdownStart;
+			long graceMillis = this.test().gracefulStop().getSeconds();
+			while( previousTasksCount > 0 && (shutdownEnd - shutdownStart) <= graceMillis ) {
+				Thread.sleep(1000);
+				
+				int currentTasksCount = 
+						  scheduledUserThreadExecutor.getActiveCount()
+						+ scheduledUserThreadExecutor.getQueue().size();
+						;
+				HSR.decreaseUsers(previousTasksCount - currentTasksCount);
+				
+				previousTasksCount = currentTasksCount;
+				
+			}
+			scheduledUserThreadExecutor.awaitTermination(
+					  this.test().gracefulStop().getSeconds()
+					, TimeUnit.SECONDS
+				);
+			
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
 		}finally {
@@ -295,48 +401,47 @@ public class PFRExecutorStandard extends PFRExecutor {
 		
 	}
 	
-	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public Thread createUserThread(PFRContext context, CountDownLatch latch) {
+	public Thread createUserThread(PFRContext context) {
 		
 		int pacingMillis = pacingSeconds * 1000;
 		
-		Thread parent = Thread.currentThread();
+		PFRUsecase usecase = this.getUsecaseInstance();
+		usecase.initializeUser(context);
 		
 		return new Thread(new Runnable() {
+			
 			@Override
 			public void run() {
 				
 				try {
 					
-					while(!gracefulStopRequested && ! parent.isInterrupted()){
-						long start = System.currentTimeMillis();
+					long start = System.currentTimeMillis();
+					
+					try {
+						usecase.execute(context);
 						
-						try {
-							usecase.execute(context);
-						}catch (Throwable e) {
-							HSR.addException(e);
-							HSR.endAllOpen(HSRRecordStatus.Failed);
-						}
+						// make sure everything is closed
+						HSR.endAllOpen(HSRRecordStatus.Aborted);
 						
-						long duration = System.currentTimeMillis() - start;
-						
-						if(duration < pacingMillis) {
-							Thread.sleep(pacingMillis - duration); 
-						}else {
-							HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
-											 + " This might cause that you get lower execution/hour then expected."
-											 + " Increase the number of users to fix this if you get lots of these messages.");
-						}
+					}catch (Throwable e) {
+						HSR.addException(e);
+						HSR.endAllOpen(HSRRecordStatus.Failed);
 					}
-
-				}catch(InterruptedException e) {
+					
+					long duration = System.currentTimeMillis() - start;
+					
+					if(duration > pacingMillis)  {
+						HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
+										 + " This might cause that you get lower execution/hour then expected."
+										 + " Increase the number of users to fix this if you get lots of these messages.");
+					}
+					
+				}catch(Exception e) {
 					logger.info("User Thread interrupted.");
 				}finally {
-					latch.countDown();
-					HSR.decreaseUsers(1);
 				}
 			}
 		});
