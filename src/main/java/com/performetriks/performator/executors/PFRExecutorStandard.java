@@ -1,5 +1,6 @@
 package com.performetriks.performator.executors;
 
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.LoggerFactory;
@@ -8,10 +9,28 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
+ * Executes a use case with a standard load pattern.
+ * 
+ * <ul>
+ * <li>Ramping up users at the start of the test</li>
+ * <li>Keeping users at a constant level</li>
+ * <li>Adds pacing to the use cases.</li>
+ * </ul>
+ *
+ * This class will calculate the pacing and ramp up interval based on the input
+ * values. 
+ * 
+ * <pre>
+ * <code>
+ * int pacingSeconds = 3600 / (execsHour / users);
+ * int rampUpInterval = pacingSeconds / users * rampUp;
+ * </code>
+ * </pre>
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0
@@ -27,12 +46,14 @@ public class PFRExecutorStandard extends PFRExecutor {
 
 	private int users = 1;
 	private int execsHour = 60;
-	private long offset = 0;
+	private long offsetSeconds = 0;
 	private int rampUp = 1;
 	private int rampUpInterval = -1;
 	private int pacingSeconds = -1;
 	
 	private boolean stopped = false;
+	
+	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
 	
 	/*****************************************************************
@@ -46,17 +67,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 		this.usecase = usecase;
 	}
 	
-	
-	/***************************************************************************
-	 * The scenario will be set to run forever, therefore make sure to
-	 * set maxDuration in your simulation:
-	 * 
-	 * <pre>
-	 * <code>
-	 * setUp(...).maxDuration(Duration.ofMinutes(15))
-	 * </code>
-	 * </pre>
-	 * 
+	/*************************************************************************** 
 	 * This method creates a standard load pattern:
 	 * <ul>
 	 * <li>Ramping up users at the start of the test</li>
@@ -82,7 +93,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 * 
 	 ***************************************************************************/
 	public PFRExecutorStandard(
-						PFRUsecase usecase
+						  PFRUsecase usecase
 						, int users
 						, int execsHour
 						, long offset
@@ -93,17 +104,16 @@ public class PFRExecutorStandard extends PFRExecutor {
 		
 		this.users = users;
 		this.execsHour = execsHour;
-		this.offset = offset;
+		this.offsetSeconds = offset;
 		
 		if(rampUp > users) { rampUp = users; } // prevent issues with ramp up
 		this.rampUp = rampUp;
 	}
 
 	/*****************************************************************
-	 * 
+	 * Calculates pacingSeconds and rampUpInterval
 	 *****************************************************************/
-	@Override
-	public void initialize(PFRContext context) {
+	public void calculateLoadSettings() {
 		
 		// -----------------------------------------------
 		// Calculate Load Parameters
@@ -113,6 +123,18 @@ public class PFRExecutorStandard extends PFRExecutor {
 		
 		this.rampUpInterval = rampUpInterval;
 		this.pacingSeconds = pacingSeconds;
+	}
+	
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	@Override
+	public void initialize(PFRContext context) {
+		
+		// -----------------------------------------------
+		// Calculate Load Parameters
+		// -----------------------------------------------
+		calculateLoadSettings();
 				
 		// -----------------------------------------------
 		// Log Warnings
@@ -148,7 +170,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 		logger.info("Scenario: " + usecase);
 		logger.info("Target Users: " + users);
 		logger.info("Executions/Hour: " + execsHour);
-		logger.info("StartOffset: " + offset);
+		logger.info("StartOffset: " + offsetSeconds);
 		logger.info("RampUp Users: " + rampUp);
 		logger.info("RampUp Interval(s): " + rampUpInterval);
 		logger.info("Pacing(s): " + pacingSeconds);
@@ -177,23 +199,37 @@ public class PFRExecutorStandard extends PFRExecutor {
 		if(users == 0 || execsHour == 0) {
 			return;
 		}
-		
+
 		//-------------------------
-		// Create Threads
+		// Latch
 		CountDownLatch latch = new CountDownLatch(users);
 		
 		try {
 			
+			//-------------------------
+			// Create Threads
+			if(offsetSeconds >= 0) {
+				Thread.sleep(offsetSeconds * 1000);
+			}
+			
+			//-------------------------
+			// Start User Threads
 			for(int i = 0; i < users; i ++) {
 				
-				Thread userThread = createUserThread(context, latch);
-				
-				userThread.setName("ExecutorStandard-User-"+i);
-				userThread.start();
+				try {
+					Thread userThread = createUserThread(context, latch);
 					
-				HSR.increaseUsers(1);
-				
-				Thread.sleep(rampUpInterval * 1000);
+						userThread.setName(usecase.getName()+"-User-"+i);
+						userThread.start();
+						
+						userThreadList.add(userThread);
+					HSR.increaseUsers(1);
+					
+					Thread.sleep(rampUpInterval * 1000);
+				}catch (Exception e) {
+					HSR.addException(e);
+					logger.info("Error While starting User Thread.");
+				}
 				
 			}
 			
@@ -212,25 +248,50 @@ public class PFRExecutorStandard extends PFRExecutor {
 	@Override
 	public void distributeLoad(int totalAgents, int agentIndex, int recursionIndex) {
 		
+		//----------------------------------
+		// Calculate Load Parameters
+		// ---------------------------------
+		calculateLoadSettings();
+		
 		int usersPerAgent = (int)Math.ceil((1.0f * users) / totalAgents);
 		int execsPerAgent = (int)Math.ceil((1.0f * execsHour) / totalAgents);
+		int offsetPerAgent = (int)Math.ceil((1.0f * pacingSeconds) / totalAgents);
 		
 		//----------------------------------
 		// Calculate if the agent still has
 		// users
 		int remainingUsers = users;
 		int remainingExecsHour = execsHour;
+		int additionalOffset = 0;
 		for(int i = 0; i < agentIndex; i++) {
 			remainingUsers -= usersPerAgent;
 			remainingExecsHour -= execsPerAgent;
+			additionalOffset += offsetPerAgent;
 		}
 		
+		
 		//----------------------------------
-		// Set Users
+		// Set New Values
+		offsetSeconds += additionalOffset;
+		
 		if(remainingUsers == 0) {
 			users = 0;
 			execsHour = 0;
+			return;
 		}
+		
+		if(remainingUsers >= usersPerAgent) {
+			users = usersPerAgent;
+		}else {
+			users = remainingUsers;
+		}
+		
+		if(remainingExecsHour >= execsPerAgent) {
+			execsHour = execsPerAgent;
+		}else {
+			execsHour = remainingExecsHour;
+		}
+		
 	}
 	
 	
@@ -239,6 +300,8 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 *****************************************************************/
 	public Thread createUserThread(PFRContext context, CountDownLatch latch) {
 		
+		int pacingMillis = pacingSeconds * 1000;
+		
 		return new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -246,8 +309,24 @@ public class PFRExecutorStandard extends PFRExecutor {
 				try {
 					
 					while(!stopped){
-						usecase.execute(context);
-						Thread.sleep(pacingSeconds * 1000); 
+						long start = System.currentTimeMillis();
+						
+						try {
+							usecase.execute(context);
+						}catch (Throwable e) {
+							HSR.addException(e);
+							HSR.endAllOpen(HSRRecordStatus.Failed);
+						}
+						
+						long duration = System.currentTimeMillis() - start;
+						
+						if(duration < pacingMillis) {
+							Thread.sleep(pacingMillis - duration); 
+						}else {
+							HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
+											 + " This might cause that you get lower execution/hour then expected."
+											 + " Increase the number of users to fix this if you get lots of these messages.");
+						}
 					}
 
 				}catch(InterruptedException e) {
@@ -265,7 +344,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 * 
 	 *****************************************************************/
 	@Override
-	public void gracefulStop(PFRContext context) {
+	public void gracefulStop() {
 		this.stopped = true;
 	}
 	
@@ -274,7 +353,18 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 *****************************************************************/
 	@Override
 	public void terminate(PFRContext context) {
-		// TODO Auto-generated method stub
+		
+		for(Thread thread : userThreadList) {
+			
+			try {
+				if(thread.isAlive() && !thread.isInterrupted()) {
+					thread.interrupt();
+				}
+			}catch(Throwable e) {
+				HSR.addException(e);
+				logger.error("Error while stopping user thread: " + e.getMessage(), e);
+			}
+		}
 		
 	}
 	

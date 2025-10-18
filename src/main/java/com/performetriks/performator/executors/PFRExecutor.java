@@ -92,7 +92,7 @@ public abstract class PFRExecutor {
 	/*****************************************************************
 	 * stop Gracefully
 	 *****************************************************************/
-	public abstract void gracefulStop(PFRContext context);	
+	public abstract void gracefulStop();	
 	
 	/*****************************************************************
 	 * Method to do any kind of termination before executeUsecase()

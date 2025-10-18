@@ -14,12 +14,13 @@ import com.performetriks.performator.executors.PFRExecutor;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PFRTest {
+public abstract class PFRTest {
 	
-	
+	private PFRContext context;
 	private ArrayList<PFRExecutor> executorList = new ArrayList<>();
 	
-	private Duration maxDuration = Duration.of(1, ChronoUnit.HOURS);
+	private Duration maxDuration = Duration.ofHours(1);
+	private Duration gracefulStop = Duration.ofMinutes(1);
 	
 	/***************************************************************************
 	 * 
@@ -28,7 +29,23 @@ public class PFRTest {
 	 * @return instance for chaining
 	 ***************************************************************************/
 	public PFRTest(PFRContext context) {
-		
+		this.context = context;
+	}
+	
+	/*****************************************************************
+	 * Return the context of this test.
+	 * 
+	 *****************************************************************/
+	public PFRContext getContext() {
+		return context;
+	}
+	
+	/*****************************************************************
+	 * This method will return the name of the test.
+	 * 
+	 *****************************************************************/
+	public String getName() {
+		return this.getClass().getSimpleName();
 	}
 	
 	/***************************************************************************
@@ -42,8 +59,20 @@ public class PFRTest {
 		return this;
 	}
 	
+	
 	/***************************************************************************
-	 * Sets the maximum duration of the test.
+	 * returns a clone of the executors that have been added to this test.
+	 * 
+	 * @return cloned list of executors
+	 ***************************************************************************/
+	public ArrayList<PFRExecutor> getExecutors(){
+		ArrayList<PFRExecutor> clone = new ArrayList<>();
+		clone.addAll(executorList);
+		return clone;
+	}
+	
+	/***************************************************************************
+	 * Sets the maximum duration of the test, default is 1 hour.
 	 * @param maxDuration
 	 * @return instance for chaining
 	 ***************************************************************************/
@@ -58,6 +87,26 @@ public class PFRTest {
 	 ***************************************************************************/
 	public Duration maxDuration(){
 		return maxDuration;
+	}
+	
+	/***************************************************************************
+	 * Duration for gracefully stopping the test. Default is 1 minute.
+	 * This time is added after max duration has been reached.
+	 * 
+	 * @param maxDuration
+	 * @return instance for chaining
+	 ***************************************************************************/
+	public PFRTest gracefulStop(Duration gracefulStop){
+		this.gracefulStop = gracefulStop;
+		return this;
+	}
+	
+	/***************************************************************************
+	 * 
+	 * @return duration
+	 ***************************************************************************/
+	public Duration gracefulStop(){
+		return gracefulStop;
 	}
 	
 	

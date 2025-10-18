@@ -29,7 +29,7 @@ public abstract class PFRUsecase {
 	 * This method will contain the main steps of your use case
 	 * 
 	 *****************************************************************/
-	public abstract void execute(PFRContext context);
+	public abstract void execute(PFRContext context) throws Throwable;
 	
 	/*****************************************************************
 	 * This method will be executed once when the test has finished.
