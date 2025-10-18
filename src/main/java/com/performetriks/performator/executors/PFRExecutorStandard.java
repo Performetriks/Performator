@@ -192,7 +192,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
-	public void executeUsecase(PFRContext context) {
+	public void executeThreads(PFRContext context) {
 		
 		//-------------------------
 		// Nothing todo?
@@ -214,7 +214,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 			
 			//-------------------------
 			// Start User Threads
-			for(int i = 0; i < users; i ++) {
+			for(int i = 0; i < users && !stopped ; i++) {
 				
 				try {
 					Thread userThread = createUserThread(context, latch);
@@ -229,6 +229,7 @@ public class PFRExecutorStandard extends PFRExecutor {
 				}catch (Exception e) {
 					HSR.addException(e);
 					logger.info("Error While starting User Thread.");
+					latch.countDown();
 				}
 				
 			}
@@ -237,7 +238,6 @@ public class PFRExecutorStandard extends PFRExecutor {
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
 		}finally {
-			latch.countDown();
 			HSR.decreaseUsers(1);
 		}	
 	}

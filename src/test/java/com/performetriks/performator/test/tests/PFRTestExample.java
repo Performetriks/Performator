@@ -21,8 +21,8 @@ public class PFRTestExample extends PFRTest {
 		
 		this.add(new PFRExecutorStandard(new UsecaseExample(), users, executionsPerHour, 0, 2) );
 		
-		this.maxDuration(Duration.ofMinutes(5));
-		this.gracefulStop(Duration.ofMinutes(1));
+		this.maxDuration(Duration.ofSeconds(90));
+		this.gracefulStop(Duration.ofSeconds(90));
 		
 	}
 

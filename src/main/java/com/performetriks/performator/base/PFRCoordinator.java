@@ -96,7 +96,6 @@ public class PFRCoordinator {
 		//-------------------------
 		// Latch
 		CountDownLatch latch = new CountDownLatch(executorList.size());
-		
 		try {
 			
 			//-------------------------
@@ -147,7 +146,7 @@ public class PFRCoordinator {
 			long graceDuration = test.gracefulStop().toMillis();
 			
 			if(graceDuration > 0 && latch.getCount() > 0 ){
-				logger.info("Max Duration reached, initialize graceful stop.");
+				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
 				gracefullyStopExecutorThreads(executorList);
 				
 				while(
@@ -159,6 +158,9 @@ public class PFRCoordinator {
 				}
 			}
 			
+		}catch(Exception e) {
+			logger.info("Error during Executor Thread execution.");
+		}finally {
 			//-------------------------------
 			// Kill remaining Threads
 			if(latch.getCount() > 0) {
@@ -168,12 +170,6 @@ public class PFRCoordinator {
 			//-------------------------------
 			// Terminate Test
 			terminateTest();
-			
-			
-		}catch(Exception e) {
-			logger.info("Error during Executor Thread execution.");
-		}finally {
-			latch.countDown();
 		}	
 		
 	}

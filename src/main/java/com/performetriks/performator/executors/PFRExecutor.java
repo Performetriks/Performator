@@ -87,7 +87,7 @@ public abstract class PFRExecutor {
 	 * This method will start and manage the users of the executor.
 	 * Implement it to handle any kind of runtime exceptions.
 	 *****************************************************************/
-	public abstract void executeUsecase(PFRContext context);
+	public abstract void executeThreads(PFRContext context);
 	
 	/*****************************************************************
 	 * stop Gracefully
@@ -111,7 +111,9 @@ public abstract class PFRExecutor {
 		
 		initialize(context);
 		
-		executeUsecase(context);
+		executeThreads(context);
+		
+		terminate(context);
 	}
 
 	
