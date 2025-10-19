@@ -181,47 +181,47 @@ public class PFRExecStandard extends PFRExec {
 		// Calculate Load Parameters
 		// -----------------------------------------------
 		calculateLoadSettings();
-				
-		// -----------------------------------------------
-		// Log Warnings
-		// -----------------------------------------------
-		String sides = "=".repeat(16);
-		String title = " Load Config: "+this.usecaseName()+" ";
-		logger.info(sides + title + sides);
 		
-		if(rampUpInterval == 0) {
-			String message = "Calculated ramp up interval is 0, all users are started at the same time.";
-			HSR.addWarnMessage(message);
-			logger.warn("==> " + message);
+		synchronized(logger) {
+			// -----------------------------------------------
+			// Log Warnings
+			// -----------------------------------------------
+			String sides = "=".repeat(16);
+			String title = " Load Config: "+this.usecaseName()+" ";
+			logger.info(sides + title + sides);
+			
+			if(rampUpInterval == 0) {
+				String message = "Calculated ramp up interval is 0, all users are started at the same time.";
+				HSR.addWarnMessage(message);
+				logger.warn("==> " + message);
+			}
+			
+			if(pacingSeconds < 10) {
+				String message = "Calculated pacing is below 10 seconds, make sure one iteration of your scenario can execute in that time.";
+				HSR.addWarnMessage(message);
+				logger.warn("==> "+message);
+			}
+			
+			if(pacingSeconds == 0) {
+				pacingSeconds = 1; 
+	
+				String message = "Calculated Pacing was 0 seconds, set to 1 second.";
+				HSR.addWarnMessage(message);
+				logger.warn("==> "+message);
+			}
+			
+			// -----------------------------------------------
+			// Log infos
+			// -----------------------------------------------
+			logger.info("Usecase: " + this.usecaseName());
+			logger.info("Target Users: " + users);
+			logger.info("Executions/Hour: " + execsHour);
+			logger.info("Start Offset: " + offsetSeconds);
+			logger.info("RampUp Users: " + rampUp);
+			logger.info("RampUp Interval(s): " + rampUpInterval);
+			logger.info("Pacing(s): " + pacingSeconds);
+			logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
 		}
-		
-		if(pacingSeconds < 10) {
-			String message = "Calculated pacing is below 10 seconds, make sure one iteration of your scenario can execute in that time.";
-			HSR.addWarnMessage(message);
-			logger.warn("==> "+message);
-		}
-		
-		if(pacingSeconds == 0) {
-			pacingSeconds = 1; 
-
-			String message = "Calculated Pacing was 0 seconds, set to 1 second.";
-			HSR.addWarnMessage(message);
-			logger.warn("==> "+message);
-		}
-		
-		// -----------------------------------------------
-		// Log infos
-		// -----------------------------------------------
-
-		logger.info("Usecase: " + this.usecaseName());
-		logger.info("Target Users: " + users);
-		logger.info("Executions/Hour: " + execsHour);
-		logger.info("StartOffset: " + offsetSeconds);
-		logger.info("RampUp Users: " + rampUp);
-		logger.info("RampUp Interval(s): " + rampUpInterval);
-		logger.info("Pacing(s): " + pacingSeconds);
-		logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
-		
 	}
 	
 	/*****************************************************************
@@ -337,6 +337,7 @@ public class PFRExecStandard extends PFRExec {
 				previousTasksCount = currentTasksCount;
 				
 			}
+			
 			scheduledUserThreadExecutor.awaitTermination(
 					  this.test().gracefulStop().getSeconds()
 					, TimeUnit.SECONDS

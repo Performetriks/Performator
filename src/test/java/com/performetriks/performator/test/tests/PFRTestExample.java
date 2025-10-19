@@ -16,9 +16,10 @@ public class PFRTestExample extends PFRTest {
 		
 		Globals.commonInitialization();
 		
-		int percentage = 300;
+		int percentage = 100;
 
-		this.add(new PFRExecStandard(UsecaseExample.class, 10, 15000, 0, 2).percent(percentage) );
+		this.add(new PFRExecStandard(UsecaseExample.class, 50, 12000, 0, 5).percent(percentage) );
+		
 		this.add(new PFRExecStandard(UsecaseExampleSLA.class)
 						.users(5)
 						.execsHour(2000)
