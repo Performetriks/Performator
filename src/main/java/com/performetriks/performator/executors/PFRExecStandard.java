@@ -46,10 +46,11 @@ public class PFRExecStandard extends PFRExec {
 	
 	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecStandard.class.getName());
 	
+	private int percent = 100;
 	private int users = 1;
 	private int execsHour = 60;
 	private long offsetSeconds = 0;
-	private int rampUp = 1;
+	private int rampUpUsers = 1;
 	private int rampUpInterval = -1;
 	private int pacingSeconds = -1;
 	
@@ -109,7 +110,7 @@ public class PFRExecStandard extends PFRExec {
 		this.offsetSeconds = offset;
 		
 		if(rampUp > users) { rampUp = users; } // prevent issues with ramp up
-		this.rampUp = rampUp;
+		this.rampUpUsers = rampUp;
 	}
 	
 	/*****************************************************************
@@ -140,7 +141,7 @@ public class PFRExecStandard extends PFRExec {
 	 * Set the amount of users to add per ramp up interval.
 	 *****************************************************************/
 	public PFRExecStandard rampUp(int rampUp) {
-		this.rampUp = rampUp;
+		this.rampUpUsers = rampUp;
 		return this;
 	}
 	
@@ -151,8 +152,7 @@ public class PFRExecStandard extends PFRExec {
 	 * @param percent 100 is 100%, you can go lower or higher, e.g. 50% or 200%
 	 *****************************************************************/
 	public PFRExecStandard percent(int percent) {
-		users = (int)Math.ceil( users * (percent / 100.0f) );
-		execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+		this.percent = percent;
 		return this;
 	}
 
@@ -162,10 +162,18 @@ public class PFRExecStandard extends PFRExec {
 	public void calculateLoadSettings() {
 		
 		// -----------------------------------------------
+		// Apply Percentage
+		// -----------------------------------------------
+		if(percent != 100) {
+			users = (int)Math.ceil( users * (percent / 100.0f) );
+			execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+		}
+		
+		// -----------------------------------------------
 		// Calculate Load Parameters
 		// -----------------------------------------------
 		int pacingSeconds = (int)Math.ceil( 3600 / ( 1f * execsHour / users) );
-		int rampUpInterval = (int)Math.ceil( (1f * pacingSeconds / users) * rampUp );
+		int rampUpInterval = (int)Math.ceil( (1f * pacingSeconds / users) * rampUpUsers );
 		
 		this.rampUpInterval = rampUpInterval;
 		this.pacingSeconds = pacingSeconds;
@@ -214,10 +222,11 @@ public class PFRExecStandard extends PFRExec {
 			// Log infos
 			// -----------------------------------------------
 			logger.info("Usecase: " + this.usecaseName());
+			logger.info("Percent: " + percent);
 			logger.info("Target Users: " + users);
 			logger.info("Executions/Hour: " + execsHour);
 			logger.info("Start Offset: " + offsetSeconds);
-			logger.info("RampUp Users: " + rampUp);
+			logger.info("RampUp Users: " + rampUpUsers);
 			logger.info("RampUp Interval(s): " + rampUpInterval);
 			logger.info("Pacing(s): " + pacingSeconds);
 			logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
@@ -229,8 +238,19 @@ public class PFRExecStandard extends PFRExec {
 	 *****************************************************************/
 	@Override
 	public JsonObject getSettings(PFRContext context) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		calculateLoadSettings();
+		
+		JsonObject settings = new JsonObject();
+		settings.addProperty("percent", percent);
+		settings.addProperty("users", users);
+		settings.addProperty("execPerHour", execsHour);
+		settings.addProperty("startOffsetSec", offsetSeconds);
+		settings.addProperty("rampUpUsers", rampUpUsers);
+		settings.addProperty("rampUpIntervalSec", rampUpInterval);
+		settings.addProperty("pacingSec", pacingSeconds);
+		
+		return settings;
 	}
 	
 	/*****************************************************************
@@ -292,8 +312,8 @@ public class PFRExecStandard extends PFRExec {
 					
 					//--------------------------
 					// Manage Ramp Up
-					if( rampUp > 0 
-					&&  ( (i+1) % rampUp ) == 0
+					if( rampUpUsers > 0 
+					&&  ( (i+1) % rampUpUsers ) == 0
 					){
 						Thread.sleep(rampUpInterval * 1000);
 					}

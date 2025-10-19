@@ -79,6 +79,18 @@ public abstract class PFRExec {
 	}
 	
 	/*****************************************************************
+	 * Return a JsonObject with key-value pairs that give details
+	 * about the settings of this executor.
+	 * 
+	 * This will be executed before distributeLoad() and initialize().
+	 * If do any calculations in initialize() for the load, it is 
+	 * recommended to do these calculations in a separate method.
+	 * 
+	 * @return JsonObject
+	 *****************************************************************/
+	public abstract JsonObject getSettings(PFRContext context);	
+	
+	/*****************************************************************
 	 * This method will be executed by agents to calculate the amount
 	 * of load that a specific agent will execute.
 	 * It will be executed before initialize() is called.
@@ -99,15 +111,6 @@ public abstract class PFRExec {
 	 *****************************************************************/
 	public abstract void initialize(PFRContext context);	
 	
-	/*****************************************************************
-	 * Return a JsonObject with key-value pairs that give details
-	 * about the load pattern.
-	 * This will be executed after initialize() and before 
-	 * executeUsecase().
-	 * 
-	 * @return JsonObject
-	 *****************************************************************/
-	public abstract JsonObject getSettings(PFRContext context);	
 	
 	/*****************************************************************
 	 * This method will start and manage the users of the executor.
