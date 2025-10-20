@@ -79,16 +79,16 @@ public abstract class PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Return a JsonObject with key-value pairs that give details
-	 * about the settings of this executor.
+	 * Add values to the parameter passed to this method, with key-value 
+	 * pairs that give details about the settings of this executor.
 	 * 
 	 * This will be executed before distributeLoad() and initialize().
 	 * If do any calculations in initialize() for the load, it is 
 	 * recommended to do these calculations in a separate method.
 	 * 
-	 * @return JsonObject
+	 * @param JsonObject object to add settings to
 	 *****************************************************************/
-	public abstract JsonObject getSettings(PFRContext context);	
+	public abstract void getSettings(JsonObject object);	
 	
 	/*****************************************************************
 	 * This method will be executed by agents to calculate the amount

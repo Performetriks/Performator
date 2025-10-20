@@ -5,15 +5,20 @@ import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonObject;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
-import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
+import com.xresch.hsr.base.HSRTestSettings;
 
 import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
  * This class coordinates the test execution.
+ * 
+ * Limitation: It can execute a single test at once, this is due to the HSR
+ * framework holding the Name of the test globally, and can't work with 
+ * multiple test running in the same JVM.
  * 
  * Available arguments:
  * <ul>
@@ -32,6 +37,7 @@ public class PFRCoordinator {
 	
 	private static ArrayList<Thread> executorThreadList = new ArrayList<>();
 	
+	private static ArrayList<PFRExec> executorList = null;
 	
 	/*************************************************************
 	 * Start the test based on argument 
@@ -58,20 +64,17 @@ public class PFRCoordinator {
 	public static void startTest(String className) {
 		
 		PFRTest test = getTestInstance(className);
+		startTest(test);
 		
-		if(test != null) {
-			startTestLocally(test);
-		}
 	}
-	
 	
 	/*************************************************************
 	 * Start the test with the given class name.
 	 * 
 	 * @param className 
 	 *************************************************************/
-	public static void startTestLocally(PFRTest test) {
-
+	public static void startTest(PFRTest test) {
+		
 		//-------------------------
 		// Check Null
 		if(test == null) {
@@ -81,17 +84,37 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Get Executors
-		ArrayList<PFRExec> executorList = test.getExecutors();
+		executorList = test.getExecutors();
 		
 		if(executorList.size() == 0) {
-			logger.info("The test "+test.getName()+" did not have any executors defined, nothing to execute.");
+			logger.info("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
 			return;
 		}
 		
 		//-------------------------
-		// Start HSR if not already done
+		// Set Test Name
 		HSR.setTest(test.getName());
+		
+		//-------------------------
+		// Register Settings
+		registerExecutorSettings();
+		
+		//-------------------------
+		// Execute
 		HSRConfig.enable(15);
+		startTestLocally(test);
+		
+		
+	}
+	
+	
+	/*************************************************************
+	 * Start the test with the given class name.
+	 * 
+	 * @param className 
+	 *************************************************************/
+	private static void startTestLocally(PFRTest test) {
+
 		
 		//-------------------------
 		// Latch
@@ -147,7 +170,7 @@ public class PFRCoordinator {
 			
 			if(graceDuration > 0 && latch.getCount() > 0 ){
 				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
-				gracefullyStopExecutorThreads(executorList);
+				gracefullyStopExecutorThreads();
 				
 				while(
 					latch.getCount() > 0 
@@ -177,7 +200,28 @@ public class PFRCoordinator {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	private static void gracefullyStopExecutorThreads(ArrayList<PFRExec> executorList) {
+	private static void registerExecutorSettings() {
+		
+		for(PFRExec executor : executorList) {
+			
+			JsonObject settings = new JsonObject();
+			settings.addProperty("executor", executor.getClass().getSimpleName());
+			
+			executor.getSettings(settings);
+			
+			HSRConfig.addTestSettings(
+					new HSRTestSettings(
+							  executor.usecaseName()
+							, settings
+						)
+				);
+		}
+		
+	}
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	private static void gracefullyStopExecutorThreads() {
 		
 		for(PFRExec executor : executorList) {
 			executor.gracefulStop();

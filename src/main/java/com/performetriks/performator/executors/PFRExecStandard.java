@@ -237,11 +237,10 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 *****************************************************************/
 	@Override
-	public JsonObject getSettings(PFRContext context) {
+	public void getSettings(JsonObject settings) {
 		
 		calculateLoadSettings();
 		
-		JsonObject settings = new JsonObject();
 		settings.addProperty("percent", percent);
 		settings.addProperty("users", users);
 		settings.addProperty("execPerHour", execsHour);
@@ -249,8 +248,7 @@ public class PFRExecStandard extends PFRExec {
 		settings.addProperty("rampUpUsers", rampUpUsers);
 		settings.addProperty("rampUpIntervalSec", rampUpInterval);
 		settings.addProperty("pacingSec", pacingSeconds);
-		
-		return settings;
+
 	}
 	
 	/*****************************************************************
