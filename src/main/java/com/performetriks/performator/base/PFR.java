@@ -1,5 +1,7 @@
 package com.performetriks.performator.base;
 
+import com.xresch.hsr.base.HSR;
+
 /***************************************************************************
  * Main Performator class used for configuration and controlling the framework.
  * 
@@ -10,5 +12,10 @@ package com.performetriks.performator.base;
  * 
  ***************************************************************************/
 public class PFR {
+	
+	public class JSON extends HSR.JSON{}; 
+	public class Math extends HSR.Math{}; 
+	public class Random extends HSR.Random{}; 
+	public class Time extends HSR.Time{}; 
 
 }

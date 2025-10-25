@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.util.Properties;
 
@@ -20,10 +21,12 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xresch.hsr.base.HSR;
+import com.performetriks.performator.base.PFR;
+import com.performetriks.performator.base.PFRConfig;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
+ * It has to be created after a PFRTest instance has been loaded to get let the user set the configuration.
  * 
  * @author Reto Scheiwiller, (c) Copyright 2025
  * @license EPL-License
@@ -34,7 +37,11 @@ public class AgentControllerConnection {
 	private static final Logger logger = LoggerFactory.getLogger(AgentControllerConnection.class);
 	
 	private static final String PARAM_BODY_LENGTH = "internal-body-length";
+	private static final String PARAM_HOST = "internal-host";
+	private static final String PARAM_PORT = "internal-port";
 	
+	Properties props = System.getProperties();
+	Runtime runtime = Runtime.getRuntime();
 	
 	//------------------------------------
 	// Remote Instance
@@ -45,7 +52,6 @@ public class AgentControllerConnection {
 	// This as a Server / Agent
 	private Thread serverThread;
 	private ServerSocket serverSocket;
-	private int serverPort = 9876;
 	
 	private Boolean isAvailable = true; // Check is in use.
 	
@@ -87,8 +93,9 @@ public class AgentControllerConnection {
 			@Override
 			public void run() {
 				try {
-					serverSocket = new ServerSocket(serverPort);
-					System.out.println("Server started on port " + serverPort);
+
+					serverSocket = new ServerSocket(PFRConfig.port());
+					System.out.println("Server listening on port " + PFRConfig.port());
 
 					while (true) {
 						final Socket socket = serverSocket.accept();
@@ -101,14 +108,22 @@ public class AgentControllerConnection {
 						clientHandler.start();
 					}
 				} catch (IOException e) {
-					System.err.println("Server error on port " + serverPort + ": " + e.getMessage());
+					System.err.println("Server error on port " + PFRConfig.port() + ": " + e.getMessage());
 				}
 			}
 		});
 
 		serverThread.start();
 	}
-
+	
+	/**********************************************************************************
+	 * 
+	 * @return Hostname of the local machine
+	 * @throws UnknownHostException
+	  **********************************************************************************/
+	public String getLocahost() throws UnknownHostException {
+		return InetAddress.getLocalHost().getHostName();
+	}
 
 	/**********************************************************************************
 	 * Protocol:
@@ -118,35 +133,38 @@ public class AgentControllerConnection {
 	 **********************************************************************************/
 	private void handleRequest(Socket socket) {
 		
-		try ( BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			  DataOutputStream out = new DataOutputStream(socket.getOutputStream())
+		try ( BufferedReader requestIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			  DataOutputStream requestOut = new DataOutputStream(socket.getOutputStream())
 			){
 
 			//------------------------
 			//
-			String commandString = in.readLine();
+			String commandString = requestIn.readLine();
 			Command command = Command.valueOf(commandString);
 			
-			String parametersJson = in.readLine();
-			JsonObject parameters = HSR.JSON.stringToJsonObject(parametersJson);
+			String parametersJson = requestIn.readLine();
+			JsonObject parameters = PFR.JSON.stringToJsonObject(parametersJson);
 			
 			System.out.println("Received command: " + command);
-
+			JsonObject response = new JsonObject();
+			
 			switch (command) {
 			
-
 				case GET_STATUS:
-					Properties props = System.getProperties();
-					Runtime runtime = Runtime.getRuntime();
-					out.writeBytes("hostname=" + InetAddress.getLocalHost().getHostName() + "\n");
-					out.writeBytes("os.name=" + props.getProperty("os.name") + "\n");
-					out.writeBytes("java.version=" + props.getProperty("java.version") + "\n");
-					out.writeBytes("memory.free=" + runtime.freeMemory() + "\n");
-					out.writeBytes("memory.total=" + runtime.totalMemory() + "\n");
+					response.addProperty("available", isAvailable);
+					response.addProperty("host", getLocahost() );
+					response.addProperty("port", PFRConfig.port() );
+					response.addProperty("javaversion", props.getProperty("java.version"));
+					response.addProperty("memory.free", runtime.freeMemory());
+					response.addProperty("memory.total", runtime.totalMemory());
+					
+					requestOut.writeBytes( PFR.JSON.toString(response) );
 				break;
 				
 				case RESERVE_AGENT: 
 					isAvailable = false; 
+					response.addProperty("success", true);
+					requestOut.writeBytes( PFR.JSON.toString(response) );
 				break;
 			
 				case SEND_JAR:
@@ -162,21 +180,21 @@ public class AgentControllerConnection {
 					Files.write(jarFile.toPath(), jarBytes);
 					
 					System.out.println("JAR saved to: " + jarFile.getAbsolutePath());
-					out.writeBytes("JAR_RECEIVED\n");
+					requestOut.writeBytes("JAR_RECEIVED\n");
 					break;
 
 				case START:
 					executeProcess();
-					out.writeBytes("PROCESS_STARTED\n");
+					requestOut.writeBytes("PROCESS_STARTED\n");
 					break;
 
 				case STOP:
 					stopProcess();
-					out.writeBytes("PROCESS_STOPPED\n");
+					requestOut.writeBytes("PROCESS_STOPPED\n");
 					break;
 
 				default:
-					out.writeBytes("UNKNOWN_COMMAND\n");
+					requestOut.writeBytes("UNKNOWN_COMMAND\n");
 			}
 
 		} catch (IOException e) {
@@ -264,7 +282,7 @@ public class AgentControllerConnection {
 					
 				}
 				if(jsonBuilder.length() > 0) {
-					response = HSR.JSON.getGsonInstance().fromJson(jsonBuilder.toString(), JsonObject.class);
+					response = PFR.JSON.getGsonInstance().fromJson(jsonBuilder.toString(), JsonObject.class);
 				}else {
 					response = SocketResponse.createErrorObject(new Exception("Empty response received."));
 				}
@@ -377,7 +395,7 @@ public class AgentControllerConnection {
 		 * 
 		 ********************************************************/
 		public SocketRequest params(JsonObject parameters) {
-			this.parameters = parameters;
+			this.parameters = parameters.deepCopy();
 			return this;
 		}
 		
@@ -430,8 +448,11 @@ public class AgentControllerConnection {
 				bodyLength = body.length;
 			}
 			
+			parameters.addProperty(PARAM_HOST, getLocahost());
+			parameters.addProperty(PARAM_PORT, PFRConfig.port());
 			parameters.addProperty(PARAM_BODY_LENGTH, bodyLength);
-			clientWriter.println(HSR.JSON.toJSON(parameters));
+			
+			clientWriter.println(PFR.JSON.toJSON(parameters));
 			
 			//-------------------------------
 			// Write body
