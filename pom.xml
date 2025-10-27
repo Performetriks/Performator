@@ -124,25 +124,26 @@
 		    <scope>runtime</scope>
 		</dependency -->
 		
-		 <dependency>
+		 <!--dependency>
 	      <groupId>com.microsoft.playwright</groupId>
 	      <artifactId>playwright</artifactId>
 	      <version>1.38.0</version>
-	    </dependency>
+	    </dependency-->
     
 		<!-- https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-java -->
-		<dependency>
+		<!--dependency>
 		    <groupId>org.seleniumhq.selenium</groupId>
 		    <artifactId>selenium-java</artifactId>
 		    <version>4.1.2</version>
 		    <scope>provided</scope>
-		</dependency>
+		</dependency-->
 	</dependencies>
 
 
 	<!-- ================= BUILD ================== -->
 	<build>
 		
+			
 		<!-- ================= RESOURCES ================== -->
 		<resources>
 			<resource>
@@ -167,6 +168,62 @@
 		</testResources>
 
 		<plugins>
+			
+			<!-- ================= JAR ================== -->
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-shade-plugin</artifactId>
+			    <version>3.6.0</version>
+			    <executions>
+			        <execution>
+			            <phase>package</phase>
+			            <goals>
+			                <goal>shade</goal>
+			            </goals>
+			            <configuration>
+			                <transformers>
+			                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+			                        <manifestEntries>
+			                            <Main-Class>com.performetriks.performator.base.Main</Main-Class>
+			                            <Specification-Title>${project.artifactId}</Specification-Title>
+			                            <Specification-Version>${project.version}</Specification-Version>
+			                            <Implementation-Title>${project.artifactId}</Implementation-Title>
+			                            <Implementation-Version>${project.version}</Implementation-Version>
+			                            <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
+			                        </manifestEntries>
+			                    </transformer>
+			                </transformers>
+			            </configuration>
+			        </execution>
+			    </executions>
+			</plugin>
+			
+			
+			<!-- ================= COMPILER ================== -->
+			<plugin>
+		        <groupId>org.codehaus.mojo</groupId>
+		        <artifactId>exec-maven-plugin</artifactId>
+		        <version>3.6.2</version>
+		        <executions>
+		          <execution>
+					<phase>verify</phase>
+		            <goals>
+		              <goal>java</goal>
+		            </goals>
+		          </execution>
+		        </executions>
+		        <configuration>
+		          <mainClass>com.performetriks.performator.base.Main</mainClass>
+		          <arguments>
+		            <argument>argument1</argument>
+		            ...
+		          </arguments>
+		          <systemProperties>
+		            <projectProperties />
+		          </systemProperties>
+		        </configuration>
+		    </plugin>
+		    
 			<!-- ================= COMPILER ================== -->
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>

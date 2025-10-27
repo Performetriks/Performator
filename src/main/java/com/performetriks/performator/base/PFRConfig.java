@@ -33,8 +33,8 @@ public class PFRConfig {
 	 * the controller until it considers the controller terminated.
 	 * This is useful to reset agents and not let them be blocked for a long time.
 	 **********************************************************************************/
-	public static void timeoutAgentReset(Duration timout) {
-		instancePort = port;
+	public static void timeoutAgentReset(Duration timeout) {
+		timeoutAgentReset = timeout;
 	}
 
 }

@@ -1,4 +1,4 @@
-package com.performetriks.performator.agent;
+package com.performetriks.performator.distribute;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
