@@ -216,7 +216,6 @@
 		          <mainClass>com.performetriks.performator.base.Main</mainClass>
 		          <arguments>
 		            <argument>argument1</argument>
-		            ...
 		          </arguments>
 		          <systemProperties>
 		            <projectProperties />
