@@ -214,9 +214,9 @@
 		        </executions>
 		        <configuration>
 		          <mainClass>com.performetriks.performator.base.Main</mainClass>
-		          <arguments>
+		          <!--arguments>
 		            <argument>argument1</argument>
-		          </arguments>
+		          </arguments-->
 		          <systemProperties>
 		            <projectProperties />
 		          </systemProperties>
