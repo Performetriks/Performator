@@ -28,8 +28,10 @@ import com.performetriks.performator.base.PFRConfig;
  * This class is used to establish a connection between an agent and a controller or vice versa.
  * It has to be created after a PFRTest instance has been loaded to get let the user set the configuration.
  * 
- * @author Reto Scheiwiller, (c) Copyright 2025
- * @license EPL-License
+ * Copyright Owner: Performetriks GmbH, Switzerland
+ * License: Eclipse Public License v2.0
+ * 
+ * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
 public class AgentControllerConnection {

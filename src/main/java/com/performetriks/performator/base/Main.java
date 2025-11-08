@@ -26,12 +26,12 @@ public class Main {
 	
 	public enum CommandLineArgs {
 		
-		  pfr_mode(HSRValueType.STRING, false, "auto", "The mode to start the process with.")
-		, pfr_test(HSRValueType.STRING, true, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_port(HSRValueType.NUMBER, false, "9876", "The port of the started instance, either .")
-		, pfr_agentIndex(HSRValueType.NUMBER, false, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_agentTotal(HSRValueType.NUMBER, false, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_controllerPort(HSRValueType.NUMBER, false, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")
+		  pfr_mode(HSRValueType.STRING, "auto", "The mode to start the process with.")
+		, pfr_test(HSRValueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_port(HSRValueType.NUMBER, "9876", "The port of the started instance, either .")
+		, pfr_agentIndex(HSRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_agentTotal(HSRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_controllerPort(HSRValueType.NUMBER, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();
@@ -40,16 +40,14 @@ public class Main {
 		}
 		
 		private HSRValueType type;
-		private boolean required;
 		private String defaultissimo;
 		private String descrizione;
 		
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		private CommandLineArgs(HSRValueType type, boolean required, String defaultissimo, String descrizione) {
+		private CommandLineArgs(HSRValueType type, String defaultissimo, String descrizione) {
 			this.type = type;
-			this.required = required;
 			this.defaultissimo = defaultissimo;
 			this.descrizione = descrizione;
 		}
@@ -61,10 +59,6 @@ public class Main {
 		public HSRValue getValue() throws IllegalStateException { 
 
 			String property = System.getProperty(this.toString(), defaultissimo);
-
-			if(this.required && property == null ) {
-				throw new IllegalStateException("The argument -D"+this.toString()+" is required.");
-			}
 			return HSRValue.newFromString(type, property);
 		}
 		
@@ -81,14 +75,13 @@ public class Main {
 			System.out.println("================================");
 			System.out.println("PERFORMATOR HELP");
 			System.out.println("================================");
-			System.out.println("Following arguments are supported. Arguments marked with (*) are required:");
+			System.out.println("Following arguments are supported:");
 			for(CommandLineArgs arg : CommandLineArgs.values()) {
 				StringBuilder builder = new StringBuilder();
 
 				builder
 					.append("-D")
 					.append(arg.toString())
-					.append( (arg.required) ? " (*)" : "")
 					.append("\r\n\tType: ").append(arg.type).append(", ")
 					.append("\r\n\tDescription: ").append(arg.descrizione);
 				
@@ -157,7 +150,30 @@ public class Main {
 				break;
 			}
 		}
-
+		
+		//------------------------------------------
+		// Get Mode
+		String modeString = CommandLineArgs.pfr_mode
+									.getValue()
+									.getAsString()
+									.trim()
+									.toUpperCase();
+		
+		if(! Mode.has(modeString)) {
+			logger.error("The provided mode \""+modeString+"\" is not known. ");
+			CommandLineArgs.printUsage();
+			return;
+		}
+		
+		Mode mode = Mode.valueOf(modeString);
+		PFRConfig.executionMode(mode);
+		
+		//------------------------------------------
+		// Execute Mode
+		PFRCoordinator.executeMode(mode);
+		
+		
+		
 	}
 
 }

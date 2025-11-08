@@ -6,6 +6,8 @@ import java.util.concurrent.CountDownLatch;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.Main.CommandLineArgs;
+import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
@@ -39,6 +41,132 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
+	
+	/*************************************************************
+	 * Start the instance in the defined mode.
+	 * 
+	 *************************************************************/
+	public static void executeMode(Mode mode) {
+		
+		switch(mode) {
+			case AUTO 	-> executeAuto();
+			case AGENT 	-> executeAgentInstance();
+			case LOCAL 	-> executeLocal();
+			case REMOTE -> executeRemote();
+		}
+	}
+	
+	/*************************************************************
+	 * Start the instance and run the test either locally or remote
+	 * on agents if agents are defined.
+	 * 
+	 *************************************************************/
+	public static void executeAuto() {
+		
+		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		
+		//This also loads all the PFRConfig set in the constructor of the test.
+		PFRTest test = getTestInstance(testClass);
+		
+		if(test != null) {
+			if(PFRConfig.hasAgents()) {
+				executeOnAgents(test);
+			}else {
+				executeLocal(test);
+			}
+		}
+	}
+
+	
+	/*************************************************************
+	 * Start the instance as an agent.
+	 * 
+	 *************************************************************/
+	public static void executeAgentInstance() {
+		
+	}
+	
+	/*************************************************************
+	 * Start the instance and run the test locally.
+	 * 
+	 *************************************************************/
+	public static void executeLocal() {
+		
+		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		
+		PFRTest test = getTestInstance(testClass);
+		
+		if(test != null) {
+			executeLocal(test);
+		}
+	}
+	/*************************************************************
+	 * Start the instance and run the test locally.
+	 * 
+	 *************************************************************/
+	public static void executeLocal(PFRTest test) {
+		startTest(test);
+	}
+	
+	/*************************************************************
+	 * Start the instance and distribute the test on agents.
+	 * 
+	 *************************************************************/
+	public static void executeOnAgents(PFRTest test) {
+		
+	}
+	
+	/*************************************************************
+	 * Start the instance and run a test that has been received
+	 * from an agent. This mode is used by agents to run tests.
+	 * 	 * 
+	 *************************************************************/
+	public static void executeRemote() {
+		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		
+		//This also loads all the PFRConfig set in the constructor of the test.
+		PFRTest test = getTestInstance(testClass);
+		
+		if(test != null) {
+			// TODO Remove reporters
+			// TODO Add reporter to report to controller
+		}
+	}
+	
+	/*************************************************************
+	 * Get an instance of a PFRTest class by name.
+	 * 
+	 * @param className 
+	 * @return instance or null on error.
+	 *************************************************************/
+	public static PFRTest getTestInstance(String className) {
+		if(className == null) {
+			logger.info("Please specify the class name of the test");
+			return null;
+		}
+		
+		try {
+
+			Class<?> clazz = Class.forName(className);
+		    
+			if(! PFRTest.class.isAssignableFrom(clazz) ){
+		    	logger.info("The specified test class "+className+" must be a subclass of "+PFRTest.class.getName()+".");
+				return null;
+		    }
+			
+			Object instance = clazz.getDeclaredConstructor(PFRContext.class)
+		    		.newInstance(new PFRContext());
+			
+		    return (PFRTest)instance;
+
+		    
+		} catch (Exception e) {
+			logger.error("Error while creating instance for class "+className, e);
+		}
+		
+		return null;
+
+	}
 	/*************************************************************
 	 * Start the test based on argument 
 	 * -Dtest=com.example.PFRTestYourImplementation.
@@ -276,39 +404,6 @@ public class PFRCoordinator {
 		});
 	}
 	
-	/*************************************************************
-	 * Get an instance of a PFRTest class by name.
-	 * 
-	 * @param className 
-	 * @return instance or null on error.
-	 *************************************************************/
-	public static PFRTest getTestInstance(String className) {
-		if(className == null) {
-			logger.info("Please specify the class name of the test");
-			return null;
-		}
-		
-		try {
 
-			Class<?> clazz = Class.forName(className);
-		    
-			if(! PFRTest.class.isAssignableFrom(clazz) ){
-		    	logger.info("The specified test class "+className+" must be a subclass of "+PFRTest.class.getName()+".");
-				return null;
-		    }
-			
-			Object instance = clazz.getDeclaredConstructor(PFRContext.class)
-		    		.newInstance(new PFRContext());
-			
-		    return (PFRTest)instance;
-
-		    
-		} catch (Exception e) {
-			logger.error("Error while creating instance for class "+className, e);
-		}
-		
-		return null;
-
-	}
 
 }

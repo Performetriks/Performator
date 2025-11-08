@@ -3,6 +3,8 @@ package com.performetriks.performator.base;
 import java.time.Duration;
 import java.util.HashSet;
 
+import com.performetriks.performator.distribute.PFRAgentPool;
+
 /**************************************************************************************************************
  * The configuration class for the performator framework.
  * 
@@ -17,6 +19,10 @@ public class PFRConfig {
 	
 	private static int instancePort = 9876;
 	private static Duration timeoutAgentReset = Duration.ofMinutes(5);
+	
+	private static PFRAgentPool agentPool = null;
+	private static int agentAmount = 0;  // 0 or smaller equals is use all agents
+	private static String[] agentTags = null;  // filter agents by these tags
 	
 	/**********************************************************************************
 	 * Mode Enum
@@ -48,15 +54,12 @@ public class PFRConfig {
 	/**********************************************************************************
 	 * Set the port of this instance when used as a controller or an agent.
 	 **********************************************************************************/
-	protected static void executionMode(String mode) {
+	protected static void executionMode(Mode mode) {
 		
 		if(mode == null) { return; }
 		
-		mode = mode.trim().toUpperCase();
+		executionMode = mode;
 		
-		if(Mode.has(mode)) {
-			executionMode = Mode.valueOf(mode);
-		}
 	}
 	
 	/**********************************************************************************
@@ -74,7 +77,9 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
+	 * Get the port of this instance.
 	 * 
+	 * @return port
 	 **********************************************************************************/
 	public static int port() {
 		return instancePort;
@@ -88,5 +93,57 @@ public class PFRConfig {
 	public static void timeoutAgentReset(Duration timeout) {
 		timeoutAgentReset = timeout;
 	}
+
+	/**********************************************************************************
+	 * Checks if any agents have been defined.
+	 * 
+	 **********************************************************************************/
+	public static boolean hasAgents() {
+		return ( agentPool != null && agentPool.hasAgents() ) ;
+	}
+	/**********************************************************************************
+	 * Get the port of this instance.
+	 * 
+	 **********************************************************************************/
+	public static PFRAgentPool getAgentPool() {
+		return agentPool;
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public static void setAgentPool(PFRAgentPool agentPool) {
+		PFRConfig.agentPool = agentPool;
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public static int getAgentAmount() {
+		return agentAmount;
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public static void setAgentAmount(int agentAmount) {
+		PFRConfig.agentAmount = agentAmount;
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public static String[] getAgentTags() {
+		return agentTags;
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public static void setAgentTags(String[] agentTags) {
+		PFRConfig.agentTags = agentTags;
+	}
+	
+	
 
 }
