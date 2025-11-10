@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.AgentControllerConnection;
+import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRValue;
 import com.xresch.hsr.base.HSRValue.HSRValueType;
 
@@ -28,6 +29,7 @@ public class Main {
 		
 		  pfr_mode(HSRValueType.STRING, "auto", "The mode to start the process with.")
 		, pfr_test(HSRValueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_logfile(HSRValueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
 		, pfr_port(HSRValueType.NUMBER, "9876", "The port of the started instance, either .")
 		, pfr_agentIndex(HSRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(HSRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
@@ -136,6 +138,9 @@ public class Main {
 		//------------------------------------------
 		// Print Awesomeness
 		printPerformatorAsciiArtTitleOfAwesomeness();
+		
+		String logfile = CommandLineArgs.pfr_logfile.getValue().getAsString();
+		HSRConfig.setLogFilePath(logfile);
 		
 		//------------------------------------------
 		// Validate Arguments
