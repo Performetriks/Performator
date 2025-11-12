@@ -447,6 +447,7 @@ public class PFRExecStandard extends PFRExec {
 						
 					}catch (Throwable e) {
 						HSR.addException(e);
+						logger.error("Unhandled Exception occured.", e);
 						HSR.endAllOpen(HSRRecordStatus.Failed);
 					}
 					
