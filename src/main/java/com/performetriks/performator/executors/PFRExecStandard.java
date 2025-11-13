@@ -183,7 +183,7 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 *****************************************************************/
 	@Override
-	public void initialize(PFRContext context) {
+	public void initialize() {
 		
 		// -----------------------------------------------
 		// Calculate Load Parameters
@@ -256,7 +256,7 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
-	public void executeThreads(PFRContext context) {
+	public void executeThreads() {
 		
 		//-------------------------
 		// Nothing todo?
@@ -294,7 +294,7 @@ public class PFRExecStandard extends PFRExec {
 			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
 				
 				try {
-					Thread userThread = createUserThread(context);
+					Thread userThread = createUserThread();
 					
 						userThread.setName(this.usecaseName()+"-User-"+i);
 						scheduledUserThreadExecutor.scheduleAtFixedRate(
@@ -423,12 +423,12 @@ public class PFRExecStandard extends PFRExec {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public Thread createUserThread(PFRContext context) {
+	public Thread createUserThread() {
 		
 		int pacingMillis = pacingSeconds * 1000;
 		
 		PFRUsecase usecase = this.getUsecaseInstance();
-		usecase.initializeUser(context);
+		usecase.initializeUser();
 		
 		return new Thread(new Runnable() {
 			
@@ -440,7 +440,7 @@ public class PFRExecStandard extends PFRExec {
 					long start = System.currentTimeMillis();
 					
 					try {
-						usecase.execute(context);
+						usecase.execute();
 						
 						// make sure everything is closed
 						HSR.endAllOpen(HSRRecordStatus.Aborted);

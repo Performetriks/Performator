@@ -2,7 +2,6 @@ package com.performetriks.performator.test.usecase;
 
 import java.math.BigDecimal;
 
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRSLA;
@@ -16,7 +15,7 @@ public class UsecaseExample extends PFRUsecase {
 	 * 
 	 ************************************************************************/
 	@Override
-	public void initializeUser(PFRContext context) {
+	public void initializeUser() {
 		// TODO Auto-generated method stub
 		// nothing todo
 	}
@@ -25,7 +24,7 @@ public class UsecaseExample extends PFRUsecase {
 	 * 
 	 ************************************************************************/
 	@Override
-	public void execute(PFRContext context) throws Throwable {
+	public void execute() throws Throwable {
 		//-------------------------------
 		// 
 		HSR.start("000_Open_Homepage");
@@ -115,7 +114,7 @@ public class UsecaseExample extends PFRUsecase {
 	 * 
 	 ************************************************************************/
 	@Override
-	public void terminate(PFRContext context) {
+	public void terminate() {
 		// nothing todo
 	}
 

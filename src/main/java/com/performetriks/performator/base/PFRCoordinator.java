@@ -154,8 +154,7 @@ public class PFRCoordinator {
 				return null;
 		    }
 			
-			Object instance = clazz.getDeclaredConstructor(PFRContext.class)
-		    		.newInstance(new PFRContext());
+			Object instance = clazz.getDeclaredConstructor().newInstance();
 			
 		    return (PFRTest)instance;
 
@@ -398,7 +397,7 @@ public class PFRCoordinator {
 		return new Thread(new Runnable() {
 			@Override
 			public void run() {
-				executor.execute(test.getContext());
+				executor.execute();
 				latch.countDown();
 			}
 		});

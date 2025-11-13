@@ -16,7 +16,6 @@ import com.performetriks.performator.executors.PFRExec;
  ***************************************************************************/
 public abstract class PFRTest {
 	
-	private PFRContext context;
 	private ArrayList<PFRExec> executorList = new ArrayList<>();
 	
 	private Duration maxDuration = Duration.ofHours(1);
@@ -28,17 +27,10 @@ public abstract class PFRTest {
 	 * @param executor
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PFRTest(PFRContext context) {
-		this.context = context;
+	public PFRTest() {
+		PFRContext.test(this);
 	}
 	
-	/*****************************************************************
-	 * Return the context of this test.
-	 * 
-	 *****************************************************************/
-	public PFRContext getContext() {
-		return context;
-	}
 	
 	/*****************************************************************
 	 * This method will return the name of the test.

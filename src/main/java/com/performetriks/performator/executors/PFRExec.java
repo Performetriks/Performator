@@ -3,7 +3,6 @@ package com.performetriks.performator.executors;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
@@ -109,14 +108,14 @@ public abstract class PFRExec {
 	 * Method to do any kind of initialization before executeUsecase()
 	 * is called.
 	 *****************************************************************/
-	public abstract void initialize(PFRContext context);	
+	public abstract void initialize();	
 	
 	
 	/*****************************************************************
 	 * This method will start and manage the users of the executor.
 	 * Implement it to handle any kind of runtime exceptions.
 	 *****************************************************************/
-	public abstract void executeThreads(PFRContext context);
+	public abstract void executeThreads();
 	
 	/*****************************************************************
 	 * stop Gracefully
@@ -134,13 +133,13 @@ public abstract class PFRExec {
 	 * This method will start and manage the threads of the executor.
 	 * Implement it to handle any kind of runtime exceptions.
 	 *****************************************************************/
-	public void execute(PFRContext context) {
+	public void execute() {
 		
 		HSR.setUsecase(usecaseName);
 		
-		initialize(context);
+		initialize();
 		
-		executeThreads(context);
+		executeThreads();
 		
 		terminate();
 	}

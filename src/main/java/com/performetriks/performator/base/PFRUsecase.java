@@ -23,19 +23,19 @@ public abstract class PFRUsecase {
 	 * This method will be executed once when the user starts.
 	 * 
 	 *****************************************************************/
-	public abstract void initializeUser(PFRContext context);
+	public abstract void initializeUser();
 	
 	/*****************************************************************
 	 * This method will contain the main steps of your use case
 	 * 
 	 *****************************************************************/
-	public abstract void execute(PFRContext context) throws Throwable;
+	public abstract void execute() throws Throwable;
 	
 	/*****************************************************************
 	 * This method will be executed once when the test has finished.
 	 * 
 	 *****************************************************************/
-	public abstract void terminate(PFRContext context);
+	public abstract void terminate();
 	
 	
 }
