@@ -16,6 +16,7 @@ public class PFR {
 	public class JSON extends HSR.JSON{}; 
 	public class Math extends HSR.Math{}; 
 	public class Random extends HSR.Random{}; 
+	public class Text extends HSR.Text{}; 
 	public class Time extends HSR.Time{}; 
 
 }
