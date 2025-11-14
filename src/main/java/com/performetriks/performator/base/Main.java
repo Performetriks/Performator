@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.AgentControllerConnection;
 import com.xresch.hsr.base.HSRConfig;
-import com.xresch.hsr.base.HSRValue;
-import com.xresch.hsr.base.HSRValue.HSRValueType;
+import com.xresch.hsr.utils.Unvalue;
+import com.xresch.hsr.utils.Unvalue.UnvalueType;
 
 /***************************************************************************
  * The main class of the Performator framework that allows to kick off
@@ -27,13 +27,13 @@ public class Main {
 	
 	public enum CommandLineArgs {
 		
-		  pfr_mode(HSRValueType.STRING, "auto", "The mode to start the process with.")
-		, pfr_test(HSRValueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_logfile(HSRValueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_port(HSRValueType.NUMBER, "9876", "The port of the started instance, either .")
-		, pfr_agentIndex(HSRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_agentTotal(HSRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_controllerPort(HSRValueType.NUMBER, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")
+		  pfr_mode(UnvalueType.STRING, "auto", "The mode to start the process with.")
+		, pfr_test(UnvalueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_logfile(UnvalueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance, either .")
+		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_agentTotal(UnvalueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_controllerPort(UnvalueType.NUMBER, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();
@@ -41,14 +41,14 @@ public class Main {
 			for(Mode mode : Mode.values()) { names.add(mode.name()); }
 		}
 		
-		private HSRValueType type;
+		private UnvalueType type;
 		private String defaultissimo;
 		private String descrizione;
 		
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		private CommandLineArgs(HSRValueType type, String defaultissimo, String descrizione) {
+		private CommandLineArgs(UnvalueType type, String defaultissimo, String descrizione) {
 			this.type = type;
 			this.defaultissimo = defaultissimo;
 			this.descrizione = descrizione;
@@ -58,10 +58,10 @@ public class Main {
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		public HSRValue getValue() throws IllegalStateException { 
+		public Unvalue getValue() throws IllegalStateException { 
 
 			String property = System.getProperty(this.toString(), defaultissimo);
-			return HSRValue.newFromString(type, property);
+			return Unvalue.newFromString(type, property);
 		}
 		
 		/*****************************************************
@@ -147,7 +147,7 @@ public class Main {
 		
 		for(CommandLineArgs arg : CommandLineArgs.values()) {
 			try {
-				HSRValue value = arg.getValue();
+				Unvalue value = arg.getValue();
 				System.out.println("-D"+arg+": "+value.getAsString());
 			}catch(Throwable e) {
 				logger.error(arg.toString()+": "+e.getMessage(), e);
