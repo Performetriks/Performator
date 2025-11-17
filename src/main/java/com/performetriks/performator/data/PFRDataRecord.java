@@ -3,9 +3,15 @@ package com.performetriks.performator.data;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Joiner;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.utils.Unvalue;
+
+import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
  * 
@@ -16,6 +22,8 @@ import com.xresch.hsr.utils.Unvalue;
  * 
  ***************************************************************************/
 public class PFRDataRecord {
+	
+	private static final Logger logger = (Logger) LoggerFactory.getLogger(PFRDataRecord.class);
 	
 	LinkedHashMap<String, Unvalue> keyValues = new LinkedHashMap<>();
 	
@@ -74,10 +82,17 @@ public class PFRDataRecord {
 	 * 
 	 * @param key
 	 * 
-	 * @return the value to which the specified key is mapped, or null if 
-	 * this map contains no mapping for the key
+	 * @return the value to which the specified key is mapped, or a Unvalue
+	 * that is null if not available
 	 ***********************************************************************/
 	public Unvalue get(String key) {
+		if(!keyValues.containsKey(key)) {
+			String message = "Data Record did not contain a field with name: "+key;
+			HSR.addWarnMessage(message);
+			logger.warn(message);
+			
+			return Unvalue.newNull();
+		}
 		return keyValues.get(key);
 	}
 	
@@ -88,6 +103,22 @@ public class PFRDataRecord {
 	 ***********************************************************************/
 	public int size() {
 		return keyValues.size();
+	}
+	
+	/***********************************************************************
+	 * Returns the record as a string.
+	 * 
+	 * @return size
+	 ***********************************************************************/
+	public  String toString() {
+
+		if(keyValues.size() == 0) { return ""; } 
+		
+		return new StringBuilder(" [")
+				.append( Joiner.on(", ").withKeyValueSeparator("=").join(keyValues) )
+				.append("]")
+				.toString()
+				;
 	}
 	
 	

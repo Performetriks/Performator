@@ -5,15 +5,32 @@ import java.util.ArrayList;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
-public class PFRDataSourceJsonArray extends PFRDataSource {
+
+/***************************************************************************
+ * 
+ * Copyright Owner: Performetriks GmbH, Switzerland
+ * License: Eclipse Public License v2.0
+ * 
+ * @author Reto Scheiwiller
+ * 
+ ***************************************************************************/
+public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 
 	JsonArray array;
 	
+	/*****************************************************************
+	 * Constructor
+	 *****************************************************************/
 	public PFRDataSourceJsonArray(String datasourceName, JsonArray array) {
 		super(datasourceName);
 		this.array = array;
 	}
 
+	/*****************************************************************
+	 * Loads the data.
+	 * 
+	 * @return list or records.
+	 *****************************************************************/
 	@Override
 	protected ArrayList<PFRDataRecord> load() {
 		

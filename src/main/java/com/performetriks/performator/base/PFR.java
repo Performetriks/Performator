@@ -13,6 +13,8 @@ import com.xresch.hsr.base.HSR;
  ***************************************************************************/
 public class PFR {
 	
+	public class CSV extends HSR.CSV{}; 
+	public class Files extends HSR.Files{}; 
 	public class JSON extends HSR.JSON{}; 
 	public class Math extends HSR.Math{}; 
 	public class Random extends HSR.Random{}; 

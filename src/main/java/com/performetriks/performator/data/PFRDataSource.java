@@ -22,16 +22,12 @@ public abstract class PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSource.class.getName());
 	
-	private ArrayList<PFRDataRecord> data = new ArrayList<>();
-	
 	private String datasourceName; 
-	private int lastIndex = 0;
+
+	protected AccessMode accessMode = AccessMode.SEQUENTIAL;
+	protected RetainMode retainMode = RetainMode.INFINITE;
 	
-	private AccessMode accessMode = AccessMode.SEQUENTIAL;
-	private RetainMode retainMode = RetainMode.INFINITE;
-	
-	private Object SYNC_LOCK = new Object();
-	
+
 	/** Defines how the data should be accessed */
 	public enum AccessMode {
 		  /** Read the data in sequence. */
@@ -45,7 +41,9 @@ public abstract class PFRDataSource {
 	
 	/** Defines if a record should be used only once or multiple times */
 	public enum RetainMode {
+		  /** Use any data record an infinite amount of times. */
 		  INFINITE
+		  /** Use any data record once. */
 		, ONCE
 	}
 	
@@ -55,121 +53,130 @@ public abstract class PFRDataSource {
 	public PFRDataSource(String datasourceName) {
 		this.datasourceName = datasourceName;
 	}
-	
+		
 	/*****************************************************************
-	 * implement this to load the data and return it as data records.
+	 * This method prepares the data source for being used.
 	 * 
-	 * @return list or records.
+	 * @return instance for chaining
+	 * 
 	 *****************************************************************/
-	protected abstract ArrayList<PFRDataRecord> load();
-	
-	
-	/*****************************************************************
-	 * Prepares the data source for being used.
-	 *****************************************************************/
-	public PFRDataSource build() {
-		
-		//-----------------------------------
-		// Load the data
-		data = load();
-		if(data == null) {
-			data = new ArrayList<>();
-		}
-		
-		//-----------------------------------
-		// Check empty
-		if(data.isEmpty()) {
-			String message = "The data source "+datasourceName+" was empty on load.";
-			logger.warn(message);
-			HSR.addWarnMessage(message);
-		}
-		
-		//-----------------------------------
-		// Shuffle
-		if(AccessMode.SHUFFLE == accessMode) {
-			Collections.shuffle(data);
-		}
-		
-		return this;
-	}
+	public abstract PFRDataSource build();
 	
 	/*****************************************************************
 	 * Return true if this data source still has data.
 	 * Useful when using RetainMode.ONCE.
 	 *****************************************************************/
-	public boolean hasNext() {
-		return data.size() > 0;
+	public abstract boolean hasNext();
+	
+	/*****************************************************************
+	 * The method that will be called by the user to load the next
+	 * data record.
+	 *****************************************************************/
+	public abstract PFRDataRecord next();
+	
+	/*****************************************************************
+	 * Set the access mode to SEQUENTIAL.
+	 * Reads the data in sequence.
+	 * @return instance for chaining
+	 *****************************************************************/
+	public PFRDataSource sequential() {
+		this.accessMode = AccessMode.SEQUENTIAL;
+		return this;
 	}
 	
 	/*****************************************************************
-	 * The internal method that load the data.
+	 * Set the access mode to RANDOM.
+	 * Reads the data in random order.
+	 * @return instance for chaining
 	 *****************************************************************/
-	public PFRDataRecord next() {
-		
-		synchronized (SYNC_LOCK) {
-			switch(accessMode) {
-			case SEQUENTIAL:
-			case SHUFFLE:
-				return nextSequential();
-				
-			case RANDOM: 
-				return nextRandom();
-			
-			// default should never be reached, except the developer messed up
-			default:
-				logger.error("Undefined AccessMode: "+accessMode, new Exception()); 
-				return null;
-
-			
-			}
-		}
-		
+	public PFRDataSource random() {
+		this.accessMode = AccessMode.RANDOM;
+		return this;
 	}
 	
 	/*****************************************************************
-	 * The internal method that load the data.
+	 * Set the access mode to SHUFFLE.
+	 * Shuffles the data once, then reads it in sequence.
+	 * 
+	 * @return instance for chaining
 	 *****************************************************************/
-	private PFRDataRecord nextSequential() {
-		
-		switch(retainMode) {
-			case INFINITE:
-				PFRDataRecord record = data.get(lastIndex);
-				lastIndex++;
-				return record;
-				
-			case ONCE:
-				return data.remove(lastIndex);
-				
-			// default should never be reached, except the developer messed up
-			default:
-				logger.error("Undefined RetainMode: "+retainMode, new Exception());
-				return null;
-		}
-
+	public PFRDataSource shuffle() {
+		this.accessMode = AccessMode.SHUFFLE;
+		return this;
+	}
+	
+	
+	/*****************************************************************
+	 * Set the retain mode to INFINITE.
+	 * Use any data record an infinite amount of times.
+	 * 
+	 * @return instance for chaining
+	 *****************************************************************/
+	public PFRDataSource infinite() {
+		this.retainMode = RetainMode.INFINITE;
+		return this;
 	}
 	
 	/*****************************************************************
-	 * The internal method that load the data.
+	 * Set the retain mode to ONCE.
+	 * Use every data record exactly once.
+	 * 
+	 * @return instance for chaining
 	 *****************************************************************/
-	private PFRDataRecord nextRandom() {
-		
-		PFRDataRecord record = PFR.Random.fromArray(data);
-		
-		switch(retainMode) {
-			case INFINITE:
-				return record;
-				
-			case ONCE:
-				data.remove(record);
-				return record;
-				
-			// default should never be reached, except the developer messed up
-			default:
-				logger.error("Undefined RetainMode: "+retainMode, new Exception());
-				return null;
-		}
-
+	public PFRDataSource once() {
+		this.retainMode = RetainMode.ONCE;
+		return this;
 	}
+	
+	
+	/*****************************************************************
+	 * Returns the name of the data source.
+	 * 
+	 * @return the retain mode
+	 *****************************************************************/
+	public String name() {
+		return this.datasourceName;
+	}
+	
+	/*****************************************************************
+	 * Set the retain mode.
+	 * 
+	 * @return  instance for chaining
+	 *****************************************************************/
+	public PFRDataSource retainMode(RetainMode retainMode) {
+		this.retainMode = retainMode;
+		return this;
+	}
+	
+	/*****************************************************************
+	 * Returns the retain mode.
+	 * 
+	 * @return the retain mode
+	 *****************************************************************/
+	public RetainMode retainMode() {
+		return this.retainMode;
+	}
+	
+	/*****************************************************************
+	 * Set the access mode.
+	 * 
+	 * @return  instance for chaining
+	 *****************************************************************/
+	public PFRDataSource accessMode(AccessMode accessMode) {
+		this.accessMode = accessMode;
+		return this;
+	}
+		
+	/*****************************************************************
+	 * Returns the access mode.
+	 * 
+	 * @return the access mode
+	 *****************************************************************/
+	public AccessMode accessMode() {
+		return this.accessMode;
+	}
+	
+
 	
 	
 	
