@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 
 import ch.qos.logback.classic.Logger;
@@ -19,27 +20,30 @@ import ch.qos.logback.classic.Logger;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PFRDataSourceJsonFile extends PFRDataSourceStatic {
+public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSourceStatic.class.getName());
 	
 	private String packagePath;
 	private String filename;
+	private String separator = ",";
 	
 	/*****************************************************************
-	 * Creates a new data source for a JSON file.
+	 * Creates a new data source for a CSV file.
 	 * The file has to contain a JsonArray of JsonObjects.
 	 * If this is not the case, the data source will be empty on
 	 * load.
 	 * 
+	 * @param datasourceName uniqueName for this data source.
 	 * @param packagePath the path of the package that contains the
 	 * testdata file
 	 * @param filename the name of the file
 	 *****************************************************************/
-	public PFRDataSourceJsonFile(String datasourceName, String packagePath, String filename) {
+	public PFRDataSourceFileCSV(String datasourceName, String packagePath, String filename, String separator) {
 		super(datasourceName);
 		this.packagePath = packagePath;
 		this.filename = filename;
+		this.separator = separator;
 	}
 
 	/*****************************************************************
@@ -54,31 +58,31 @@ public class PFRDataSourceJsonFile extends PFRDataSourceStatic {
 		
 		//----------------------------
 		// Load the file
-		String jsonContent = PFR.Files.readPackageResource(packagePath, filename);
+		String csvContent = PFR.Files.readPackageResource(packagePath, filename);
 
-		if(jsonContent == null || jsonContent.isBlank() ) {
+		if(csvContent == null || csvContent.isBlank() ) {
 			logger.warn("The file for data source \""+name()+"\" was empty or could not be read.");
 			return result;
 		}
 		
 		//----------------------------
 		// Parse JSON
-		JsonElement potentialArray = PFR.JSON.fromJson(jsonContent);
-		
-		if(!potentialArray.isJsonArray()) {
-			logger.warn("The data source \""+name()+"\" did not contain a JSON Array.");
+		ArrayList<JsonObject> potentialArray;
+		try {
+			potentialArray = PFR.Data.parseAsCSV(csvContent, separator);
+		} catch (Exception e) {
+			logger.error("The data source \""+name()+"\" had an error while parsing CSV: "+e.getMessage(), e);
 			return result;
 		}
 		
-		JsonArray array = potentialArray.getAsJsonArray();
+		if(potentialArray == null ) {
+			return result;
+		}
 		
 		//----------------------------
 		// Create Result
-
-		for(JsonElement e : array) {
-			if(e.isJsonObject()) {
-				result.add( new PFRDataRecord(e.getAsJsonObject()) );
-			}
+		for(JsonObject o : potentialArray) {
+			result.add( new PFRDataRecord(o) );
 		}
 		
 		return result;

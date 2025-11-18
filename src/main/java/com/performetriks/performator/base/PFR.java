@@ -1,5 +1,6 @@
 package com.performetriks.performator.base;
 
+import com.performetriks.performator.data.PFRData;
 import com.xresch.hsr.base.HSR;
 
 /***************************************************************************
@@ -14,6 +15,7 @@ import com.xresch.hsr.base.HSR;
 public class PFR {
 	
 	public class CSV extends HSR.CSV{}; 
+	public class Data extends PFRData{}; 
 	public class Files extends HSR.Files{}; 
 	public class JSON extends HSR.JSON{}; 
 	public class Math extends HSR.Math{}; 
