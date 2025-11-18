@@ -1,8 +1,11 @@
 package com.performetriks.performator.base;
 
 import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 
 import com.google.common.base.Joiner;
+import com.performetriks.performator.data.PFRDataRecord;
+import com.xresch.hsr.utils.Unvalue;
 
 /***************************************************************************
  * 
@@ -40,10 +43,23 @@ public class PFRContext {
 	
 	/*****************************************************************
 	 * Scope: User<br>
-	 * Adds details that can be used by logs to add
+	 * Adds details that can be used by logging to add more useful 
+	 * information to analyze failing data constellations.
 	 *****************************************************************/
 	public static void logDetailsAdd(String key, String value) {
 		userLogDetails.get().put(key, value);
+	}
+	
+	/*****************************************************************
+	 * Scope: User<br>
+	 * Adds all the fields of the record as details that can be used 
+	 * by logging to add more useful information to analyze failing 
+	 * data constellations.
+	 *****************************************************************/
+	public static void logDetailsAdd(PFRDataRecord record) {
+		for(Entry<String, Unvalue> entry : record.entrySet()) {
+			logDetailsAdd(entry.getKey(), entry.getValue().getAsString());
+		}
 	}
 	
 	/*****************************************************************
@@ -66,11 +82,13 @@ public class PFRContext {
 		
 		if(details.size() == 0) { return ""; } 
 		
-		return new StringBuilder(" [")
-				.append( Joiner.on(", ").withKeyValueSeparator("=").join(details) )
-				.append("]")
-				.toString()
-				;
+		return PFR.JSON.toJSON(details).replace("\",\"", "\",   \"");
+		
+//		return new StringBuilder(" [")
+//				.append( Joiner.on(", ").withKeyValueSeparator("=").join(details) )
+//				.append("]")
+//				.toString()
+//				;
 	}
 	
 	/*****************************************************************

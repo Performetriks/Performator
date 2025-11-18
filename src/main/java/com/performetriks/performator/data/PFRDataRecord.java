@@ -2,6 +2,7 @@ package com.performetriks.performator.data;
 
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +104,14 @@ public class PFRDataRecord {
 	 ***********************************************************************/
 	public int size() {
 		return keyValues.size();
+	}
+	/***********************************************************************
+	 * Returns the entry set of key-value mappings in this data record.
+	 * 
+	 * @return entrySet
+	 ***********************************************************************/
+	public Set<Entry<String, Unvalue>> entrySet() {
+		return keyValues.entrySet();
 	}
 	
 	/***********************************************************************
