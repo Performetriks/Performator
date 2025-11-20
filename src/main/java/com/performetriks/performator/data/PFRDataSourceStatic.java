@@ -24,6 +24,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	
 	private ArrayList<PFRDataRecord> data = new ArrayList<>();
 	
+	private boolean hasBeenBuilt = false;
 	private int lastIndex = 0;
 	
 	private Object SYNC_LOCK = new Object();
@@ -47,7 +48,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	 * Prepares the data source for being used.
 	 *****************************************************************/
 	public PFRDataSourceStatic build() {
-		
+				
 		//-----------------------------------
 		// Load the data
 		data = load();
@@ -69,6 +70,8 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 			Collections.shuffle(data);
 		}
 		
+		hasBeenBuilt = true;
+		
 		return this;
 	}
 	
@@ -85,6 +88,8 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	 *****************************************************************/
 	public PFRDataRecord next() {
 		
+		if( ! hasBeenBuilt ) { logger.warn("The data source '"+name()+"' has not been built correctly. Make sure to call the build()-method on the instance."); }
+
 		synchronized (SYNC_LOCK) {
 			
 			if(!hasNext()) { return null; }
@@ -114,8 +119,12 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 		
 		switch(retainMode) {
 			case INFINITE:
+				
 				PFRDataRecord record = data.get(lastIndex);
+				
 				lastIndex++;
+				if(lastIndex == data.size()) { lastIndex = 0;}
+				
 				return record;
 				
 			case ONCE:
