@@ -221,6 +221,7 @@ public class PFRExecStandard extends PFRExec {
 			// -----------------------------------------------
 			// Log infos
 			// -----------------------------------------------
+			logger.info("Executor: " + this.getClass().getSimpleName() );
 			logger.info("Usecase: " + this.usecaseName());
 			logger.info("Percent: " + percent);
 			logger.info("Target Users: " + users);
@@ -299,7 +300,7 @@ public class PFRExecStandard extends PFRExec {
 						userThread.setName(this.usecaseName()+"-User-"+i);
 						scheduledUserThreadExecutor.scheduleAtFixedRate(
 								  userThread
-								, offsetSeconds
+								, 0
 								, pacingSeconds
 								, TimeUnit.SECONDS
 							);
@@ -318,14 +319,14 @@ public class PFRExecStandard extends PFRExec {
 					
 				}catch (Exception e) {
 					HSR.addException(e);
-					logger.info("Error While starting User Thread.");
+					logger.warn(this.usecaseName()+": Error While starting User Thread.");
 				}
 				
 			}
 			
 			//--------------------------------
 			// Wait for graceful stop
-			while(!gracefulStopRequested) {
+			while(!gracefulStopRequested && getCurrentTaskCount() > 0) {
 				Thread.sleep(1000);
 			}
 			
@@ -333,10 +334,7 @@ public class PFRExecStandard extends PFRExec {
 			// Initialize Graceful stop		
 			scheduledUserThreadExecutor.shutdown();
 			
-			int previousTasksCount = 
-					  scheduledUserThreadExecutor.getActiveCount()
-					+ scheduledUserThreadExecutor.getQueue().size();
-					;
+			int previousTasksCount = getCurrentTaskCount();
 			
 			//--------------------------------
 			// Wait for Stopping
@@ -346,10 +344,7 @@ public class PFRExecStandard extends PFRExec {
 			while( previousTasksCount > 0 && (shutdownEnd - shutdownStart) <= graceMillis ) {
 				Thread.sleep(1000);
 				
-				int currentTasksCount = 
-						  scheduledUserThreadExecutor.getActiveCount()
-						+ scheduledUserThreadExecutor.getQueue().size();
-						;
+				int currentTasksCount = getCurrentTaskCount();
 				HSR.decreaseUsers(previousTasksCount - currentTasksCount);
 				
 				previousTasksCount = currentTasksCount;
@@ -363,9 +358,18 @@ public class PFRExecStandard extends PFRExec {
 			
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
-		}finally {
 			HSR.decreaseUsers(1);
+		}finally {
+			
 		}	
+	}
+	
+	/*****************************************************************
+	 * Returns the amount of tasks that has not yet finished.
+	 *****************************************************************/
+	private int getCurrentTaskCount() {
+		return scheduledUserThreadExecutor.getActiveCount()
+			 + scheduledUserThreadExecutor.getQueue().size();
 	}
 	
 	/*****************************************************************
