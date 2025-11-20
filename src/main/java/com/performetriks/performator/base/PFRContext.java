@@ -82,7 +82,7 @@ public class PFRContext {
 		
 		if(details.size() == 0) { return ""; } 
 		
-		return PFR.JSON.toJSON(details).replace("\",\"", "\",   \"");
+		return " " + PFR.JSON.toJSON(details).replace("\",\"", "\",   \"");
 		
 //		return new StringBuilder(" [")
 //				.append( Joiner.on(", ").withKeyValueSeparator("=").join(details) )
