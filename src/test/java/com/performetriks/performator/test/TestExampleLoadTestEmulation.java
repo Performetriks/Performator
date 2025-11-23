@@ -123,7 +123,8 @@ public class TestExampleLoadTestEmulation {
 		
 		//--------------------------
 		// Enable
-		HSRConfig.enable(REPORT_INTERVAL_SECONDS); 
+		HSRConfig.setInterval(REPORT_INTERVAL_SECONDS); 
+		HSRConfig.enable(); 
 		
 	}
 	

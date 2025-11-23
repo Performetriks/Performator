@@ -102,7 +102,8 @@ public class Globals {
 		
 		//--------------------------
 		// Enable
-		HSRConfig.enable(REPORT_INTERVAL_SECONDS); 
+		HSRConfig.setInterval(REPORT_INTERVAL_SECONDS); 
+		HSRConfig.enable(); 
 		
 	}
 }

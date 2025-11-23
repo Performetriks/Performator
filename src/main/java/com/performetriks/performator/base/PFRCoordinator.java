@@ -228,7 +228,7 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Execute
-		HSRConfig.enable(15);
+		HSRConfig.enable();
 		startTestLocally(test);
 		
 		
