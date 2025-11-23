@@ -7,7 +7,7 @@ clean install -DcreateChecksum=true
 #########################################################
 # Signing for publishing
 #########################################################
-gpg -ab hsr-1.0.0.jar
-gpg -ab hsr-1.0.0-javadoc.jar
-gpg -ab hsr-1.0.0-sources.jar
-gpg -ab hsr-1.0.0.pom
+gpg -ab performator-1.0.0.jar
+gpg -ab performator-1.0.0-javadoc.jar
+gpg -ab performator-1.0.0-sources.jar
+gpg -ab performator-1.0.0.pom
