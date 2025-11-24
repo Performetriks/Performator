@@ -116,7 +116,7 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
-	 * Returns the record as a string.
+	 * Returns the record as an array string oneliner.
 	 * 
 	 * @return size
 	 ***********************************************************************/
@@ -124,9 +124,31 @@ public class PFRDataRecord {
 
 		if(keyValues.size() == 0) { return ""; } 
 		
-		return " " + PFR.JSON.toJSON(keyValues).replace("\",\"", "\",   \"");
+		return new StringBuilder("[")
+				.append( Joiner.on("\",    ").withKeyValueSeparator("=\"").join(keyValues) )
+				.append("]")
+				.toString()
+				;
 		
 	}
+	
+	/***********************************************************************
+	 * Returns the record as an array string with pretty print.
+	 * 
+	 * @return size
+	 ***********************************************************************/
+	public  String toStringPretty() {
+
+		if(keyValues.size() == 0) { return ""; } 
+		
+		return new StringBuilder("[\r\n  ")
+				.append( Joiner.on("\"\r\n, ").withKeyValueSeparator("=\"").join(keyValues) )
+				.append("\r\n]")
+				.toString()
+				;
+		
+	}
+	
 	
 	
 
