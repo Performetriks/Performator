@@ -126,7 +126,7 @@ public class PFRDataRecord {
 		
 		return new StringBuilder("[")
 				.append( Joiner.on("\",    ").withKeyValueSeparator("=\"").join(keyValues) )
-				.append("]")
+				.append("\"]")
 				.toString()
 				;
 		
@@ -143,7 +143,7 @@ public class PFRDataRecord {
 		
 		return new StringBuilder("[\r\n  ")
 				.append( Joiner.on("\"\r\n, ").withKeyValueSeparator("=\"").join(keyValues) )
-				.append("\r\n]")
+				.append("\"\r\n]")
 				.toString()
 				;
 		
