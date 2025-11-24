@@ -84,6 +84,13 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	}
 	
 	/*****************************************************************
+	 * Returns the number of data records.
+	 *****************************************************************/
+	public int size() {
+		return data.size();
+	}
+	
+	/*****************************************************************
 	 * 
 	 *****************************************************************/
 	public PFRDataRecord next() {

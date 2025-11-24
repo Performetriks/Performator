@@ -75,6 +75,11 @@ public abstract class PFRDataSource {
 	public abstract PFRDataRecord next();
 	
 	/*****************************************************************
+	 * Returns the number of data records.
+	 *****************************************************************/
+	public abstract int size();
+	
+	/*****************************************************************
 	 * Set the access mode to SEQUENTIAL.
 	 * Reads the data in sequence.
 	 * @return instance for chaining
