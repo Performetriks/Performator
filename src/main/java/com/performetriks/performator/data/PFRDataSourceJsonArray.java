@@ -34,7 +34,10 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 	@Override
 	protected ArrayList<PFRDataRecord> load() {
 		
+		
 		ArrayList<PFRDataRecord> result = new ArrayList<>();
+		
+		if(array == null) { return result; }
 		
 		for(JsonElement e : array) {
 			if(e.isJsonObject()) {

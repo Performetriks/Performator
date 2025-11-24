@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Joiner;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.PFR;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.utils.Unvalue;
 
@@ -123,11 +124,8 @@ public class PFRDataRecord {
 
 		if(keyValues.size() == 0) { return ""; } 
 		
-		return new StringBuilder(" [")
-				.append( Joiner.on(", ").withKeyValueSeparator("=").join(keyValues) )
-				.append("]")
-				.toString()
-				;
+		return " " + PFR.JSON.toJSON(keyValues).replace("\",\"", "\",   \"");
+		
 	}
 	
 	

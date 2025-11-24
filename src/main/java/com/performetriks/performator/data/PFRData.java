@@ -107,6 +107,20 @@ public class PFRData {
 	}
 	
 	/****************************************************************************
+	 * Creates a new data source for a JSON file.
+	 * The file has to contain a JsonArray of JsonObjects.
+	 * If this is not the case, the data source will be empty on
+	 * load.
+	 * @param datasourceName uniqueName for this data source.
+	 * @param packagePath the path of the package that contains the
+	 * testdata file
+	 * @param filename the name of the file
+	 ****************************************************************************/
+	public static PFRDataSourceJsonArray newSourceJsonArray(String datasourceName, JsonArray array) {
+		return new PFRDataSourceJsonArray(datasourceName, array);
+	}
+	
+	/****************************************************************************
 	 * Creates a new data source for a CSV file.
 	 * The file has to contain a JsonArray of JsonObjects.
 	 * If this is not the case, the data source will be empty on
