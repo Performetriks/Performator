@@ -1,6 +1,8 @@
 package com.performetriks.performator.executors;
 
 import java.time.Duration;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -41,18 +43,6 @@ public abstract class PFRExec {
 	protected boolean gracefulStopDone = false;  
 	
 	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
-	private ScheduledThreadPoolExecutor selfStopperThreadExecutor;
-	
-	private static ThreadFactory factory =  new ThreadFactory() {
-	    private final AtomicInteger count = new AtomicInteger(1);
-
-	    @Override
-	    public Thread newThread(Runnable r) {
-	        Thread t = new Thread(r);
-	        t.setName("Executor-SelfStopper-" + count.getAndIncrement());
-	        return t;
-	    }
-	};
 	
 	/*****************************************************************
 	 * Constructor
@@ -143,17 +133,24 @@ public abstract class PFRExec {
 	 * @param maxDuration
 	 * @return instance for chaining
 	 ***************************************************************************/
-	public PFRExec setGracefulStop(Duration gracefulStop){
+	public PFRExec gracefulStop(Duration gracefulStop){
 		this.usecaseGracefulStopDuration = gracefulStop;
 		return this;
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Returns the graceful stop duration.
 	 * @return duration
 	 ***************************************************************************/
-	public Duration getGracefulStop(){
+	public Duration gracefulStop(){
 		return usecaseGracefulStopDuration;
+	}
+	
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	public void requestGracefulStop() {
+		this.gracefulStopRequested = true;
 	}
 	
 	/*****************************************************************
@@ -184,10 +181,14 @@ public abstract class PFRExec {
 	 *****************************************************************/
 	public abstract void executeThreads();
 	
+	
 	/*****************************************************************
-	 * stop Gracefully
+	 * Method to do any kind of cleanup tasks etc.
+	 * This will not stop the execution, use doGracefulStop() or
+	 * requestGracefulStop() to initiate the shutdown of the execution.
+	 * 
 	 *****************************************************************/
-	public abstract void requestGracefulStop();	
+	public abstract void terminate();
 	
 	/*****************************************************************
 	 * Returns the amount of tasks that has not yet finished.
@@ -212,6 +213,7 @@ public abstract class PFRExec {
 			    public Thread newThread(Runnable r) {
 			        Thread t = new Thread(r);
 			        t.setName(executorName+"-User-" + count.getAndIncrement());
+			        t.setDaemon(true); // prevent thread from blocking the JVM to stop
 			        return t;
 			    }
 			};
@@ -227,7 +229,9 @@ public abstract class PFRExec {
 	 * Do the graceful stopping.
 	 * 
 	 *****************************************************************/
-	public void doGracefulStop(Duration waitTime)  {
+	protected void doGracefulStop(Duration waitTime)  {
+		
+		if(waitTime == null) { waitTime = Duration.ofMillis(0); }
 		
 		gracefulStopRequested = true;
 		
@@ -266,10 +270,6 @@ public abstract class PFRExec {
 		}
 	}
 	
-	/*****************************************************************
-	 * Method to do any kind of termination.
-	 *****************************************************************/
-	public abstract void terminate();
 	
 
 	/*****************************************************************
@@ -277,33 +277,19 @@ public abstract class PFRExec {
 	 *****************************************************************/
 	private void createSelfStopper() {
 		
-		if(maxDuration == null) { return; }
-		//-------------------------
-		// Create Scheduler
-		selfStopperThreadExecutor = (ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(1, factory);
-
-		//-------------------------
-		// Create Thread
-		PFRExec instance = this;
+		if(maxDuration == null) { return; }			
 		
-		Thread selfStopperThread = new Thread(new Runnable() {
-			
+		PFRExec instance = this;
+		Timer timer = new Timer(true);
+		
+		timer.schedule(new TimerTask() {
 			@Override
 			public void run() {
-				
 				instance.doGracefulStop(usecaseGracefulStopDuration);
-				
-				
 			}
-		});
-			
-		//-------------------------
-		// Schedule Thread
-		selfStopperThreadExecutor.schedule(
-				  selfStopperThread
-				, maxDuration.getSeconds()
-				, TimeUnit.SECONDS
-			);
+		}
+		, maxDuration.getSeconds() * 1000);
+		
 										
 	}
 	

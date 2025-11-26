@@ -92,16 +92,12 @@ public class PFRExecOnce extends PFRExec {
 		
 		synchronized(logger) {
 			// -----------------------------------------------
-			// Log Warnings
+			// Log
 			// -----------------------------------------------
 			String sides = "=".repeat(16);
 			String title = " Load Config: "+this.usecaseName()+" ";
 			logger.info(sides + title + sides);
 			
-			
-			// -----------------------------------------------
-			// Log infos
-			// -----------------------------------------------
 			logger.info("Executor: " + this.getClass().getSimpleName() );
 			logger.info("Usecase: " + this.usecaseName());
 			logger.info("Start Offset: " + offsetSeconds);
@@ -226,14 +222,6 @@ public class PFRExecOnce extends PFRExec {
 		});
 	}
 	
-
-	/*****************************************************************
-	 * 
-	 *****************************************************************/
-	@Override
-	public void requestGracefulStop() {
-		this.gracefulStopRequested = true;
-	}
 	
 	/*****************************************************************
 	 * 

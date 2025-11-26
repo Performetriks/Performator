@@ -428,15 +428,7 @@ public class PFRExecStandard extends PFRExec {
 			}
 		});
 	}
-	
 
-	/*****************************************************************
-	 * 
-	 *****************************************************************/
-	@Override
-	public void requestGracefulStop() {
-		this.gracefulStopRequested = true;
-	}
 	
 	/*****************************************************************
 	 * 
