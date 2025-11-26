@@ -219,6 +219,16 @@ public abstract class PFRExec {
 			};
 			
 			scheduledUserThreadExecutor = (ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(threadPoolSize, factory);
+			
+			//-------------------------------
+			// Make sure to kill that pest
+			String name = this.getClass().getSimpleName();
+			Runtime.getRuntime().addShutdownHook(
+				new Thread(() -> {
+					logger.info("Terminate thread pool for "+ name);
+					scheduledUserThreadExecutor.shutdownNow();
+				})
+			);
 		}
 		
 		return scheduledUserThreadExecutor;
