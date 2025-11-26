@@ -351,7 +351,7 @@ public class PFRCoordinator {
 	private static void gracefullyStopExecutorThreads() {
 		
 		for(PFRExec executor : executorList) {
-			executor.gracefulStop();
+			executor.requestGracefulStop();
 		}
 	}
 	

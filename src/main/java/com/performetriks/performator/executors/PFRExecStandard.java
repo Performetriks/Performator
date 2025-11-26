@@ -1,5 +1,6 @@
 package com.performetriks.performator.executors;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -10,7 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
@@ -267,20 +267,7 @@ public class PFRExecStandard extends PFRExec {
 
 		//-------------------------
 		// Create Scheduler
-		String executorName = this.getClass().getSimpleName();
-		ThreadFactory factory =  new ThreadFactory() {
-		    private final AtomicInteger count = new AtomicInteger(1);
-
-		    @Override
-		    public Thread newThread(Runnable r) {
-		        Thread t = new Thread(r);
-		        t.setName(executorName+"-User-" + count.getAndIncrement());
-		        return t;
-		    }
-		};
-		
-		scheduledUserThreadExecutor = 
-				(ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(users, factory);
+		scheduledUserThreadExecutor = getScheduledUserExecutor(users);
 
 		try {
 			
@@ -332,29 +319,7 @@ public class PFRExecStandard extends PFRExec {
 			
 			//--------------------------------
 			// Initialize Graceful stop		
-			scheduledUserThreadExecutor.shutdown();
-			
-			int previousTasksCount = getCurrentTaskCount();
-			
-			//--------------------------------
-			// Wait for Stopping
-			long shutdownStart = System.currentTimeMillis();
-			long shutdownEnd = shutdownStart;
-			long graceMillis = this.test().gracefulStop().getSeconds();
-			while( previousTasksCount > 0 && (shutdownEnd - shutdownStart) <= graceMillis ) {
-				Thread.sleep(1000);
-				
-				int currentTasksCount = getCurrentTaskCount();
-				HSR.decreaseUsers(previousTasksCount - currentTasksCount);
-				
-				previousTasksCount = currentTasksCount;
-				
-			}
-			
-			scheduledUserThreadExecutor.awaitTermination(
-					  this.test().gracefulStop().getSeconds()
-					, TimeUnit.SECONDS
-				);
+			doGracefulStop(this.test().gracefulStop());
 			
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
@@ -364,13 +329,6 @@ public class PFRExecStandard extends PFRExec {
 		}	
 	}
 	
-	/*****************************************************************
-	 * Returns the amount of tasks that has not yet finished.
-	 *****************************************************************/
-	private int getCurrentTaskCount() {
-		return scheduledUserThreadExecutor.getActiveCount()
-			 + scheduledUserThreadExecutor.getQueue().size();
-	}
 	
 	/*****************************************************************
 	 * INTERNAL USE ONLY
@@ -476,7 +434,7 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 *****************************************************************/
 	@Override
-	public void gracefulStop() {
+	public void requestGracefulStop() {
 		this.gracefulStopRequested = true;
 	}
 	

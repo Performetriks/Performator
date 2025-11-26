@@ -1,16 +1,12 @@
 package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
@@ -36,13 +32,11 @@ public class PFRExecOnce extends PFRExec {
 	private boolean executeInThisInstance = true;
 	private boolean executionFinished = false;
 	
-	private boolean gracefulStopRequested = false;  
+
 	private boolean isTerminated = false;
-	
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
-	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
 	
 	/*****************************************************************
 	 * Clones this instance of the executor.
@@ -138,20 +132,7 @@ public class PFRExecOnce extends PFRExec {
 		
 		//-------------------------
 		// Create Scheduler
-		String executorName = this.getClass().getSimpleName();
-		ThreadFactory factory =  new ThreadFactory() {
-		    private final AtomicInteger count = new AtomicInteger(1);
-
-		    @Override
-		    public Thread newThread(Runnable r) {
-		        Thread t = new Thread(r);
-		        t.setName(executorName+"-User-" + count.getAndIncrement());
-		        return t;
-		    }
-		};
-		
-		scheduledUserThreadExecutor = 
-				(ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(1, factory);
+		ScheduledThreadPoolExecutor threadExecutor = getScheduledUserExecutor(1);
 
 		try {
 						
@@ -162,7 +143,7 @@ public class PFRExecOnce extends PFRExec {
 				Thread userThread = createUserThread();
 				
 					userThread.setName(this.usecaseName()+"-User");
-					scheduledUserThreadExecutor.schedule(
+					threadExecutor.schedule(
 							  userThread
 							, offsetSeconds
 							, TimeUnit.SECONDS
@@ -173,7 +154,6 @@ public class PFRExecOnce extends PFRExec {
 				HSR.increaseUsers(1);
 
 			}catch (Exception e) {
-				HSR.addException(e);
 				logger.warn(this.usecaseName()+": Error While starting User Thread.");
 			}
 				
@@ -184,30 +164,8 @@ public class PFRExecOnce extends PFRExec {
 			}
 			
 			//--------------------------------
-			// Initialize Graceful stop		
-			scheduledUserThreadExecutor.shutdown();
-			
-			int previousTasksCount = getCurrentTaskCount();
-			
-			//--------------------------------
-			// Wait for Stopping
-			long shutdownStart = System.currentTimeMillis();
-			long shutdownEnd = shutdownStart;
-			long graceMillis = this.test().gracefulStop().getSeconds();
-			while( previousTasksCount > 0 && (shutdownEnd - shutdownStart) <= graceMillis ) {
-				Thread.sleep(1000);
-				
-				int currentTasksCount = getCurrentTaskCount();
-				HSR.decreaseUsers(previousTasksCount - currentTasksCount);
-				
-				previousTasksCount = currentTasksCount;
-				
-			}
-			
-			scheduledUserThreadExecutor.awaitTermination(
-					  this.test().gracefulStop().getSeconds()
-					, TimeUnit.SECONDS
-				);
+			// Initialize Graceful stop
+			doGracefulStop(this.test().gracefulStop());
 			
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
@@ -216,15 +174,8 @@ public class PFRExecOnce extends PFRExec {
 			
 		}	
 	}
-	
-	/*****************************************************************
-	 * Returns the amount of tasks that has not yet finished.
-	 *****************************************************************/
-	private int getCurrentTaskCount() {
-		return scheduledUserThreadExecutor.getActiveCount()
-		+ scheduledUserThreadExecutor.getQueue().size();
-	}
-	
+
+		
 	/*****************************************************************
 	 * INTERNAL USE ONLY
 	 *****************************************************************/
@@ -261,7 +212,6 @@ public class PFRExecOnce extends PFRExec {
 						HSR.endAllOpen(HSRRecordStatus.Aborted);
 						
 					}catch (Throwable e) {
-						HSR.addException(e);
 						logger.error("Unhandled Exception occured.", e);
 						HSR.endAllOpen(HSRRecordStatus.Failed);
 					}
@@ -281,7 +231,7 @@ public class PFRExecOnce extends PFRExec {
 	 * 
 	 *****************************************************************/
 	@Override
-	public void gracefulStop() {
+	public void requestGracefulStop() {
 		this.gracefulStopRequested = true;
 	}
 	
@@ -300,7 +250,6 @@ public class PFRExecOnce extends PFRExec {
 						thread.interrupt();
 					}
 				}catch(Throwable e) {
-					HSR.addException(e);
 					logger.error("Error while stopping user thread: " + e.getMessage(), e);
 				}
 			}
