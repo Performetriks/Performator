@@ -54,7 +54,6 @@ public class PFRExecStandard extends PFRExec {
 	private int rampUpInterval = -1;
 	private int pacingSeconds = -1;
 	
-	private boolean gracefulStopRequested = false;  
 	private boolean isTerminated = false;
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
@@ -304,6 +303,9 @@ public class PFRExecStandard extends PFRExec {
 						Thread.sleep(rampUpInterval * 1000);
 					}
 					
+				}catch (InterruptedException e) {
+				    Thread.currentThread().interrupt();
+				    return;                              
 				}catch (Exception e) {
 					HSR.addException(e);
 					logger.warn(this.usecaseName()+": Error While starting User Thread.");
@@ -324,6 +326,8 @@ public class PFRExecStandard extends PFRExec {
 		}catch(InterruptedException e) {
 			logger.info("User Thread interrupted.");
 			HSR.decreaseUsers(1);
+			Thread.currentThread().interrupt();
+		    return; 
 		}finally {
 			
 		}	
@@ -407,6 +411,9 @@ public class PFRExecStandard extends PFRExec {
 						// make sure everything is closed
 						HSR.endAllOpen(HSRRecordStatus.Aborted);
 						
+					}catch (InterruptedException e) {
+					    Thread.currentThread().interrupt(); // prevent lingering of threads
+					    return;                              
 					}catch (Throwable e) {
 						HSR.addException(e);
 						logger.error("Unhandled Exception occured.", e);
@@ -423,7 +430,6 @@ public class PFRExecStandard extends PFRExec {
 					
 				}catch(Exception e) {
 					logger.info("User Thread interrupted.");
-				}finally {
 				}
 			}
 		});
