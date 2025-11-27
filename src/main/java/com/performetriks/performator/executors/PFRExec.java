@@ -53,6 +53,44 @@ public abstract class PFRExec {
 		this.usecaseName = this.getUsecaseInstance().getName();
 	}
 	
+	
+	/*****************************************************************
+	 * This method will be executed by agents to calculate the amount
+	 * of load that a specific agent will execute.
+	 * It will be executed before initialize() is called.
+	 * 
+	 * The agentNumber is 1 for the first 2 for the second etc... and
+	 * can be used to calculate the load a specific agent will hold.
+	 * 
+	 * @param totalAgent agent count
+	 * @param agentIndex the number of the agent
+	 * @param recursionIndex can be used to call this method recursively.
+	 * 
+	 *****************************************************************/
+	public abstract void distributeLoad(int totalAgents, int agentIndex, int recursionIndex);
+	
+	/*****************************************************************
+	 * Method to do any kind of initialization before executeUsecase()
+	 * is called.
+	 *****************************************************************/
+	public abstract void initialize();	
+	
+	
+	/*****************************************************************
+	 * This method will start and manage the users of the executor.
+	 * Implement it to handle any kind of runtime exceptions.
+	 *****************************************************************/
+	public abstract void executeThreads();
+	
+	
+	/*****************************************************************
+	 * Method to do any kind of cleanup tasks etc.
+	 * This will not stop the execution, use doGracefulStop() or
+	 * requestGracefulStop() to initiate the shutdown of the execution.
+	 * 
+	 *****************************************************************/
+	public abstract void terminate();
+	
 	/*****************************************************************
 	 * 
 	 * @return usecase
@@ -152,43 +190,6 @@ public abstract class PFRExec {
 	public void requestGracefulStop() {
 		this.gracefulStopRequested = true;
 	}
-	
-	/*****************************************************************
-	 * This method will be executed by agents to calculate the amount
-	 * of load that a specific agent will execute.
-	 * It will be executed before initialize() is called.
-	 * 
-	 * The agentNumber is 1 for the first 2 for the second etc... and
-	 * can be used to calculate the load a specific agent will hold.
-	 * 
-	 * @param totalAgent agent count
-	 * @param agentIndex the number of the agent
-	 * @param recursionIndex can be used to call this method recursively.
-	 * 
-	 *****************************************************************/
-	public abstract void distributeLoad(int totalAgents, int agentIndex, int recursionIndex);
-	
-	/*****************************************************************
-	 * Method to do any kind of initialization before executeUsecase()
-	 * is called.
-	 *****************************************************************/
-	public abstract void initialize();	
-	
-	
-	/*****************************************************************
-	 * This method will start and manage the users of the executor.
-	 * Implement it to handle any kind of runtime exceptions.
-	 *****************************************************************/
-	public abstract void executeThreads();
-	
-	
-	/*****************************************************************
-	 * Method to do any kind of cleanup tasks etc.
-	 * This will not stop the execution, use doGracefulStop() or
-	 * requestGracefulStop() to initiate the shutdown of the execution.
-	 * 
-	 *****************************************************************/
-	public abstract void terminate();
 	
 	/*****************************************************************
 	 * Returns the amount of tasks that has not yet finished.
