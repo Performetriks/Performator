@@ -37,14 +37,18 @@ public class PFRExecOnce extends PFRExec {
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
-	
+	private Class<? extends PFRUsecase> usecaseClass;
+	private String usecaseName;
+
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
 	public PFRExecOnce(Class<? extends PFRUsecase> usecaseClass) {
-		super(usecaseClass);
+		this.usecaseClass = usecaseClass;
+		PFRUsecase instance = PFRUsecase.getUsecaseInstance(usecaseClass);
+		usecaseName = instance.getName();
 	}
 	
 	/*************************************************************************** 
@@ -95,11 +99,11 @@ public class PFRExecOnce extends PFRExec {
 			// Log
 			// -----------------------------------------------
 			String sides = "=".repeat(16);
-			String title = " Load Config: "+this.usecaseName()+" ";
+			String title = " Load Config: "+this.getExecutedName()+" ";
 			logger.info(sides + title + sides);
 			
 			logger.info("Executor: " + this.getClass().getSimpleName() );
-			logger.info("Usecase: " + this.usecaseName());
+			logger.info("Usecase: " + this.getExecutedName());
 			logger.info("Start Offset: " + offsetSeconds);
 			logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
 		}
@@ -111,6 +115,16 @@ public class PFRExecOnce extends PFRExec {
 	@Override
 	public void getSettings(JsonObject settings) {
 		settings.addProperty("startOffsetSec", offsetSeconds);
+	}
+	
+	/*****************************************************************
+	 * Return the name of the usecase or other thing that is 
+	 * executed by this executor. 
+	 * 
+	 * @return the name of the usecase or null
+	 *****************************************************************/
+	public String getExecutedName() {
+		return usecaseName;
 	}
 	
 	/*****************************************************************
@@ -138,7 +152,7 @@ public class PFRExecOnce extends PFRExec {
 			try {
 				Thread userThread = createUserThread();
 				
-					userThread.setName(this.usecaseName()+"-User");
+					userThread.setName(this.getExecutedName()+"-User");
 					threadExecutor.schedule(
 							  userThread
 							, offsetSeconds
@@ -150,7 +164,7 @@ public class PFRExecOnce extends PFRExec {
 				HSR.increaseUsers(1);
 
 			}catch (Exception e) {
-				logger.warn(this.usecaseName()+": Error While starting User Thread.");
+				logger.warn(this.getExecutedName()+": Error While starting User Thread.");
 			}
 				
 			//--------------------------------
@@ -190,8 +204,10 @@ public class PFRExecOnce extends PFRExec {
 	 *****************************************************************/
 	public Thread createUserThread() {
 		
-
-		PFRUsecase usecase = this.getUsecaseInstance();
+		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
+		
+		HSR.setUsecase(usecase.getName());
+		
 		usecase.initializeUser();
 		
 		return new Thread(new Runnable() {

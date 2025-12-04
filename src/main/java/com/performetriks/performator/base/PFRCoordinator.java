@@ -338,7 +338,7 @@ public class PFRCoordinator {
 			
 			HSRConfig.addTestSettings(
 					new HSRTestSettings(
-							  executor.usecaseName()
+							  executor.getExecutedName()
 							, settings
 						)
 				);

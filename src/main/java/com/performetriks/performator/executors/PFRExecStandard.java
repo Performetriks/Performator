@@ -1,12 +1,8 @@
 package com.performetriks.performator.executors;
 
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.LoggerFactory;
 
@@ -60,13 +56,18 @@ public class PFRExecStandard extends PFRExec {
 	
 	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
 	
+	private Class<? extends PFRUsecase> usecaseClass;
+	private String usecaseName;
+	
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
 	public PFRExecStandard(Class<? extends PFRUsecase> usecaseClass) {
-		super(usecaseClass);
+		this.usecaseClass = usecaseClass;
+		PFRUsecase instance = PFRUsecase.getUsecaseInstance(usecaseClass);
+		usecaseName = instance.getName();
 	}
 	
 	/*************************************************************************** 
@@ -194,7 +195,7 @@ public class PFRExecStandard extends PFRExec {
 			// Log Warnings
 			// -----------------------------------------------
 			String sides = "=".repeat(16);
-			String title = " Load Config: "+this.usecaseName()+" ";
+			String title = " Load Config: "+this.getExecutedName()+" ";
 			logger.info(sides + title + sides);
 			
 			if(rampUpInterval == 0) {
@@ -221,7 +222,7 @@ public class PFRExecStandard extends PFRExec {
 			// Log infos
 			// -----------------------------------------------
 			logger.info("Executor: " + this.getClass().getSimpleName() );
-			logger.info("Usecase: " + this.usecaseName());
+			logger.info("Usecase: " + this.getExecutedName());
 			logger.info("Percent: " + percent);
 			logger.info("Target Users: " + users);
 			logger.info("Executions/Hour: " + execsHour);
@@ -249,6 +250,16 @@ public class PFRExecStandard extends PFRExec {
 		settings.addProperty("rampUpIntervalSec", rampUpInterval);
 		settings.addProperty("pacingSec", pacingSeconds);
 
+	}
+	
+	/*****************************************************************
+	 * Return the name of the usecase or other thing that is 
+	 * executed by this executor. 
+	 * 
+	 * @return the name of the usecase or null
+	 *****************************************************************/
+	public String getExecutedName() {
+		return usecaseName;
 	}
 	
 	/*****************************************************************
@@ -283,7 +294,7 @@ public class PFRExecStandard extends PFRExec {
 				try {
 					Thread userThread = createUserThread();
 					
-						userThread.setName(this.usecaseName()+"-User-"+i);
+						userThread.setName(this.getExecutedName()+"-User-"+i);
 						scheduledUserThreadExecutor.scheduleAtFixedRate(
 								  userThread
 								, 0
@@ -308,7 +319,7 @@ public class PFRExecStandard extends PFRExec {
 				    return;                              
 				}catch (Exception e) {
 					HSR.addException(e);
-					logger.warn(this.usecaseName()+": Error While starting User Thread.");
+					logger.warn(this.getExecutedName()+": Error While starting User Thread.");
 				}
 				
 			}
@@ -393,7 +404,10 @@ public class PFRExecStandard extends PFRExec {
 		
 		int pacingMillis = pacingSeconds * 1000;
 		
-		PFRUsecase usecase = this.getUsecaseInstance();
+		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
+		
+		HSR.setUsecase(usecase.getName());
+		
 		usecase.initializeUser();
 		
 		return new Thread(new Runnable() {

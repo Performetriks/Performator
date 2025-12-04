@@ -1,5 +1,11 @@
 package com.performetriks.performator.base;
 
+import org.slf4j.LoggerFactory;
+
+import com.performetriks.performator.executors.PFRExec;
+
+import ch.qos.logback.classic.Logger;
+
 /***************************************************************************
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
@@ -9,15 +15,8 @@ package com.performetriks.performator.base;
  * 
  ***************************************************************************/
 public abstract class PFRUsecase {
-
 	
-	/*****************************************************************
-	 * This method will return the name of the usecase.
-	 * 
-	 *****************************************************************/
-	public String getName() {
-		return this.getClass().getSimpleName();
-	}
+	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRUsecase.class.getName());
 	
 	/*****************************************************************
 	 * This method will be executed once when the user starts.
@@ -36,6 +35,34 @@ public abstract class PFRUsecase {
 	 * 
 	 *****************************************************************/
 	public abstract void terminate();
+	
+	/*****************************************************************
+	 * This method will return the name of the usecase.
+	 * 
+	 *****************************************************************/
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+	
+	/*****************************************************************
+	 * 
+	 * @return usecase
+	 *****************************************************************/
+	public static PFRUsecase getUsecaseInstance(Class<? extends PFRUsecase> usecaseClass){
+		
+		try {
+			return (PFRUsecase) usecaseClass.getDeclaredConstructor()
+		    		.newInstance();
+
+		} catch (Exception e) {
+			logger.error("Error while creating instance for class "+usecaseClass.getName(), e);
+		}
+		
+		return null;
+		
+	}
+	
+
 	
 	
 }

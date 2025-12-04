@@ -31,9 +31,6 @@ public abstract class PFRExec {
 	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExec.class.getName());
 	
 	private PFRTest test;
-	private Class<? extends PFRUsecase> usecaseClass;
-	private String usecaseName;
-	
 	
 	private Duration maxDuration = null;
 	private Duration usecaseGracefulStopDuration = Duration.ofMinutes(1);
@@ -43,16 +40,7 @@ public abstract class PFRExec {
 	protected boolean gracefulStopDone = false;  
 	
 	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
-	
-	/*****************************************************************
-	 * Constructor
-	 * 
-	 *****************************************************************/
-	public PFRExec(Class<? extends PFRUsecase> usecaseClass){
-		this.usecaseClass = usecaseClass;
-		this.usecaseName = this.getUsecaseInstance().getName();
-	}
-	
+			
 	
 	/*****************************************************************
 	 * This method will be executed by agents to calculate the amount
@@ -91,23 +79,6 @@ public abstract class PFRExec {
 	 *****************************************************************/
 	public abstract void terminate();
 	
-	/*****************************************************************
-	 * 
-	 * @return usecase
-	 *****************************************************************/
-	public PFRUsecase getUsecaseInstance(){
-		
-		try {
-			return (PFRUsecase) usecaseClass.getDeclaredConstructor()
-		    		.newInstance();
-
-		} catch (Exception e) {
-			logger.error("Error while creating instance for class "+usecaseClass.getName(), e);
-		}
-		
-		return null;
-		
-	}
 	
 	/*****************************************************************
 	 * 
@@ -127,14 +98,6 @@ public abstract class PFRExec {
 	}
 	
 	/*****************************************************************
-	 * 
-	 * @return test
-	 *****************************************************************/
-	public String usecaseName(){
-		return usecaseName;
-	}
-	
-	/*****************************************************************
 	 * Add values to the parameter passed to this method, with key-value 
 	 * pairs that give details about the settings of this executor.
 	 * 
@@ -145,6 +108,14 @@ public abstract class PFRExec {
 	 * @param JsonObject object to add settings to
 	 *****************************************************************/
 	public abstract void getSettings(JsonObject object);	
+	
+	/*****************************************************************
+	 * Return the name of the usecase or other thing that is 
+	 * executed by this executor. 
+	 * 
+	 * @return the name of the usecase or null
+	 *****************************************************************/
+	public abstract String getExecutedName();
 	
 	/***************************************************************************
 	 * Sets the maximum duration of the test, default is 1 hour.
@@ -311,7 +282,8 @@ public abstract class PFRExec {
 	 *****************************************************************/
 	public void execute() {
 		
-		HSR.setUsecase(usecaseName);
+		// this must now be done by each executor itself
+		//HSR.setUsecase(getExecutedName());
 		
 		initialize();
 		
