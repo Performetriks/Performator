@@ -1,7 +1,6 @@
 package com.performetriks.performator.base;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 
 import com.performetriks.performator.executors.PFRExec;

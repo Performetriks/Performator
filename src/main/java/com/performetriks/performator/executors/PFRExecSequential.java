@@ -7,8 +7,10 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRUsecase;
+import com.performetriks.performator.base.PFRTest;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.base.HSRConfig;
+import com.xresch.hsr.base.HSRTestSettings;
 import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
@@ -23,69 +25,69 @@ import ch.qos.logback.classic.Logger;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PFRExecOnce extends PFRExec {
+public class PFRExecSequential extends PFRExec {
 	
-	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecOnce.class.getName());
+	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecSequential.class.getName());
 	
 	private long offsetSeconds = 0;
-	
-	private boolean executeInThisInstance = true;
-	
+
 	private boolean isTerminated = false;
 	
-	private ArrayList<Thread> userThreadList = new ArrayList<>();
+	private ArrayList<Thread> executorThreadList = new ArrayList<>();
 	
-	private Class<? extends PFRUsecase> usecaseClass;
-	private String usecaseName;
+	private ArrayList<PFRExec> executorList = new ArrayList<>();;
 
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Constructor
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
-	public PFRExecOnce(Class<? extends PFRUsecase> usecaseClass) {
-		this.usecaseClass = usecaseClass;
-		PFRUsecase instance = PFRUsecase.getUsecaseInstance(usecaseClass);
-		usecaseName = instance.getName();
+	public PFRExecSequential() {
+		// nothing todo
 	}
 	
-	/*************************************************************************** 
-	 * This method creates a standard load pattern:
-	 * <ul>
-	 * <li>Ramping up users at the start of the test</li>
-	 * <li>Keeping users at a constant level</li>
-	 * <li>Adds pacing to the use cases.</li>
-	 * </ul>
-	 *
-	 * This method will calculate the pacing and ramp up interval based on the input
-	 * values. 
+	/*****************************************************************
+	 * Constructor
 	 * 
-	 * <pre>
-	 * <code>
-	 * int pacingSeconds = 3600 / (execsHour / users);
-	 * int rampUpInterval = pacingSeconds / users * rampUp;
-	 * </code>
-	 * </pre>
-	 *
-	 * @param offset    in seconds from the test start
-	 * 
-	 ***************************************************************************/
-	public PFRExecOnce(Class<? extends PFRUsecase> usecase, long offset){
+	 *****************************************************************/
+	public PFRExecSequential(PFRExec... executors) {
+		
+		for(PFRExec executor : executors) {
+			executorList.add(executor);
+		}
+		
+	}
 
-		this(usecase);
-		
-		this.offsetSeconds = offset;
-		
+	/*****************************************************************
+	 * Set the offset in seconds.
+	 *****************************************************************/
+	public PFRExecSequential add(PFRExec executor) {
+		executorList.add(executor);
+		return this;
 	}
 		
 	/*****************************************************************
 	 * Set the offset in seconds.
 	 *****************************************************************/
-	public PFRExecOnce offset(int offsetSeconds) {
+	public PFRExecSequential offset(int offsetSeconds) {
 		this.offsetSeconds = offsetSeconds;
 		return this;
 	}
+	
+	/*****************************************************************
+	 * 
+	 * @return test
+	 *****************************************************************/
+	@Override
+	public PFRExec test(PFRTest test){
+		super.test(test);
 		
+		for(PFRExec executor : executorList) {
+			executor.test(test);
+		}
+		
+		return this;
+	}
+	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
@@ -101,7 +103,7 @@ public class PFRExecOnce extends PFRExec {
 			logger.info(sides + title + sides);
 			
 			logger.info("Executor: " + this.getClass().getSimpleName() );
-			logger.info("Usecase: " + this.getExecutedName());
+			logger.info("Executors: " + this.getExecutedName());
 			logger.info("Start Offset: " + offsetSeconds);
 			logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
 		}
@@ -113,6 +115,16 @@ public class PFRExecOnce extends PFRExec {
 	@Override
 	public void getSettings(JsonObject settings) {
 		settings.addProperty("startOffsetSec", offsetSeconds);
+		
+		
+		for(PFRExec executor : executorList) {
+			HSRConfig.addTestSettings(
+					new HSRTestSettings(
+							  executor.getExecutedName()
+							, settings
+						)
+				);
+		}
 	}
 	
 	/*****************************************************************
@@ -122,21 +134,28 @@ public class PFRExecOnce extends PFRExec {
 	 * @return the name of the usecase or null
 	 *****************************************************************/
 	public String getExecutedName() {
-		return usecaseName;
+		
+		StringBuilder builder = new StringBuilder("[");
+		
+		for(PFRExec executor : executorList) {
+			builder
+				.append(executor.getClass().getSimpleName())
+				.append("("+executor.getExecutedName()+")")
+				.append(",")
+				;
+		}
+		
+		builder.deleteCharAt(builder.length()-1).append("]");
+		
+		return builder.toString();
 	}
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Execute the threads
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
 	public void executeThreads() {
-
-		//-------------------------
-		// Check do Execute
-		if( ! executeInThisInstance ) {
-			return;
-		}
 		
 		//-------------------------
 		// Create Scheduler
@@ -148,18 +167,16 @@ public class PFRExecOnce extends PFRExec {
 			// Start Single Threads
 
 			try {
-				Thread userThread = createUserThread();
+				Thread executorThread = createSequentialThread();
 				
-					userThread.setName(this.getExecutedName()+"-User");
+					executorThread.setName(this.getExecutedName()+"-User");
 					threadExecutor.schedule(
-							  userThread
+							  executorThread
 							, offsetSeconds
 							, TimeUnit.SECONDS
 						);
 											
-					userThreadList.add(userThread);
-					
-				HSR.increaseUsers(1);
+					executorThreadList.add(executorThread);
 
 			}catch (Exception e) {
 				logger.warn(this.getExecutedName()+": Error While starting User Thread.");
@@ -176,11 +193,11 @@ public class PFRExecOnce extends PFRExec {
 			doGracefulStop(this.test().gracefulStop());
 			
 		}catch(InterruptedException e) {
-			logger.info("User Thread interrupted.");
-			HSR.decreaseUsers(1);
+			logger.info("Executor Thread interrupted.");
 		}finally {
 			
 		}	
+		
 	}
 
 		
@@ -190,23 +207,16 @@ public class PFRExecOnce extends PFRExec {
 	@Override
 	public void distributeLoad(int totalAgents, int agentIndex, int recursionIndex) {
 		
-		//
-		if(agentIndex != 0) {
-			executeInThisInstance = false;
+		for(PFRExec executor : executorList) {
+			executor.distributeLoad(totalAgents, agentIndex, recursionIndex);
 		}
-				
+		
 	}
 	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public Thread createUserThread() {
-		
-		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
-		
-		HSR.setUsecase(usecase.getName());
-		
-		usecase.initializeUser();
+	public Thread createSequentialThread() {
 		
 		return new Thread(new Runnable() {
 			
@@ -216,19 +226,19 @@ public class PFRExecOnce extends PFRExec {
 				try {
 					
 					try {
-						usecase.execute();
-						
-						// make sure everything is closed
-						HSR.endAllOpen(HSRRecordStatus.Aborted);
+						for(PFRExec executor : executorList) {
+							if(!gracefulStopRequested) {
+								executor.execute();
+							}
+						}
 						
 					}catch (Throwable e) {
-						logger.error("Unhandled Exception occured.", e);
+						logger.error("Unhandled Exception occured: "+e.getMessage(), e);
 						HSR.endAllOpen(HSRRecordStatus.Failed);
 					}
 					
-					
 				}catch(Exception e) {
-					logger.info("User Thread interrupted.");
+					logger.info("Executor Thread interrupted.");
 				}
 			}
 		});
@@ -239,11 +249,32 @@ public class PFRExecOnce extends PFRExec {
 	 * 
 	 *****************************************************************/
 	@Override
-	public void terminate() {
+	public void requestGracefulStop() {
+		super.requestGracefulStop();
+		for(PFRExec exec : executorList) {
+			exec.requestGracefulStop();
+		}
 		
+	}
+	
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	@Override
+	public void terminate() {
+
 		if(!isTerminated) {
 			isTerminated = true;
-			for(Thread thread : userThreadList) {
+			
+			//-----------------------------------
+			// Terminate Executors
+			for(PFRExec executor : executorList) {
+				executor.terminate();
+			}
+			
+			//-----------------------------------
+			//
+			for(Thread thread : executorThreadList) {
 				
 				try {
 					if(thread.isAlive() && !thread.isInterrupted()) {
