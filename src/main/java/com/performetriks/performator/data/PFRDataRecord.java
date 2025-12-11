@@ -80,6 +80,21 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
+	 * Overloaded method to simplify working with enumerations.
+	 * This method will call the Object.toString() method and calls the 
+	 * this.get(String) method.
+	 * 
+	 * @param key
+	 * 
+	 * @return the value to which the specified key is mapped, or a Unvalue
+	 * that is null if not available
+	 ***********************************************************************/
+	public Unvalue get(Object key) {
+		if(key == null) { return Unvalue.newNull(); };
+		return get(key.toString());
+	}
+	
+	/***********************************************************************
 	 * Get the value for a specified key.
 	 * 
 	 * @param key
