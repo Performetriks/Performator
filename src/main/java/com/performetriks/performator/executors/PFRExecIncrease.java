@@ -38,17 +38,17 @@ import ch.qos.logback.classic.Logger;
  * @author Reto Scheiwiller
  * 
  ***************************************************************************/
-public class PFRExecStandard extends PFRExec {
+public class PFRExecIncrease extends PFRExec {
 	
-	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecStandard.class.getName());
+	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExecIncrease.class.getName());
 	
 	private int percent = 100;
-	private int users = 1;
-	private int execsHour = 60;
+
 	private long offsetSeconds = 0;
 	private int rampUpUsers = 1;
-	private int rampUpInterval = -1;
-	private int pacingSeconds = -1;
+	private int rampUpInterval = 20;
+	private int maxUsers = 10000;
+	private int pacingSeconds = 10;
 	
 	private boolean isTerminated = false;
 	
@@ -64,17 +64,16 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 * @return instance for chaining
 	 *****************************************************************/
-	public PFRExecStandard(Class<? extends PFRUsecase> usecaseClass) {
+	public PFRExecIncrease(Class<? extends PFRUsecase> usecaseClass) {
 		this.usecaseClass = usecaseClass;
 		PFRUsecase instance = PFRUsecase.getUsecaseInstance(usecaseClass);
 		usecaseName = instance.getName();
 	}
 	
 	/*************************************************************************** 
-	 * This method creates a standard load pattern:
+	 * This method constantly increases the amount of :
 	 * <ul>
-	 * <li>Ramping up users at the start of the test</li>
-	 * <li>Keeping users at a constant level</li>
+	 * <li>Endlessly ramping up users at the start of the test.</li>
 	 * <li>Adds pacing to the use cases.</li>
 	 * </ul>
 	 *
@@ -89,50 +88,52 @@ public class PFRExecStandard extends PFRExec {
 	 * </pre>
 	 *
 	 * @param usecase 	the usecase to be executed with this executor
+	 * @param rampUpUsers    number of users to increase per ramp up
+	 * @param rampUpInterval the interval of the ramp up in seconds
 	 * @param users     number of users to run constantly for this scenario
 	 * @param execsHour targeted number of executions per hour
 	 * @param offset    in seconds from the test start
-	 * @param rampUp    number of users to increase per ramp up
 	 * 
 	 ***************************************************************************/
-	public PFRExecStandard(
+	public PFRExecIncrease(
 						  Class<? extends PFRUsecase> usecase
-						, int users
-						, int execsHour
+						, int rampUpUsers
+						, int rampUpInterval
+						, int maxUsers
+						, int pacingSeconds
 						, long offset
-						, int rampUp
 					){
 
 		this(usecase);
 		
-		this.users = users;
-		this.execsHour = execsHour;
+		this.rampUpUsers = rampUpUsers;
+		this.rampUpInterval = rampUpInterval;
+		this.maxUsers = maxUsers;
+		this.pacingSeconds = pacingSeconds;
 		this.offsetSeconds = offset;
 		
-		if(rampUp > users) { rampUp = users; } // prevent issues with ramp up
-		this.rampUpUsers = rampUp;
 	}
 	
 	/*****************************************************************
 	 * Set the number of users.
 	 *****************************************************************/
-	public PFRExecStandard users(int users) {
-		this.users = users;
+	public PFRExecIncrease rampUpInterval(int rampUpInterval) {
+		this.rampUpInterval = rampUpInterval;
 		return this;
 	}
 	
 	/*****************************************************************
 	 * Set the executions per hour.
 	 *****************************************************************/
-	public PFRExecStandard execsHour(int execsHour) {
-		this.execsHour = execsHour;
+	public PFRExecIncrease pacingSeconds(int pacingSeconds) {
+		this.pacingSeconds = pacingSeconds;
 		return this;
 	}
 	
 	/*****************************************************************
 	 * Set the offset in seconds.
 	 *****************************************************************/
-	public PFRExecStandard offset(int offsetSeconds) {
+	public PFRExecIncrease offset(int offsetSeconds) {
 		this.offsetSeconds = offsetSeconds;
 		return this;
 	}
@@ -140,8 +141,8 @@ public class PFRExecStandard extends PFRExec {
 	/*****************************************************************
 	 * Set the amount of users to add per ramp up interval.
 	 *****************************************************************/
-	public PFRExecStandard rampUp(int rampUp) {
-		this.rampUpUsers = rampUp;
+	public PFRExecIncrease rampUp(int rampUpUsers) {
+		this.rampUpUsers = rampUpUsers;
 		return this;
 	}
 	
@@ -151,7 +152,7 @@ public class PFRExecStandard extends PFRExec {
 	 * 
 	 * @param percent 100 is 100%, you can go lower or higher, e.g. 50% or 200%
 	 *****************************************************************/
-	public PFRExecStandard percent(int percent) {
+	public PFRExecIncrease percent(int percent) {
 		this.percent = percent;
 		return this;
 	}
@@ -165,18 +166,14 @@ public class PFRExecStandard extends PFRExec {
 		// Apply Percentage
 		// -----------------------------------------------
 		if(percent != 100) {
-			users = (int)Math.ceil( users * (percent / 100.0f) );
-			execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+			
+			// reduce users and increase interval to match new overall load
+			double reductionFactor = percent / 100.0f;
+			double scaleFactor = Math.sqrt(reductionFactor);
+			rampUpUsers = (int)Math.ceil( rampUpUsers * scaleFactor );
+			rampUpInterval = (int)Math.ceil( rampUpInterval / scaleFactor );
 		}
-		
-		// -----------------------------------------------
-		// Calculate Load Parameters
-		// -----------------------------------------------
-		int pacingSeconds = (int)Math.ceil( 3600 / ( 1f * execsHour / users) );
-		int rampUpInterval = (int)Math.ceil( (1f * pacingSeconds / users) * rampUpUsers );
-		
-		this.rampUpInterval = rampUpInterval;
-		this.pacingSeconds = pacingSeconds;
+
 	}
 	
 	/*****************************************************************
@@ -186,6 +183,7 @@ public class PFRExecStandard extends PFRExec {
 	public void initialize() {
 		
 		HSR.setUsecase(usecaseName);
+		
 		// -----------------------------------------------
 		// Calculate Load Parameters
 		// -----------------------------------------------
@@ -226,11 +224,10 @@ public class PFRExecStandard extends PFRExec {
 			logger.info("Executor: " + this.getClass().getSimpleName() );
 			logger.info("Usecase: " + this.getExecutedName());
 			logger.info("Percent: " + percent);
-			logger.info("Target Users: " + users);
-			logger.info("Executions/Hour: " + execsHour);
 			logger.info("Start Offset: " + offsetSeconds);
 			logger.info("RampUp Users: " + rampUpUsers);
 			logger.info("RampUp Interval(s): " + rampUpInterval);
+			logger.info("Max Users: " + maxUsers);
 			logger.info("Pacing(s): " + pacingSeconds);
 			logger.info(sides.repeat(2) + "=".repeat( title.length()) ); // cosmetics, just because we can!
 		}
@@ -245,11 +242,10 @@ public class PFRExecStandard extends PFRExec {
 		calculateLoadSettings();
 		
 		settings.addProperty("percent", percent);
-		settings.addProperty("users", users);
-		settings.addProperty("execPerHour", execsHour);
 		settings.addProperty("startOffsetSec", offsetSeconds);
 		settings.addProperty("rampUpUsers", rampUpUsers);
 		settings.addProperty("rampUpIntervalSec", rampUpInterval);
+		settings.addProperty("maxUsers", maxUsers);
 		settings.addProperty("pacingSec", pacingSeconds);
 
 	}
@@ -273,13 +269,20 @@ public class PFRExecStandard extends PFRExec {
 		
 		//-------------------------
 		// Nothing todo?
-		if(users == 0 || execsHour == 0) {
+		if(rampUpUsers <= 0) {
 			return;
+		}
+		
+		//-------------------------
+		// Prevent Self Denial Of Service
+		if(rampUpInterval <= 0) {
+			logger.warn("Ramp up interval was 0 second, set to 1 second.");
+			rampUpInterval = 1;
 		}
 
 		//-------------------------
 		// Create Scheduler
-		scheduledUserThreadExecutor = getScheduledUserExecutor(users);
+		scheduledUserThreadExecutor = getScheduledUserExecutor(maxUsers);
 
 		try {
 			
@@ -291,7 +294,7 @@ public class PFRExecStandard extends PFRExec {
 			
 			//-------------------------
 			// Start User Threads
-			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
+			for(int i = 0; i < maxUsers && !gracefulStopRequested ; i++) {
 				
 				try {
 					Thread userThread = createUserThread();
@@ -346,7 +349,6 @@ public class PFRExecStandard extends PFRExec {
 		}	
 	}
 	
-	
 	/*****************************************************************
 	 * INTERNAL USE ONLY
 	 *****************************************************************/
@@ -358,44 +360,24 @@ public class PFRExecStandard extends PFRExec {
 		// ---------------------------------
 		calculateLoadSettings();
 		
-		int usersPerAgent = (int)Math.ceil((1.0f * users) / totalAgents);
-		int execsPerAgent = (int)Math.ceil((1.0f * execsHour) / totalAgents);
-		int offsetPerAgent = (int)Math.ceil((1.0f * pacingSeconds) / totalAgents);
+		// reduce users and increase interval to match new overall load
+		float percent = 100 / totalAgents;
+		double reductionFactor = percent / 100.0f;
+		double scaleFactor = Math.sqrt(reductionFactor);
+		int newRampUpUsers = (int)Math.ceil( rampUpUsers * scaleFactor );
+		int newRampUpInterval = (int)Math.ceil( rampUpInterval / scaleFactor );
 		
 		//----------------------------------
-		// Calculate if the agent still has
-		// users
-		int remainingUsers = users;
-		int remainingExecsHour = execsHour;
-		int additionalOffset = 0;
-		for(int i = 0; i < agentIndex; i++) {
-			remainingUsers -= usersPerAgent;
-			remainingExecsHour -= execsPerAgent;
-			additionalOffset += offsetPerAgent;
-		}
+		// Calculate Offset
+		int additionalOffsetPerAgent = (int)Math.ceil(1.0f * rampUpInterval / totalAgents );
 		
-		
+
 		//----------------------------------
 		// Set New Values
-		offsetSeconds += additionalOffset;
-		
-		if(remainingUsers == 0) {
-			users = 0;
-			execsHour = 0;
-			return;
-		}
-		
-		if(remainingUsers >= usersPerAgent) {
-			users = usersPerAgent;
-		}else {
-			users = remainingUsers;
-		}
-		
-		if(remainingExecsHour >= execsPerAgent) {
-			execsHour = execsPerAgent;
-		}else {
-			execsHour = remainingExecsHour;
-		}
+		this.offsetSeconds += agentIndex * additionalOffsetPerAgent;
+		this.rampUpUsers = newRampUpUsers;
+		this.rampUpInterval = newRampUpInterval;
+
 		
 	}
 	
@@ -407,7 +389,7 @@ public class PFRExecStandard extends PFRExec {
 		int pacingMillis = pacingSeconds * 1000;
 		
 		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
-		
+				
 		usecase.initializeUser();
 		
 		return new Thread(new Runnable() {
@@ -471,7 +453,6 @@ public class PFRExecStandard extends PFRExec {
 			}
 		}
 			
-		
 	}
 	
 	

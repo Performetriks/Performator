@@ -92,6 +92,8 @@ public class PFRExecOnce extends PFRExec {
 	@Override
 	public void initialize() {
 		
+		HSR.setUsecase(usecaseName);
+		
 		synchronized(logger) {
 			// -----------------------------------------------
 			// Log
@@ -203,8 +205,6 @@ public class PFRExecOnce extends PFRExec {
 	public Thread createUserThread() {
 		
 		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
-		
-		HSR.setUsecase(usecase.getName());
 		
 		usecase.initializeUser();
 		
