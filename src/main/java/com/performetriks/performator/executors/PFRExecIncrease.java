@@ -14,7 +14,7 @@ import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
- * Executes a use case with a standard load pattern.
+ * Executes a use case with an increasing load pattern.
  * 
  * <ul>
  * <li>Ramping up users at the start of the test</li>
