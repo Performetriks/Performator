@@ -1,6 +1,8 @@
 package com.performetriks.performator.base;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.ServiceLoader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +104,24 @@ public class Main {
 			}
 		}
 	}
+	/***********************************************************************
+	 * Searches all classes annotated with @CFWExtentionFeature and adds 
+	 * them to the registry.
+	 * 
+	 ***********************************************************************/
+	@SuppressWarnings("unchecked")
+	private static HashMap<String, PFRCustomMode> loadCustomModes() {
+		HashMap<String, PFRCustomMode> customModes = new HashMap<>();
 		
+       ServiceLoader<PFRCustomMode> loader = ServiceLoader.load(PFRCustomMode.class);
+       for(PFRCustomMode mode : loader) {
+    	   logger.info("Load Custom Mode: -Dpfr_mode="+mode.getUniqueName());
+    	   customModes.put (mode.getUniqueName().trim().toUpperCase(), mode);
+       }
+       
+       return customModes;
+	}
+	
 	/*****************************************************************************************
 	 * 
 	 *****************************************************************************************/
@@ -163,7 +182,18 @@ public class Main {
 									.getAsString()
 									.trim()
 									.toUpperCase();
+		//------------------------------------------
+		// Execute Custom Mode
+		HashMap<String, PFRCustomMode> customModes = loadCustomModes();
+		if(customModes.containsKey(modeString)) {
+			PFRCustomMode custom = customModes.get(modeString);
+			logger.info("Execute Custom Mode: -Dpfr_mode="+custom.getUniqueName());
+			custom.execute();
+			return;
+		}
 		
+		//------------------------------------------
+		// Check Official Mode
 		if(! Mode.has(modeString)) {
 			logger.error("The provided mode \""+modeString+"\" is not known. ");
 			CommandLineArgs.printUsage();

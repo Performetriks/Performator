@@ -204,7 +204,7 @@
 		            <argument>argument1</argument>
 		          </arguments-->
 		          <systemProperties>
-		            <projectProperties />
+		            <projectProperties /> <!-- automatically propagate all -D argument values -->
 		          </systemProperties>
 		        </configuration>
 		    </plugin>
