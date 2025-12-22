@@ -1,5 +1,6 @@
 package com.performetriks.performator.data;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -7,10 +8,9 @@ import java.util.Set;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFR;
-import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.utils.Unvalue;
 
 import ch.qos.logback.classic.Logger;
@@ -105,12 +105,122 @@ public class PFRDataRecord {
 	public Unvalue get(String key) {
 		if(!keyValues.containsKey(key)) {
 			String message = "Data Record did not contain a field with name: "+key;
-			HSR.addWarnMessage(message);
 			logger.warn(message);
 			
 			return Unvalue.newNull();
 		}
 		return keyValues.get(key);
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as a string value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return String value or null
+	 ***********************************************************************/
+	public String getString(Object key) {
+		return get(key).getAsString();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an integer value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Integer value or null
+	 ***********************************************************************/
+	public Integer getInteger(Object key) {
+		return get(key).getAsInteger();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an Long value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Long value or null
+	 ***********************************************************************/
+	public Long getLong(Object key) {
+		return get(key).getAsLong();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an Double value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Double value or null
+	 ***********************************************************************/
+	public Double getDouble(Object key) {
+		return get(key).getAsDouble();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an Float value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Float value or null
+	 ***********************************************************************/
+	public Float getFloat(Object key) {
+		return get(key).getAsFloat();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an Number value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Number value or null
+	 ***********************************************************************/
+	public Number getNumber(Object key) {
+		return get(key).getAsNumber();
+	}
+	
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an BigDecimal value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return BigDecimal value or null
+	 ***********************************************************************/
+	public BigDecimal getBigDecimal(Object key) {
+		return get(key).getAsBigDecimal();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as an boolean value.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return Boolean value 
+	 ***********************************************************************/
+	public Boolean getBoolean(Object key) {
+		return get(key).getAsBoolean();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as a JsonArray.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return JsonArray value 
+	 ***********************************************************************/
+	public JsonArray getJsonArray(Object key) {
+		return get(key).getAsJsonArray();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as a JsonObject.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return JsonObject value 
+	 ***********************************************************************/
+	public JsonObject getJsonObject(Object key) {
+		return get(key).getAsJsonObject();
+	}
+	
+	/***********************************************************************
+	 * Get the value for a specified key as a JsonElement.
+	 * 
+	 * @param key name of value, key.toString() will be used to retrieve the value
+	 * @return JsonElement value 
+	 ***********************************************************************/
+	public JsonElement getJsonElement(Object key) {
+		return get(key).getAsJsonElement();
 	}
 	
 	/***********************************************************************
