@@ -12,20 +12,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
 
-/***************************************************************************
+/*************************************************************************************************
+ * Base class for Executors.
+ * Implementations of this class are responsible for:
+ * - Calling "HSR.endAllOpen(HSRRecordStatus.Aborted);" after executing a usecase iteration.
+ * - Calling "PFRContext.logDetailsClear()" after executing a usecase iteration.
+ * - Handling exceptions thrown by usecases.
+ * - Calling "HSR.endAllOpen(HSRRecordStatus.Failed);" in case an exception was thrown.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0
  * 
  * @author Reto Scheiwiller
  * 
- ***************************************************************************/
+ *************************************************************************************************/
 public abstract class PFRExec {
 	
 	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRExec.class.getName());

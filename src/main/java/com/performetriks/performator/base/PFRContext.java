@@ -42,7 +42,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: User<br>
+	 * Scope: Thread<br>
 	 * Adds details that can be used by logging to add more useful 
 	 * information to analyze failing data constellations.
 	 *****************************************************************/
@@ -51,7 +51,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: User<br>
+	 * Scope: Thread<br>
 	 * Adds all the fields of the record as details that can be used 
 	 * by logging to add more useful information to analyze failing 
 	 * data constellations.
@@ -63,7 +63,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: User<br>
+	 * Scope: Thread<br>
 	 * Removes a log detail that was added previously.
 	 *****************************************************************/
 	public static void logDetailsRemove(String key) {
@@ -71,9 +71,18 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: User<br>
+	 * Scope: Thread<br>
+	 * Removes all the log details. This is done automatically after 
+	 * each execution of a user.
+	 *****************************************************************/
+	public static void logDetailsClear() {
+		userLogDetails.get().clear();
+	}
+	
+	/*****************************************************************
+	 * Scope: Thread<br>
 	 * Creates a log details string starting with a blank for easier
-	 * concatenation, like " [key=value, key2=value2 ...]".
+	 * concatenation, like " {key:value, key2:value2 ...}".
 	 * 
 	 * @returns string or empty string
 	 *****************************************************************/
@@ -92,7 +101,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: User<br>
+	 * Scope: Thread<br>
 	 * Returns a clone of the current log details.
 	 *****************************************************************/
 	public static LinkedHashMap<String,String> logDetails() {

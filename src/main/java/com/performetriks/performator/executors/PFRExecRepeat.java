@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
@@ -229,9 +230,14 @@ public class PFRExecRepeat extends PFRExec {
 							// make sure everything is closed
 							HSR.endAllOpen(HSRRecordStatus.Aborted);
 							
+						}catch (InterruptedException e) {
+						    Thread.currentThread().interrupt(); // prevent lingering of threads
+						    return;                              
 						}catch (Throwable e) {
 							logger.error("Unhandled Exception occured.", e);
 							HSR.endAllOpen(HSRRecordStatus.Failed);
+						}finally {
+							PFRContext.logDetailsClear();
 						}
 					}
 					
