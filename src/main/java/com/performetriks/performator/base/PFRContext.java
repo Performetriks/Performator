@@ -22,11 +22,11 @@ public class PFRContext {
 	private static PFRTest globalTest;
 	
 	//------------------------------
-	// Scope User 
+	// Scope Thread 
 	private static ThreadLocal<LinkedHashMap<String,String>> userLogDetails = ThreadLocal.withInitial(() -> new LinkedHashMap<String,String>());
 	
 	/*****************************************************************
-	 * Scope: Global<br>
+	 * <b>Scope:</b> Global<br>
 	 * Set the test instance
 	 *****************************************************************/
 	protected static void test(PFRTest test) {
@@ -34,7 +34,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Global<br>
+	 * <b>Scope:</b> Global<br>
 	 * Get the test instance.
 	 *****************************************************************/
 	protected PFRTest test() {
@@ -42,7 +42,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Adds details that can be used by logging to add more useful 
 	 * information to analyze failing data constellations.
 	 *****************************************************************/
@@ -51,7 +51,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Adds all the fields of the record as details that can be used 
 	 * by logging to add more useful information to analyze failing 
 	 * data constellations.
@@ -63,7 +63,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Removes a log detail that was added previously.
 	 *****************************************************************/
 	public static void logDetailsRemove(String key) {
@@ -71,7 +71,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Removes all the log details. This is done automatically after 
 	 * each execution of a user.
 	 *****************************************************************/
@@ -80,7 +80,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Creates a log details string starting with a blank for easier
 	 * concatenation, like " {key:value, key2:value2 ...}".
 	 * 
@@ -101,7 +101,7 @@ public class PFRContext {
 	}
 	
 	/*****************************************************************
-	 * Scope: Thread<br>
+	 * <b>Scope:</b> Thread<br>
 	 * Returns a clone of the current log details.
 	 *****************************************************************/
 	public static LinkedHashMap<String,String> logDetails() {

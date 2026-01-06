@@ -52,7 +52,8 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
-	 * Set the port of this instance when used as a controller or an agent.
+	 * <b>Scope:</b> Global<br>
+	 * Set the execution mode.
 	 **********************************************************************************/
 	protected static void executionMode(Mode mode) {
 		
@@ -63,13 +64,14 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
-	 * 
+	 * <b>Scope:</b> Global<br>
 	 **********************************************************************************/
 	public static Mode executionMode() {
 		return executionMode;
 	}
 	
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
 	 * Set the port of this instance when used as a controller or an agent.
 	 **********************************************************************************/
 	public static void port(int port) {
@@ -77,6 +79,8 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * Get the port of this instance.
 	 * 
 	 * @return port
@@ -86,6 +90,8 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * The amount of time an agent that is executing a test should try to reconnect to 
 	 * the controller until it considers the controller terminated.
 	 * This is useful to reset agents and not let them be blocked for a long time.
@@ -95,6 +101,8 @@ public class PFRConfig {
 	}
 
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * Checks if any agents have been defined.
 	 * 
 	 **********************************************************************************/
@@ -102,6 +110,8 @@ public class PFRConfig {
 		return ( agentPool != null && agentPool.hasAgents() ) ;
 	}
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * Get the port of this instance.
 	 * 
 	 **********************************************************************************/
@@ -110,6 +120,8 @@ public class PFRConfig {
 	}
 
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * 
 	 **********************************************************************************/
 	public static void setAgentPool(PFRAgentPool agentPool) {
@@ -117,6 +129,8 @@ public class PFRConfig {
 	}
 	
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
 	 * 
 	 **********************************************************************************/
 	public static int getAgentAmount() {
@@ -124,13 +138,15 @@ public class PFRConfig {
 	}
 
 	/**********************************************************************************
-	 * 
+	 * <b>Scope:</b> Global<br>
+	 *  
 	 **********************************************************************************/
 	public static void setAgentAmount(int agentAmount) {
 		PFRConfig.agentAmount = agentAmount;
 	}
 
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
 	 * 
 	 **********************************************************************************/
 	public static String[] getAgentTags() {
@@ -138,6 +154,7 @@ public class PFRConfig {
 	}
 
 	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
 	 * 
 	 **********************************************************************************/
 	public static void setAgentTags(String[] agentTags) {

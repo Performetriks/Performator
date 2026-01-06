@@ -24,7 +24,7 @@ public class PFRData {
 	/*******************************************************************************
 	 * Enum for defining available String Parsers
 	 *******************************************************************************/
-	public enum CFWQueryStringParserType {
+	public enum PFRStringParserType {
 
 		  json("Parse the whole response as a json object or array.")
 		, jsonlines("Parse each line of the response as a json object.")
@@ -49,7 +49,7 @@ public class PFRData {
 
 		//==============================
 		// Constructor
-		private CFWQueryStringParserType(String shortDescription) {
+		private PFRStringParserType(String shortDescription) {
 			this.shortDescription = shortDescription;
 		}
 				
@@ -61,7 +61,7 @@ public class PFRData {
 			if(enumNames == null) {
 				enumNames = new TreeSet<>();
 				
-				for(CFWQueryStringParserType unit : CFWQueryStringParserType.values()) {
+				for(PFRStringParserType unit : PFRStringParserType.values()) {
 					enumNames.add(unit.name());
 				}
 			}
@@ -82,7 +82,7 @@ public class PFRData {
 			StringBuilder builder = new StringBuilder();
 			
 			builder.append("<ul>");
-				for(CFWQueryStringParserType type : CFWQueryStringParserType.values()) {
+				for(PFRStringParserType type : PFRStringParserType.values()) {
 					builder.append("<li><b>"+type.toString()+":&nbsp;</b>"+type.shortDescription+"</li>");
 				}
 			builder.append("</ul>");
@@ -172,13 +172,13 @@ public class PFRData {
 		
 		type = type.trim().toLowerCase();
 		
-		if( !CFWQueryStringParserType.has(type) ){
+		if( !PFRStringParserType.has(type) ){
 			HSR.addErrorMessage(" Parser Type: "+type+"' is not known."
-						+" Available options: "+HSR.JSON.toJSON( CFWQueryStringParserType.getNames()) );
+						+" Available options: "+HSR.JSON.toJSON( PFRStringParserType.getNames()) );
 			return new ArrayList<>();
 		}
 		
-		return parse( CFWQueryStringParserType.valueOf(type), data, csvSeparator);
+		return parse( PFRStringParserType.valueOf(type), data, csvSeparator);
 		
 	}
 	
@@ -186,7 +186,7 @@ public class PFRData {
 	 * Parses the string with the 
 	 * @param csvSeparator TODO
 	 ******************************************************************/
-	public static ArrayList<JsonObject> parse(CFWQueryStringParserType type, String data, String csvSeparator) throws Exception {
+	public static ArrayList<JsonObject> parse(PFRStringParserType type, String data, String csvSeparator) throws Exception {
 		ArrayList<JsonObject> result = new ArrayList<>();
 
 		switch(type) {
