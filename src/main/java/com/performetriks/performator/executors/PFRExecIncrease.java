@@ -60,7 +60,7 @@ public class PFRExecIncrease extends PFRExec {
 	private Class<? extends PFRUsecase> usecaseClass;
 	private String usecaseName;
 	
-	private boolean isCalculated = true;
+	private boolean isCalculated = false;
 	
 	/*****************************************************************
 	 * Clones this instance of the executor.
@@ -72,6 +72,7 @@ public class PFRExecIncrease extends PFRExec {
 		PFRUsecase instance = PFRUsecase.getUsecaseInstance(usecaseClass);
 		usecaseName = instance.getName();
 	}
+	
 	
 	/*************************************************************************** 
 	 * This method constantly increases the amount of users:
@@ -90,12 +91,46 @@ public class PFRExecIncrease extends PFRExec {
 	 * </code>
 	 * </pre>
 	 *
-	 * @param usecase 	the usecase to be executed with this executor
+	 * @param usecase 		the usecase to be executed with this executor
 	 * @param rampUpUsers    number of users to increase per ramp up
 	 * @param rampUpInterval the interval of the ramp up in seconds
-	 * @param users     number of users to run constantly for this scenario
-	 * @param execsHour targeted number of executions per hour
-	 * @param offset    in seconds from the test start
+	 * @param maxUsers     	number of maximum user as a safety limit
+	 * @param execsHour 	targeted number of executions per hour
+	 * 
+	 ***************************************************************************/
+	public PFRExecIncrease(
+						  Class<? extends PFRUsecase> usecase
+						, int rampUpUsers
+						, int rampUpInterval
+						, int maxUsers
+						, int pacingSeconds
+					){
+		this(usecase, rampUpUsers, rampUpInterval, maxUsers, pacingSeconds, 0);
+	}
+		
+	/*************************************************************************** 
+	 * This method constantly increases the amount of users:
+	 * <ul>
+	 * <li>Endlessly ramping up users at the start of the test.</li>
+	 * <li>Adds pacing to the use cases.</li>
+	 * </ul>
+	 *
+	 * This method will calculate the pacing and ramp up interval based on the input
+	 * values. 
+	 * 
+	 * <pre>
+	 * <code>
+	 * int pacingSeconds = 3600 / (execsHour / users);
+	 * int rampUpInterval = pacingSeconds / users * rampUp;
+	 * </code>
+	 * </pre>
+	 *
+	 * @param usecase 		the usecase to be executed with this executor
+	 * @param rampUpUsers    number of users to increase per ramp up
+	 * @param rampUpInterval the interval of the ramp up in seconds
+	 * @param maxUsers     	number of maximum user as a safety limit
+	 * @param execsHour 	targeted number of executions per hour
+	 * @param offset    	in seconds from the test start
 	 * 
 	 ***************************************************************************/
 	public PFRExecIncrease(
@@ -150,6 +185,14 @@ public class PFRExecIncrease extends PFRExec {
 	}
 	
 	/*****************************************************************
+	 * Set the limit of users to be started by this executor.
+	 *****************************************************************/
+	public PFRExecIncrease maxUsers(int maxUsers) {
+		this.maxUsers = maxUsers;
+		return this;
+	}
+	
+	/*****************************************************************
 	 * Call this method after setting users and executions per hour
 	 * to run a percentage of that load.
 	 * 
@@ -176,6 +219,8 @@ public class PFRExecIncrease extends PFRExec {
 				double scaleFactor = Math.sqrt(reductionFactor);
 				rampUpUsers = (int)Math.ceil( rampUpUsers * scaleFactor );
 				rampUpInterval = (int)Math.ceil( rampUpInterval / scaleFactor );
+				
+				maxUsers = (int)Math.ceil( maxUsers * (percent / 100.0f) );
 			}
 			
 			isCalculated = true;
