@@ -60,6 +60,8 @@ public class PFRExecIncrease extends PFRExec {
 	private Class<? extends PFRUsecase> usecaseClass;
 	private String usecaseName;
 	
+	private boolean isCalculated = true;
+	
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
@@ -72,7 +74,7 @@ public class PFRExecIncrease extends PFRExec {
 	}
 	
 	/*************************************************************************** 
-	 * This method constantly increases the amount of :
+	 * This method constantly increases the amount of users:
 	 * <ul>
 	 * <li>Endlessly ramping up users at the start of the test.</li>
 	 * <li>Adds pacing to the use cases.</li>
@@ -163,16 +165,20 @@ public class PFRExecIncrease extends PFRExec {
 	 *****************************************************************/
 	public void calculateLoadSettings() {
 		
-		// -----------------------------------------------
-		// Apply Percentage
-		// -----------------------------------------------
-		if(percent != 100) {
+		if(!isCalculated) {
+			// -----------------------------------------------
+			// Apply Percentage
+			// -----------------------------------------------
+			if(percent != 100) {
+				
+				// reduce users and increase interval to match new overall load
+				double reductionFactor = percent / 100.0f;
+				double scaleFactor = Math.sqrt(reductionFactor);
+				rampUpUsers = (int)Math.ceil( rampUpUsers * scaleFactor );
+				rampUpInterval = (int)Math.ceil( rampUpInterval / scaleFactor );
+			}
 			
-			// reduce users and increase interval to match new overall load
-			double reductionFactor = percent / 100.0f;
-			double scaleFactor = Math.sqrt(reductionFactor);
-			rampUpUsers = (int)Math.ceil( rampUpUsers * scaleFactor );
-			rampUpInterval = (int)Math.ceil( rampUpInterval / scaleFactor );
+			isCalculated = true;
 		}
 
 	}

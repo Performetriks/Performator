@@ -60,6 +60,8 @@ public class PFRExecStandard extends PFRExec {
 	private Class<? extends PFRUsecase> usecaseClass;
 	private String usecaseName;
 	
+	private boolean isCalculated = false;
+	
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
@@ -162,22 +164,26 @@ public class PFRExecStandard extends PFRExec {
 	 *****************************************************************/
 	public void calculateLoadSettings() {
 		
-		// -----------------------------------------------
-		// Apply Percentage
-		// -----------------------------------------------
-		if(percent != 100) {
-			users = (int)Math.ceil( users * (percent / 100.0f) );
-			execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+		if(!isCalculated) {
+			// -----------------------------------------------
+			// Apply Percentage
+			// -----------------------------------------------
+			if(percent != 100) {
+				users = (int)Math.ceil( users * (percent / 100.0f) );
+				execsHour = (int)Math.ceil( execsHour * (percent / 100.0f) );
+			}
+			
+			// -----------------------------------------------
+			// Calculate Load Parameters
+			// -----------------------------------------------
+			int pacingSeconds = (int)Math.ceil( 3600 / ( 1f * execsHour / users) );
+			int rampUpInterval = (int)Math.ceil( (1f * pacingSeconds / users) * rampUpUsers );
+			
+			this.rampUpInterval = rampUpInterval;
+			this.pacingSeconds = pacingSeconds;
+			
+			isCalculated = true;
 		}
-		
-		// -----------------------------------------------
-		// Calculate Load Parameters
-		// -----------------------------------------------
-		int pacingSeconds = (int)Math.ceil( 3600 / ( 1f * execsHour / users) );
-		int rampUpInterval = (int)Math.ceil( (1f * pacingSeconds / users) * rampUpUsers );
-		
-		this.rampUpInterval = rampUpInterval;
-		this.pacingSeconds = pacingSeconds;
 	}
 	
 	/*****************************************************************
