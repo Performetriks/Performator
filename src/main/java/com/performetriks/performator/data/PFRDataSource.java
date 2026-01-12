@@ -1,12 +1,8 @@
 package com.performetriks.performator.data;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 
 import org.slf4j.LoggerFactory;
-
-import com.performetriks.performator.base.PFR;
-import com.xresch.hsr.base.HSR;
 
 import ch.qos.logback.classic.Logger;
 
@@ -22,8 +18,12 @@ public abstract class PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSource.class.getName());
 	
+	
+	private static HashMap<String, PFRDataSource> registeredDataSources = new HashMap<>();
+	
 	private String datasourceName; 
-
+	private boolean isLocal = false; // Make source shared between agents by default;
+	
 	protected AccessMode accessMode = AccessMode.SEQUENTIAL;
 	protected RetainMode retainMode = RetainMode.INFINITE;
 	
@@ -53,14 +53,53 @@ public abstract class PFRDataSource {
 	public PFRDataSource(String datasourceName) {
 		this.datasourceName = datasourceName;
 	}
-		
+	
+	/*****************************************************************
+	 * Removes a registered data source.
+	 * 
+	 * @return the removed source 
+	 *****************************************************************/
+	public static PFRDataSource unregisterSource(String datasourceName) {
+		return registeredDataSources.remove(datasourceName);
+	}
+	
+	
+	/*****************************************************************
+	 * Removes all registered data sources.
+	 * 
+	 * @return the removed source 
+	 *****************************************************************/
+	public static void clearSources() {
+		registeredDataSources.clear();
+	}
+	
 	/*****************************************************************
 	 * This method prepares the data source for being used.
 	 * 
 	 * @return instance for chaining
 	 * 
 	 *****************************************************************/
-	public abstract PFRDataSource build();
+	public PFRDataSource build() {
+		
+		//------------------------------------
+		// register Data Source
+		if(!isLocal 
+		&& registeredDataSources.containsKey(datasourceName)) {
+			throw new RuntimeException("Data Source with name '"+datasourceName+"' has already been registered. Best thing to do is to rename the data source and make sure it is only loaded once.");
+		}
+		registeredDataSources.put(datasourceName, this);
+		
+		return buildSource();
+		
+	}
+	
+	/*****************************************************************
+	 * This method prepares the data source for being used.
+	 * 
+	 * @return instance for chaining
+	 * 
+	 *****************************************************************/
+	public abstract PFRDataSource buildSource();
 	
 	/*****************************************************************
 	 * Return true if this data source still has data.

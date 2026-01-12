@@ -47,7 +47,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * Prepares the data source for being used.
 	 *****************************************************************/
-	public PFRDataSourceStatic build() {
+	public PFRDataSourceStatic buildSource() {
 				
 		//-----------------------------------
 		// Load the data

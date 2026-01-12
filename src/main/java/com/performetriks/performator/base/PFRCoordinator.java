@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
+import com.performetriks.performator.data.PFRDataSource;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
@@ -221,6 +222,12 @@ public class PFRCoordinator {
 		//-------------------------
 		// Set Test Name
 		HSR.setTest(test.getName());
+		
+		//-------------------------
+		// Reset
+		PFRDataSource.clearSources();
+		HSR.reset();
+		HSRConfig.reset();
 		
 		//-------------------------
 		// Register Settings
