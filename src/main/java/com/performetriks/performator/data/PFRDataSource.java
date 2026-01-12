@@ -18,11 +18,10 @@ public abstract class PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSource.class.getName());
 	
-	
 	private static HashMap<String, PFRDataSource> registeredDataSources = new HashMap<>();
 	
 	private String datasourceName; 
-	private boolean isLocal = false; // Make source shared between agents by default;
+	private boolean isLocal = false;
 	
 	protected AccessMode accessMode = AccessMode.SEQUENTIAL;
 	protected RetainMode retainMode = RetainMode.INFINITE;
@@ -85,7 +84,9 @@ public abstract class PFRDataSource {
 		// register Data Source
 		if(!isLocal 
 		&& registeredDataSources.containsKey(datasourceName)) {
-			throw new RuntimeException("Data Source with name '"+datasourceName+"' has already been registered. Best thing to do is to rename the data source and make sure it is only loaded once.");
+			throw new RuntimeException("Data Source with name '"+datasourceName+"' has already been registered."
+									+ " Best thing to do is to rename the data source and make sure it is only loaded once."
+									+ " Or use the method yourSource.local() to define that it should not be shared between agents.");
 		}
 		registeredDataSources.put(datasourceName, this);
 		
@@ -117,6 +118,17 @@ public abstract class PFRDataSource {
 	 * Returns the number of data records.
 	 *****************************************************************/
 	public abstract int size();
+	
+	/*****************************************************************
+	 * Set the source to be local.
+	 * By default, a source is set to be shared between agents.
+	 * If you set it to local, the data will not be shared between agents.
+	 * 
+	 *****************************************************************/
+	public PFRDataSource local() {
+		this.isLocal = true;
+		return this;
+	}
 	
 	/*****************************************************************
 	 * Set the access mode to SEQUENTIAL.
