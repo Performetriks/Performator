@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRConfig.Mode;
-import com.performetriks.performator.distribute.AgentControllerConnection;
+import com.performetriks.performator.distribute.AgentControllerServer;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.utils.Unvalue;
 import com.xresch.hsr.utils.Unvalue.UnvalueType;
@@ -25,14 +25,14 @@ import com.xresch.hsr.utils.Unvalue.UnvalueType;
  ***************************************************************************/
 public class Main {
 
-	private static final Logger logger = LoggerFactory.getLogger(AgentControllerConnection.class);
+	private static final Logger logger = LoggerFactory.getLogger(AgentControllerServer.class);
 	
 	public enum CommandLineArgs {
 		
 		  pfr_mode(UnvalueType.STRING, "auto", "The mode to start the process with.")
 		, pfr_test(UnvalueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
 		, pfr_logfile(UnvalueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance, either .")
+		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance.")
 		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(UnvalueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_controllerPort(UnvalueType.NUMBER, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")

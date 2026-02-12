@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
+import com.performetriks.performator.distribute.AgentControllerConnection;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
@@ -85,6 +86,17 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeAgentInstance() {
 		
+		int agentPort = CommandLineArgs.pfr_port
+										.getValue()
+										.getAsInteger();
+		
+		int remotePort = CommandLineArgs.pfr_port
+				.getValue()
+				.getAsInteger();
+	
+		PFRConfig.port(agentPort);
+		
+		AgentControllerConnection connection = new AgentControllerConnection(String remoteHost, remotePort);
 	}
 	
 	/*************************************************************
