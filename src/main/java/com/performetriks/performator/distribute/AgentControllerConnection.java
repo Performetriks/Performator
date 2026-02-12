@@ -21,7 +21,7 @@ import com.performetriks.performator.distribute.AgentControllerServer.Command;
  * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
-public class AgentControllerConnection {
+class AgentControllerConnection {
 	
 	private static final Logger logger = LoggerFactory.getLogger(AgentControllerConnection.class);
 	
@@ -38,12 +38,22 @@ public class AgentControllerConnection {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
+	public AgentControllerConnection(PFRAgent agent) throws IOException {
+		this.remoteHost = agent.hostname();
+		this.remotePort = agent.port();
+	}
+	
+	/**********************************************************************************
+	 * Connects this instance to a agent or collector.
+	 * 
+	 * @throws IOException 
+	 * 
+	 **********************************************************************************/
 	public AgentControllerConnection(String remoteHost, int remotePort) throws IOException {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
 	}
 
-	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
@@ -73,6 +83,7 @@ public class AgentControllerConnection {
 		}
 
 	}
+	
 	
 	/**********************************************************************************
 	 * 

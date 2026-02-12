@@ -71,7 +71,7 @@ public class AgentControllerServer {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public AgentControllerServer() throws IOException {
+	public AgentControllerServer(){
 		
 		startServer();
 		
@@ -80,7 +80,7 @@ public class AgentControllerServer {
 	/**********************************************************************************
 	 * Start server (multi-threaded)
 	 **********************************************************************************/
-	public void startServer() {
+	private void startServer() {
 		serverThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -114,7 +114,7 @@ public class AgentControllerServer {
 	 * @return Hostname of the local machine
 	 * @throws UnknownHostException
 	  **********************************************************************************/
-	public String getLocahost() throws UnknownHostException {
+	public static String getLocalhost() throws UnknownHostException {
 		return InetAddress.getLocalHost().getHostName();
 	}
 
@@ -145,7 +145,7 @@ public class AgentControllerServer {
 			
 				case GET_STATUS:
 					response.addProperty("available", isAvailable);
-					response.addProperty("host", getLocahost() );
+					response.addProperty("host", getLocalhost() );
 					response.addProperty("port", PFRConfig.port() );
 					response.addProperty("javaversion", props.getProperty("java.version"));
 					response.addProperty("memory.free", runtime.freeMemory());
@@ -193,37 +193,6 @@ public class AgentControllerServer {
 		} catch (IOException e) {
 			System.err.println("Error handling client: " + e.getMessage());
 		} 
-	}
-
-	
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	public void sendJar(File jarFile) throws IOException {
-
-		byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
-		
-		new RemoteRequest(this, Command.SEND_JAR)
-					.body(jarBytes)
-					.send()
-					;
-		
-	}
-
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	public void getStatus() throws IOException {
-		
-		RemoteResponse response = 
-				new RemoteRequest(this, Command.GET_STATUS)
-							.send()
-							;
-		
-		if(response.success()) {
-			JsonElement object = response.payload();
-		}
-
 	}
 
 	/**********************************************************************************

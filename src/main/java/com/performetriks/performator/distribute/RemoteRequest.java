@@ -16,7 +16,7 @@ import com.performetriks.performator.distribute.AgentControllerServer.Command;
 /**********************************************************************************
  * 
  **********************************************************************************/
-class RemoteRequest{
+public class RemoteRequest{
 	
 	/**
 	 * 
@@ -110,7 +110,7 @@ class RemoteRequest{
 			bodyLength = body.length;
 		}
 		
-		parameters.addProperty(AgentControllerServer.PARAM_HOST, this.connection.getLocahost());
+		parameters.addProperty(AgentControllerServer.PARAM_HOST, AgentControllerServer.getLocalhost());
 		parameters.addProperty(AgentControllerServer.PARAM_PORT, PFRConfig.port());
 		parameters.addProperty(AgentControllerServer.PARAM_BODY_LENGTH, bodyLength);
 		

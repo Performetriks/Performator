@@ -9,7 +9,7 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
-import com.performetriks.performator.distribute.AgentControllerConnection;
+import com.performetriks.performator.distribute.AgentControllerServer;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
@@ -43,6 +43,7 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
+	private static AgentControllerServer server = null;
 	
 	/*************************************************************
 	 * Start the instance in the defined mode.
@@ -89,14 +90,10 @@ public class PFRCoordinator {
 		int agentPort = CommandLineArgs.pfr_port
 										.getValue()
 										.getAsInteger();
-		
-		int remotePort = CommandLineArgs.pfr_port
-				.getValue()
-				.getAsInteger();
-	
+			
 		PFRConfig.port(agentPort);
 		
-		AgentControllerConnection connection = new AgentControllerConnection(String remoteHost, remotePort);
+		server = new AgentControllerServer();
 	}
 	
 	/*************************************************************
@@ -113,6 +110,7 @@ public class PFRCoordinator {
 			executeLocal(test);
 		}
 	}
+	
 	/*************************************************************
 	 * Start the instance and run the test locally.
 	 * 

@@ -185,6 +185,45 @@
 				</configuration>
 			</plugin>
 			
+			<!-- ================= SHADE ================== -->
+		    <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-shade-plugin</artifactId>
+              <version>3.1.1</version>
+              <configuration>
+            	<finalName>performator-agent-${project.version}</finalName>
+                <filters>
+                  <!-- https://stackoverflow.com/a/6743609 -->
+                  <filter>
+                    <artifact>*:*</artifact>
+                    <excludes>
+                      <exclude>META-INF/*.DSA</exclude>
+                      <exclude>META-INF/*.SF</exclude>
+                      <exclude>META-INF/*.RSA</exclude>
+                    </excludes>
+                  </filter>
+                </filters>
+              </configuration>
+              <executions>
+                <execution>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>shade</goal>
+                  </goals>
+                  <configuration>
+                    <transformers>
+                      <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                        <manifestEntries>
+		                    <Main-Class>com.performetriks.performator.base.Main</Main-Class>
+                  		</manifestEntries>
+                      </transformer>
+                    </transformers>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            
+			
 			<!-- ================= EXEC ================== -->
 			<plugin>
 		        <groupId>org.codehaus.mojo</groupId>
@@ -200,7 +239,7 @@
 		        </executions>
 		        <configuration>
 		          <mainClass>com.performetriks.performator.base.Main</mainClass>
-		          <!--arguments>
+					<!--arguments>
 		            <argument>argument1</argument>
 		          </arguments-->
 		          <systemProperties>
@@ -208,7 +247,7 @@
 		          </systemProperties>
 		        </configuration>
 		    </plugin>
-		    
+
 			<!-- ================= COMPILER ================== -->
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -218,7 +257,7 @@
 					<target>17</target>
 				</configuration>
 			</plugin>
-			
+
 			<!-- ================= INSTALL ================== -->
 			<plugin>
 			  <artifactId>maven-install-plugin</artifactId>
@@ -227,7 +266,7 @@
 			    <createChecksum>true</createChecksum>
 			  </configuration>
 			</plugin>
-			
+
 			<!-- ================= SOURCES ================== -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -263,7 +302,7 @@
 					<additionalJOption>-Xdoclint:none</additionalJOption>
 				</configuration>
 			</plugin>
-			
+
 			<!-- ================= GPG SIGN ================== -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
