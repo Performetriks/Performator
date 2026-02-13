@@ -15,12 +15,18 @@ import com.performetriks.performator.base.PFR;
  * 
  **********************************************************************************/
 public class RemoteResponse {
+	private static final Logger logger = LoggerFactory.getLogger(TheConnection.class);
 	
-	private static final Logger logger = LoggerFactory.getLogger(RemoteResponse.class);
+	public static final String FIELD_PAYLOAD = "payload";
+	public static final String FIELD_MESSAGES = "messages";
+	public static final String FIELD_SUCCESS = "success";
 	
-	private static final String FIELD_PAYLOAD = "payload";
-	private static final String FIELD_MESSAGES = "messages";
-	private static final String FIELD_SUCCESS = "success";
+	public static final String FIELD_STATUS_MEMORYTOTAL = "memory.total";
+	public static final String FIELD_STATUS_MEMORYFREE = "memory.free";
+	public static final String FIELD_STATUS_JAVAVERSION = "javaversion";
+	public static final String FIELD_STATUS_PORT = "port";
+	public static final String FIELD_STATUS_HOST = "host";
+	public static final String FIELD_STATUS_AVAILABLE = "available";
 	
 	JsonObject response;
 	
@@ -31,8 +37,8 @@ public class RemoteResponse {
 		StringBuilder jsonBuilder = new StringBuilder();
 		String line;
 		try {
-			while ((line = clientReader.readLine()) != null) {
-				//if ("END".equals(line)) break;
+			while (clientReader != null 
+				&& (line = clientReader.readLine()) != null) {
 				jsonBuilder.append(line);
 				
 			}

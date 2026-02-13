@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRConfig.Mode;
-import com.performetriks.performator.distribute.AgentControllerServer;
+import com.performetriks.performator.distribute.TheServer;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.utils.Unvalue;
 import com.xresch.hsr.utils.Unvalue.UnvalueType;
@@ -25,7 +25,7 @@ import com.xresch.hsr.utils.Unvalue.UnvalueType;
  ***************************************************************************/
 public class Main {
 
-	private static final Logger logger = LoggerFactory.getLogger(AgentControllerServer.class);
+	private static final Logger logger = LoggerFactory.getLogger(TheServer.class);
 	
 	public enum CommandLineArgs {
 		

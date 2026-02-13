@@ -30,11 +30,35 @@ public class PFRAgentPool {
 		
 	}
 	
+
+	/*************************************************************
+	 * Add an agent to the pool.
+	 *************************************************************/
+	public boolean add(PFRAgent agent){
+		return agentList.add(agent);
+	}
+	
 	/*************************************************************
 	 * Checks if this Agent Pool has agents defined
 	 *************************************************************/
 	public boolean hasAgents(){
 		return agentList.size() > 0;
+	}
+	
+	/*************************************************************
+	 * Returns the number of agents in the pool
+	 *************************************************************/
+	public int size(){
+		return agentList.size();
+	}
+	
+	/*************************************************************
+	 * Returns the element at the index.
+	 * 
+	 * @param i index of the element
+	 *************************************************************/
+	public PFRAgent get(int i){
+		return agentList.get(i);
 	}
 	
 	

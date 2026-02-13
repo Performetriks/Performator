@@ -8,23 +8,28 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
-import com.performetriks.performator.distribute.AgentControllerServer.Command;
+import com.performetriks.performator.base.PFRTest;
+import com.performetriks.performator.distribute.TheServer.Command;
 
 /**********************************************************************************
  * 
  **********************************************************************************/
 public class RemoteRequest{
 	
-	/**
-	 * 
-	 */
-	private final AgentControllerConnection connection;
+	private static final Logger logger = LoggerFactory.getLogger(RemoteRequest.class);
+	
+	
+	private final TheConnection connection;
 	//------------------------------------
 	// Data Fields
 	private Command command = null;
+	private PFRTest test = null;
 	private JsonObject parameters = new JsonObject();
 	private byte[] body = null;
 	
@@ -37,11 +42,14 @@ public class RemoteRequest{
 	/********************************************************
 	 * 
 	 ********************************************************/
-	public RemoteRequest(AgentControllerConnection agentControllerConnection, Command command) {
+	public RemoteRequest(TheConnection agentControllerConnection, Command command, PFRTest test) {
 		this.connection = agentControllerConnection;
 		this.command = command;
+		this.test = test;
 		
 	}
+	
+	
 	
 	/********************************************************
 	 * Adds a parameter to the request.
@@ -88,52 +96,65 @@ public class RemoteRequest{
 	}
 	
 	/********************************************************
-	 * 
+	 * Send a request and return a response.
+	 * @return response or null on error
 	 ********************************************************/
-	public RemoteResponse send() throws IOException {
+	public RemoteResponse send() {
 	   
-		initializeClient();
+		try {
+			initializeClient();
+				
+			//-------------------------------
+			// Write Command
+			clientWriter.println(command.toString());
+		   
+			//-------------------------------
+			// Write Parameters
 			
-		//-------------------------------
-		// Write Command
-		clientWriter.println(command.toString());
-	   
-		//-------------------------------
-		// Write Parameters
-		
-		if(parameters == null) {
-			parameters = new JsonObject();
+			if(parameters == null) {
+				parameters = new JsonObject();
+			}
+			
+			int bodyLength = 0;
+			if(body != null) {
+				bodyLength = body.length;
+			}
+			
+			parameters.addProperty(TheServer.PARAM_HOST, TheServer.getLocalhost());
+			parameters.addProperty(TheServer.PARAM_PORT, PFRConfig.port());
+			parameters.addProperty(TheServer.PARAM_BODY_LENGTH, bodyLength);
+			
+			if(test != null) {
+				parameters.addProperty("test", test.getName());
+			}
+			
+			clientWriter.println(PFR.JSON.toJSON(parameters));
+			
+			//-------------------------------
+			// Write body
+			if(body != null) {
+				clientSocket.getOutputStream().write(body);
+				clientSocket.getOutputStream().flush();
+			}
+			
+			//-------------------------------
+			// Get Response
+			RemoteResponse response = new RemoteResponse(clientReader);
+			
+			//-------------------------------
+			// Close Stuff
+			clientReader.close();
+			clientWriter.close();
+			clientSocket.close();
+			
+			return response;
+			
+		} catch(IOException e) {
+			logger.error("Error on remote request.", e);
 		}
 		
-		int bodyLength = 0;
-		if(body != null) {
-			bodyLength = body.length;
-		}
+		return null;
 		
-		parameters.addProperty(AgentControllerServer.PARAM_HOST, AgentControllerServer.getLocalhost());
-		parameters.addProperty(AgentControllerServer.PARAM_PORT, PFRConfig.port());
-		parameters.addProperty(AgentControllerServer.PARAM_BODY_LENGTH, bodyLength);
-		
-		clientWriter.println(PFR.JSON.toJSON(parameters));
-		
-		//-------------------------------
-		// Write body
-		if(body != null) {
-			clientSocket.getOutputStream().write(body);
-			clientSocket.getOutputStream().flush();
-		}
-		
-		//-------------------------------
-		// Get Response
-		RemoteResponse response = new RemoteResponse(clientReader);
-		
-		//-------------------------------
-		// Close Stuff
-		clientReader.close();
-		clientWriter.close();
-		clientSocket.close();
-		
-		return response;
 		
 	}
 }

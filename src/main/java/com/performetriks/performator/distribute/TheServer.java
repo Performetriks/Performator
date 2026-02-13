@@ -15,10 +15,12 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
+
+import ch.qos.logback.classic.Level;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
@@ -30,9 +32,11 @@ import com.performetriks.performator.base.PFRConfig;
  * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
-public class AgentControllerServer {
+public class TheServer {
 	
-	private static final Logger logger = LoggerFactory.getLogger(AgentControllerServer.class);
+
+
+	private static final Logger logger = LoggerFactory.getLogger(TheServer.class);
 	
 	static final String PARAM_BODY_LENGTH = "internal-body-length";
 	static final String PARAM_HOST = "internal-host";
@@ -71,7 +75,7 @@ public class AgentControllerServer {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public AgentControllerServer(){
+	public TheServer(){
 		
 		startServer();
 		
@@ -87,7 +91,7 @@ public class AgentControllerServer {
 				try {
 
 					serverSocket = new ServerSocket(PFRConfig.port());
-					System.out.println("Server listening on port " + PFRConfig.port());
+					logger.info("Server listening on port " + PFRConfig.port());
 
 					while (true) {
 						final Socket socket = serverSocket.accept();
@@ -101,7 +105,7 @@ public class AgentControllerServer {
 					}
 					
 				} catch (IOException e) {
-					System.err.println("Server error on port " + PFRConfig.port() + ": " + e.getMessage());
+					logger.error("Server error on port " + PFRConfig.port() + ": " + e.getMessage());
 				}
 			}
 		});
@@ -138,26 +142,45 @@ public class AgentControllerServer {
 			String parametersJson = requestIn.readLine();
 			JsonObject parameters = PFR.JSON.stringToJsonObject(parametersJson);
 			
-			System.out.println("Received command: " + command);
-			JsonObject response = new JsonObject();
+			logger.info("Received command: " + command + ", Parameters: " + parametersJson);
+
+			//---------------------------
+			// Create Response object
+			// e.g. {
+			// 		  success: true
+			//		, messages: [{"level": "INFO", "message": "my message"}, ...]
+			// 		, payload: { ... } or [ ... ]
+			// }
 			
+			JsonObject response = new JsonObject(); 
+			response.addProperty(RemoteResponse.FIELD_SUCCESS, true);
+			
+			JsonArray messages = new JsonArray();
+			response.add(RemoteResponse.FIELD_MESSAGES, messages);
+			
+			JsonObject payload = new JsonObject();
+			response.add(RemoteResponse.FIELD_PAYLOAD, payload);
+			
+			//---------------------------
+			// Execute command
 			switch (command) {
 			
 				case GET_STATUS:
-					response.addProperty("available", isAvailable);
-					response.addProperty("host", getLocalhost() );
-					response.addProperty("port", PFRConfig.port() );
-					response.addProperty("javaversion", props.getProperty("java.version"));
-					response.addProperty("memory.free", runtime.freeMemory());
-					response.addProperty("memory.total", runtime.totalMemory());
-					
-					requestOut.writeBytes( PFR.JSON.toString(response) );
+					payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
+					payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
+					payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
+					payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
+					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE, runtime.freeMemory());
+					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, runtime.totalMemory());
 				break;
 				
 				case RESERVE_AGENT: 
+					
+					if(!isAvailable) {
+						response.addProperty("success", false);
+						addMessage(response, Level.WARN, "Agent is already in use.");
+					}
 					isAvailable = false; 
-					response.addProperty("success", true);
-					requestOut.writeBytes( PFR.JSON.toString(response) );
 				break;
 			
 				case SEND_JAR:
@@ -173,49 +196,73 @@ public class AgentControllerServer {
 					Files.write(jarFile.toPath(), jarBytes);
 					
 					System.out.println("JAR saved to: " + jarFile.getAbsolutePath());
-					requestOut.writeBytes("JAR_RECEIVED\n");
+					
 					break;
 
 				case START:
-					executeProcess();
-					requestOut.writeBytes("PROCESS_STARTED\n");
-					break;
+					executeProcess(response);
+				break;
 
 				case STOP:
-					stopProcess();
-					requestOut.writeBytes("PROCESS_STOPPED\n");
-					break;
+					stopProcess(response);
+					isAvailable = true; 
+				break;
 
 				default:
-					requestOut.writeBytes("UNKNOWN_COMMAND\n");
+					response.addProperty("success", false);
+					addMessage(response, Level.ERROR, "Unkown command: "+command);
 			}
+			
+			// Write response
+			
+			requestOut.writeBytes( PFR.JSON.toString(response) );
 
 		} catch (IOException e) {
 			System.err.println("Error handling client: " + e.getMessage());
 		} 
+		
+		
 	}
-
+	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void executeProcess() {
+	private void addMessage(JsonObject response, Level level, String message) {
+		
+		JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
+		
+		JsonObject messageObject = new JsonObject();
+		messageObject.addProperty("level", level.toString());
+		messageObject.addProperty("message", message);
+		
+		messages.add(messageObject);
+		
+		logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public void executeProcess(JsonObject response) {
 		try {
 			simulatedProcess = new ProcessBuilder("echo", "Simulated process running").start();
-			System.out.println("Simulated process started.");
+			addMessage(response, Level.INFO, "Simulated process started.");
 		} catch (IOException e) {
-			System.err.println("Failed to start process: " + e.getMessage());
+			addMessage(response, Level.ERROR, "Simulated process started.");
 		}
 	}
+	
+
 
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void stopProcess() {
+	public void stopProcess(JsonObject response) {
 		if (simulatedProcess != null) {
 			simulatedProcess.destroy();
-			System.out.println("Simulated process stopped.");
+			addMessage(response, Level.INFO, "Simulated process stopped.");
 		} else {
-			System.out.println("No process to stop.");
+			addMessage(response, Level.ERROR,"No process to stop.");
 		}
 	}
 }

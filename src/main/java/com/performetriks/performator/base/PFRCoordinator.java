@@ -9,7 +9,11 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
-import com.performetriks.performator.distribute.AgentControllerServer;
+import com.performetriks.performator.distribute.TheConnection;
+import com.performetriks.performator.distribute.TheServer;
+import com.performetriks.performator.distribute.PFRAgent;
+import com.performetriks.performator.distribute.PFRAgentPool;
+import com.performetriks.performator.distribute.RemoteResponse;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
@@ -43,7 +47,9 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
-	private static AgentControllerServer server = null;
+	private static ArrayList<TheConnection> agentConnections = new ArrayList<>();
+	
+	private static TheServer server = null;
 	
 	/*************************************************************
 	 * Start the instance in the defined mode.
@@ -93,7 +99,7 @@ public class PFRCoordinator {
 			
 		PFRConfig.port(agentPort);
 		
-		server = new AgentControllerServer();
+		server = new TheServer();
 	}
 	
 	/*************************************************************
@@ -120,10 +126,84 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
+	 * makes sure that all the agents are disconnected.
+	 * 
+	 *************************************************************/
+	public static void disconnectAgents() {
+		
+		for(TheConnection connection : agentConnections) {
+			connection.stop();
+		}
+		
+		agentConnections.clear();
+		
+	}
+	/*************************************************************
 	 * Start the instance and distribute the test on agents.
 	 * 
 	 *************************************************************/
 	public static void executeOnAgents(PFRTest test) {
+		
+		//------------------------------
+		// Get Agents and Amount
+		disconnectAgents();
+		
+		//------------------------------
+		// Get Agents and Amount
+		PFRAgentPool pool = PFRConfig.getAgentPool();
+		
+		int amount = PFRConfig.getAgentAmount();
+		if(amount <= 0) {
+			amount = pool.size();
+		}
+		
+		//------------------------------
+		// Reserve available agents
+		logger.info("################################################");
+		logger.info("Check Agent Availability and Reserve. ");
+		logger.info("################################################");
+		for(int i = 0 ; i < amount; i++) {
+			
+			PFRAgent agent = pool.get(i);
+			TheConnection connection = new TheConnection(agent, test);
+			RemoteResponse status = connection.getStatus();
+			
+			//---------------------------
+			// Check success
+			if(status == null) {
+				logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
+				continue;
+			}
+			
+			if(!status.success()) {
+				logger.warn("Error while checking agent status: " 
+								+ agent.hostname() + ":" + agent.port() 
+								+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
+							);
+				continue;
+			}
+			
+			//---------------------------
+			// Check success
+			JsonObject payload = status.payload().getAsJsonObject();
+			logger.info(PFR.JSON.toJSON(payload));
+			
+			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
+			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
+				RemoteResponse reserve = connection.reserveAgent();
+				if(reserve != null && reserve.success()) {
+					agentConnections.add(connection);
+				}
+			}
+			
+		}
+		
+		//------------------------------
+		// Reserve available agents
+		logger.info("################################################");
+		logger.info("Send JAR File. ");
+		logger.info("################################################");
+		logger.info("to be done ...");
 		
 	}
 	

@@ -1,15 +1,13 @@
 package com.performetriks.performator.distribute;
 import java.io.File;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.JsonElement;
-import com.performetriks.performator.distribute.AgentControllerServer.Command;
+import com.performetriks.performator.base.PFRTest;
+import com.performetriks.performator.distribute.TheServer.Command;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
@@ -21,9 +19,9 @@ import com.performetriks.performator.distribute.AgentControllerServer.Command;
  * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
-class AgentControllerConnection {
+public class TheConnection {
 	
-	private static final Logger logger = LoggerFactory.getLogger(AgentControllerConnection.class);
+	private static final Logger logger = LoggerFactory.getLogger(TheConnection.class);
 	
 	static final String PARAM_BODY_LENGTH = "internal-body-length";
 	static final String PARAM_HOST = "internal-host";
@@ -31,6 +29,7 @@ class AgentControllerConnection {
 	
 	private String remoteHost;
 	private int remotePort;
+	private PFRTest test;
 	
 	/**********************************************************************************
 	 * Connects this instance to a agent or collector.
@@ -38,10 +37,12 @@ class AgentControllerConnection {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public AgentControllerConnection(PFRAgent agent) throws IOException {
+	public TheConnection(PFRAgent agent, PFRTest test){
 		this.remoteHost = agent.hostname();
 		this.remotePort = agent.port();
+		this.test = test;
 	}
+	
 	
 	/**********************************************************************************
 	 * Connects this instance to a agent or collector.
@@ -49,7 +50,7 @@ class AgentControllerConnection {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public AgentControllerConnection(String remoteHost, int remotePort) throws IOException {
+	public TheConnection(String remoteHost, int remotePort) {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
 	}
@@ -57,11 +58,11 @@ class AgentControllerConnection {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void sendJar(File jarFile) throws IOException {
+	public RemoteResponse sendJar(File jarFile) throws IOException {
 
 		byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
 		
-		new RemoteRequest(this, Command.SEND_JAR)
+		return new RemoteRequest(this, Command.SEND_JAR, test)
 					.body(jarBytes)
 					.send()
 					;
@@ -71,19 +72,26 @@ class AgentControllerConnection {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void getStatus() throws IOException {
+	public RemoteResponse getStatus(){
 		
-		RemoteResponse response = 
-				new RemoteRequest(this, Command.GET_STATUS)
-							.send()
-							;
-		
-		if(response.success()) {
-			JsonElement object = response.payload();
-		}
-
+		return new RemoteRequest(this, Command.GET_STATUS, test).send();
 	}
 	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse reserveAgent(){
+		
+		return new RemoteRequest(this, Command.RESERVE_AGENT, test).send();
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse stop(){
+		
+		return new RemoteRequest(this, Command.STOP, test).send();
+	}
 	
 	/**********************************************************************************
 	 * 
