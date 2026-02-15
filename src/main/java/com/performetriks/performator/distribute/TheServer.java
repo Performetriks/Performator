@@ -37,11 +37,7 @@ public class TheServer {
 
 
 	private static final Logger logger = LoggerFactory.getLogger(TheServer.class);
-	
-	static final String PARAM_BODY_LENGTH = "internal-body-length";
-	static final String PARAM_HOST = "internal-host";
-	static final String PARAM_PORT = "internal-port";
-	
+		
 	Properties props = System.getProperties();
 	Runtime runtime = Runtime.getRuntime();
 	
@@ -60,10 +56,10 @@ public class TheServer {
 		  /** STEP 2: Mark the agent as in use */
 		, RESERVE_AGENT
 		  /** STEP 3: Send the jar file and other data to the agent */
-		, SEND_JAR
+		, TRANSFER_JAR
 		  /** STEP 4: Start the received jar file as a new process. */
 		, START
-		  /** STEP 5: Agent pings controller to see if it is still available. */
+		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still is connected. */
 		, PING
 		  /** STEP 6: Stop the process. */
 		, STOP
@@ -139,11 +135,13 @@ public class TheServer {
 			String commandString = requestIn.readLine();
 			Command command = Command.valueOf(commandString);
 			
+			JsonObject parameters = null;
+			
 			String parametersJson = requestIn.readLine();
-			JsonObject parameters = PFR.JSON.stringToJsonObject(parametersJson);
+			parameters = PFR.JSON.stringToJsonObject(parametersJson);
 			
 			logger.info("Received command: " + command + ", Parameters: " + parametersJson);
-
+					
 			//---------------------------
 			// Create Response object
 			// e.g. {
@@ -180,17 +178,15 @@ public class TheServer {
 						response.addProperty("success", false);
 						addMessage(response, Level.WARN, "Agent is already in use.");
 					}
-					isAvailable = false; 
+					//isAvailable = false; 
 				break;
 			
-				case SEND_JAR:
+				case TRANSFER_JAR:
 					
-					int jarSize = parameters.get(PARAM_BODY_LENGTH).getAsInt();
-					byte[] jarBytes = new byte[jarSize];
-					
-					DataInputStream dataIn = new DataInputStream(socket.getInputStream());
-					dataIn.readFully(jarBytes);
-					
+					//int jarSize = parameters.get(PARAM_BODY_LENGTH).getAsInt();
+
+					byte[] jarBytes = socket.getInputStream().readAllBytes();
+
 					File jarFile = File.createTempFile("received-", ".jar");
 					
 					Files.write(jarFile.toPath(), jarBytes);

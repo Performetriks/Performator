@@ -120,9 +120,9 @@ public class RemoteRequest{
 				bodyLength = body.length;
 			}
 			
-			parameters.addProperty(TheServer.PARAM_HOST, TheServer.getLocalhost());
-			parameters.addProperty(TheServer.PARAM_PORT, PFRConfig.port());
-			parameters.addProperty(TheServer.PARAM_BODY_LENGTH, bodyLength);
+			parameters.addProperty(TheConnection.PARAM_HOST, TheServer.getLocalhost());
+			parameters.addProperty(TheConnection.PARAM_PORT, PFRConfig.port());
+			parameters.addProperty(TheConnection.PARAM_BODY_LENGTH, bodyLength);
 			
 			if(test != null) {
 				parameters.addProperty("test", test.getName());

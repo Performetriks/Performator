@@ -1,7 +1,11 @@
 package com.performetriks.performator.distribute;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.concurrent.CountDownLatch;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +27,9 @@ public class TheConnection {
 	
 	private static final Logger logger = LoggerFactory.getLogger(TheConnection.class);
 	
-	static final String PARAM_BODY_LENGTH = "internal-body-length";
-	static final String PARAM_HOST = "internal-host";
-	static final String PARAM_PORT = "internal-port";
+	static final String PARAM_BODY_LENGTH = "body-length";
+	static final String PARAM_HOST = "host";
+	static final String PARAM_PORT = "port";
 	
 	private String remoteHost;
 	private int remotePort;
@@ -58,15 +62,42 @@ public class TheConnection {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public RemoteResponse sendJar(File jarFile) throws IOException {
+	public void sendJar(CountDownLatch latch) {
 
-		byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
-		
-		return new RemoteRequest(this, Command.SEND_JAR, test)
-					.body(jarBytes)
-					.send()
-					;
-		
+		TheConnection instance = this;
+		Thread senderThread = new Thread(new Runnable() {
+			
+				@Override
+				public void run() {
+				 // Get path of the currently running JAR
+			    
+			    try {
+			    	File jarFile = new File(
+			            test.getClass()
+			                .getProtectionDomain()
+			                .getCodeSource()
+			                .getLocation()
+			                .toURI()
+			        );
+			        System.out.println("JAR File Path: "+jarFile.getAbsolutePath());
+					byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
+					
+					RemoteResponse response = 
+							new RemoteRequest(instance, Command.TRANSFER_JAR, test)
+								.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
+								.body(jarBytes)
+								.send()
+							;
+					
+			    } catch (Exception e) {
+			        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
+			    }finally {
+			    	latch.countDown();
+			    }
+			}
+		});
+
+		senderThread.start();
 	}
 
 	/**********************************************************************************
@@ -106,8 +137,5 @@ public class TheConnection {
 	public int getPort() throws IOException {
 		return remotePort;
 	}
-	
-	
-
 
 }

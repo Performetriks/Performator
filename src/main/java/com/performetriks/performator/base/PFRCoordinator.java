@@ -199,11 +199,22 @@ public class PFRCoordinator {
 		}
 		
 		//------------------------------
-		// Reserve available agents
+		// Send Jar File
 		logger.info("################################################");
 		logger.info("Send JAR File. ");
 		logger.info("################################################");
-		logger.info("to be done ...");
+		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			
+			agentConnections.get(i).sendJar(latch);
+		}
+		
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 	}
 	
