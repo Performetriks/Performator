@@ -9,8 +9,8 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
-import com.performetriks.performator.distribute.TheConnection;
-import com.performetriks.performator.distribute.TheServer;
+import com.performetriks.performator.distribute.ZePFRClient;
+import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
 import com.performetriks.performator.distribute.RemoteResponse;
@@ -47,9 +47,9 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
-	private static ArrayList<TheConnection> agentConnections = new ArrayList<>();
+	private static ArrayList<ZePFRClient> agentConnections = new ArrayList<>();
 	
-	private static TheServer server = null;
+	private static ZePFRServer server = null;
 	
 	/*************************************************************
 	 * Start the instance in the defined mode.
@@ -99,7 +99,7 @@ public class PFRCoordinator {
 			
 		PFRConfig.port(agentPort);
 		
-		server = new TheServer();
+		server = new ZePFRServer();
 	}
 	
 	/*************************************************************
@@ -131,7 +131,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void disconnectAgents() {
 		
-		for(TheConnection connection : agentConnections) {
+		for(ZePFRClient connection : agentConnections) {
 			connection.stop();
 		}
 		
@@ -165,7 +165,7 @@ public class PFRCoordinator {
 		for(int i = 0 ; i < amount; i++) {
 			
 			PFRAgent agent = pool.get(i);
-			TheConnection connection = new TheConnection(agent, test);
+			ZePFRClient connection = new ZePFRClient(agent, test);
 			RemoteResponse status = connection.getStatus();
 			
 			//---------------------------
@@ -201,7 +201,7 @@ public class PFRCoordinator {
 		//------------------------------
 		// Send Jar File
 		logger.info("################################################");
-		logger.info("Send JAR File. ");
+		logger.info("Send JAR File - Print Progress ");
 		logger.info("################################################");
 		CountDownLatch latch = new CountDownLatch(agentConnections.size());
 		for(int i = 0 ; i < agentConnections.size(); i++) {
@@ -210,7 +210,18 @@ public class PFRCoordinator {
 		}
 		
 		try {
-			latch.await();
+			while(latch.getCount() > 0) {
+				StringBuilder builder = new StringBuilder();
+				for(int i = 0 ; i < agentConnections.size(); i++) {
+					PFRAgent current = agentConnections.get(i).getAgent();
+					builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
+				}
+				logger.info("Upload Progress:"+builder.toString());
+				Thread.sleep(1000);
+			}
+			
+			logger.info("all Uploads finished.");
+			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

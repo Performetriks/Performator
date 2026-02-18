@@ -15,7 +15,7 @@ import com.performetriks.performator.base.PFR;
  * 
  **********************************************************************************/
 public class RemoteResponse {
-	private static final Logger logger = LoggerFactory.getLogger(TheConnection.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZePFRClient.class);
 	
 	public static final String FIELD_PAYLOAD = "payload";
 	public static final String FIELD_MESSAGES = "messages";

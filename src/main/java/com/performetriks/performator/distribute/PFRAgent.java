@@ -13,9 +13,13 @@ import java.util.HashSet;
  **************************************************************************************************************/
 public class PFRAgent {
 	
-	public String hostname;
-	public int port;
-	public HashSet<String> tags = new HashSet<>();
+	private String hostname;
+	private int port;
+	
+	// progress in percent of test jar file uploaded
+	private int uploadProgressPercent = 0;
+	
+	private HashSet<String> tags = new HashSet<>();
 	
 	/*************************************************************
 	 * Start the instance and run the test either locally or remote
@@ -59,6 +63,20 @@ public class PFRAgent {
 	 *************************************************************/
 	public int port() {
 		return port;
+	}
+	
+	/*************************************************************
+	 * @return uploadProgressPercent
+	 *************************************************************/
+	public int uploadProgressPercent() {
+		return uploadProgressPercent;
+	}
+	
+	/*************************************************************
+	 *
+	 *************************************************************/
+	protected void uploadProgressPercent(int percent) {
+		uploadProgressPercent = percent;
 	}
 
 }

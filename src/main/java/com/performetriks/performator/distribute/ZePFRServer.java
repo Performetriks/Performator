@@ -1,6 +1,5 @@
 package com.performetriks.performator.distribute;
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +9,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +25,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
+import com.xresch.hsr.base.HSR;
 
 import ch.qos.logback.classic.Level;
 
@@ -32,11 +39,11 @@ import ch.qos.logback.classic.Level;
  * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
-public class TheServer {
+public class ZePFRServer {
 	
 
 
-	private static final Logger logger = LoggerFactory.getLogger(TheServer.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
 		
 	Properties props = System.getProperties();
 	Runtime runtime = Runtime.getRuntime();
@@ -71,7 +78,7 @@ public class TheServer {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public TheServer(){
+	public ZePFRServer(){
 		
 		startServer();
 		
@@ -141,7 +148,12 @@ public class TheServer {
 			parameters = PFR.JSON.stringToJsonObject(parametersJson);
 			
 			logger.info("Received command: " + command + ", Parameters: " + parametersJson);
-					
+			
+			String test = "TestnameUnknown";
+			if(parameters != null && parameters.has(ZePFRClient.PARAM_TEST) ) {
+				test = parameters.get(ZePFRClient.PARAM_TEST).getAsString();
+			}
+		
 			//---------------------------
 			// Create Response object
 			// e.g. {
@@ -182,16 +194,8 @@ public class TheServer {
 				break;
 			
 				case TRANSFER_JAR:
-					
-					//int jarSize = parameters.get(PARAM_BODY_LENGTH).getAsInt();
 
-					byte[] jarBytes = socket.getInputStream().readAllBytes();
-
-					File jarFile = File.createTempFile("received-", ".jar");
-					
-					Files.write(jarFile.toPath(), jarBytes);
-					
-					System.out.println("JAR saved to: " + jarFile.getAbsolutePath());
+					storeJar(socket, test);
 					
 					break;
 
@@ -218,6 +222,44 @@ public class TheServer {
 		} 
 		
 		
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void storeJar(Socket socket, String test) throws IOException {
+
+	    final int MAX_FOLDERS = 10;
+	    
+	    byte[] jarBytes = socket.getInputStream().readAllBytes();
+
+	    Path runDir = Paths.get(System.getProperty("user.dir"));
+
+	    Path executionDir = HSR.Files.createTimestampedFolder(runDir.toString(), test, MAX_FOLDERS);
+
+	    Path jarFilePath = executionDir.resolve("received.jar");
+		Files.write(jarFilePath, jarBytes);
+		
+		logger.info("JAR saved to: " + jarFilePath.toAbsolutePath());
+		
+	    
+	  
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private static void deleteDirectoryRecursively(Path path) throws IOException {
+
+	    Files.walk(path)
+	            .sorted(Comparator.reverseOrder()) // delete children first
+	            .forEach(p -> {
+	                try {
+	                    Files.delete(p);
+	                } catch (IOException e) {
+	                    throw new RuntimeException("Failed to delete: " + p, e);
+	                }
+	            });
 	}
 	
 	/**********************************************************************************

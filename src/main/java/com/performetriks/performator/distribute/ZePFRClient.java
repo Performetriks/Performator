@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRTest;
-import com.performetriks.performator.distribute.TheServer.Command;
+import com.performetriks.performator.distribute.ZePFRServer.Command;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
@@ -23,14 +23,16 @@ import com.performetriks.performator.distribute.TheServer.Command;
  * @author Reto Scheiwiller
  * 
  **************************************************************************************************************/
-public class TheConnection {
+public class ZePFRClient {
 	
-	private static final Logger logger = LoggerFactory.getLogger(TheConnection.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZePFRClient.class);
 	
 	static final String PARAM_BODY_LENGTH = "body-length";
 	static final String PARAM_HOST = "host";
 	static final String PARAM_PORT = "port";
+	static final String PARAM_TEST = "test";
 	
+	private PFRAgent agent;
 	private String remoteHost;
 	private int remotePort;
 	private PFRTest test;
@@ -41,7 +43,8 @@ public class TheConnection {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public TheConnection(PFRAgent agent, PFRTest test){
+	public ZePFRClient(PFRAgent agent, PFRTest test){
+		this.agent = agent;
 		this.remoteHost = agent.hostname();
 		this.remotePort = agent.port();
 		this.test = test;
@@ -54,50 +57,43 @@ public class TheConnection {
 	 * @throws IOException 
 	 * 
 	 **********************************************************************************/
-	public TheConnection(String remoteHost, int remotePort) {
+	public ZePFRClient(String remoteHost, int remotePort) {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
 	}
 
+	
+
 	/**********************************************************************************
-	 * 
+	 * Sends 
 	 **********************************************************************************/
 	public void sendJar(CountDownLatch latch) {
 
-		TheConnection instance = this;
-		Thread senderThread = new Thread(new Runnable() {
-			
-				@Override
-				public void run() {
-				 // Get path of the currently running JAR
-			    
-			    try {
-			    	File jarFile = new File(
-			            test.getClass()
-			                .getProtectionDomain()
-			                .getCodeSource()
-			                .getLocation()
-			                .toURI()
-			        );
-			        System.out.println("JAR File Path: "+jarFile.getAbsolutePath());
-					byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
-					
-					RemoteResponse response = 
-							new RemoteRequest(instance, Command.TRANSFER_JAR, test)
-								.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
-								.body(jarBytes)
-								.send()
-							;
-					
-			    } catch (Exception e) {
-			        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
-			    }finally {
-			    	latch.countDown();
-			    }
-			}
-		});
+		ZePFRClient instance = this;
 
-		senderThread.start();
+	    try {
+	    	File jarFile = new File(
+	            test.getClass()
+	                .getProtectionDomain()
+	                .getCodeSource()
+	                .getLocation()
+	                .toURI()
+	        );
+	        System.out.println("JAR File Path: "+jarFile.getAbsolutePath());
+			byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
+			
+			
+			new RemoteRequest(instance, Command.TRANSFER_JAR, test)
+				.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
+				.body(jarBytes)
+				.sendAsync(latch)
+			;
+			
+	    } catch (Exception e) {
+	        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
+	    }
+			
+
 	}
 
 	/**********************************************************************************
@@ -124,17 +120,24 @@ public class TheConnection {
 		return new RemoteRequest(this, Command.STOP, test).send();
 	}
 	
+	
+	/**********************************************************************************
+	 * Returns the agent the client connects too.
+	 **********************************************************************************/
+	public PFRAgent getAgent() {
+		return agent;
+	}
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public String getHost() throws IOException {
+	public String getHost() {
 		return remoteHost;
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public int getPort() throws IOException {
+	public int getPort(){
 		return remotePort;
 	}
 

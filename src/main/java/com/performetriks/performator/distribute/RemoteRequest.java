@@ -1,5 +1,6 @@
 package com.performetriks.performator.distribute;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7,6 +8,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +17,7 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRTest;
-import com.performetriks.performator.distribute.TheServer.Command;
+import com.performetriks.performator.distribute.ZePFRServer.Command;
 
 /**********************************************************************************
  * 
@@ -25,7 +27,7 @@ public class RemoteRequest{
 	private static final Logger logger = LoggerFactory.getLogger(RemoteRequest.class);
 	
 	
-	private final TheConnection connection;
+	private final ZePFRClient client;
 	//------------------------------------
 	// Data Fields
 	private Command command = null;
@@ -42,14 +44,12 @@ public class RemoteRequest{
 	/********************************************************
 	 * 
 	 ********************************************************/
-	public RemoteRequest(TheConnection agentControllerConnection, Command command, PFRTest test) {
-		this.connection = agentControllerConnection;
+	public RemoteRequest(ZePFRClient client, Command command, PFRTest test) {
+		this.client = client;
 		this.command = command;
 		this.test = test;
 		
 	}
-	
-	
 	
 	/********************************************************
 	 * Adds a parameter to the request.
@@ -85,7 +85,7 @@ public class RemoteRequest{
 		
 		if (clientSocket == null || clientSocket.isClosed()) {
 
-			SocketAddress address = new InetSocketAddress(connection.getHost(), connection.getPort());
+			SocketAddress address = new InetSocketAddress(client.getHost(), client.getPort());
 			clientSocket = new Socket();
 			clientSocket.connect(address, 5000); // 5-second timeout
 			clientSocket.setSoTimeout(10000); // read timeout
@@ -95,6 +95,28 @@ public class RemoteRequest{
 		}
 	}
 	
+	/********************************************************
+	 * Send a request and return a response.
+	 * @return response or null on error
+	 ********************************************************/
+	public void sendAsync(CountDownLatch latch) {
+	
+		Thread senderThread = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					send();
+				}finally {
+					latch.countDown();
+				}
+			}
+		});
+	
+		senderThread.start();
+	}
+	
+
 	/********************************************************
 	 * Send a request and return a response.
 	 * @return response or null on error
@@ -120,21 +142,58 @@ public class RemoteRequest{
 				bodyLength = body.length;
 			}
 			
-			parameters.addProperty(TheConnection.PARAM_HOST, TheServer.getLocalhost());
-			parameters.addProperty(TheConnection.PARAM_PORT, PFRConfig.port());
-			parameters.addProperty(TheConnection.PARAM_BODY_LENGTH, bodyLength);
+			parameters.addProperty(ZePFRClient.PARAM_HOST, ZePFRServer.getLocalhost());
+			parameters.addProperty(ZePFRClient.PARAM_PORT, PFRConfig.port());
+			parameters.addProperty(ZePFRClient.PARAM_BODY_LENGTH, bodyLength);
 			
 			if(test != null) {
-				parameters.addProperty("test", test.getName());
+				parameters.addProperty(ZePFRClient.PARAM_TEST, test.getName());
 			}
 			
 			clientWriter.println(PFR.JSON.toJSON(parameters));
 			
 			//-------------------------------
 			// Write body
-			if(body != null) {
-				clientSocket.getOutputStream().write(body);
-				clientSocket.getOutputStream().flush();
+			
+			if (body != null) {
+
+			    byte[] data = body;
+			    long totalBytes = data.length;
+			    long bytesWritten = 0;
+			    
+			    client.getAgent().uploadProgressPercent(0); // reset
+			   
+			    BufferedOutputStream bos = null;
+			    try {
+			    	
+			    	bos = new BufferedOutputStream(clientSocket.getOutputStream());
+			        int bufferSize = 8192; // 8 KB buffer
+			        int offset = 0;
+
+			        while (offset < totalBytes) {
+
+			            int bytesToWrite = (int) Math.min(bufferSize, totalBytes - offset);
+
+			            bos.write(data, offset, bytesToWrite);
+			            offset += bytesToWrite;
+			            bytesWritten += bytesToWrite;
+
+			            // Calculate percentage
+			            int percent = (int) ((bytesWritten * 100) / totalBytes);
+			            client.getAgent().uploadProgressPercent(percent);
+			        }
+
+			        bos.flush();
+			        
+			    }catch(Exception e) {
+			    	logger.error("Exception sending remote request.", e);
+			    }finally {
+			    	try {
+			    		if(bos != null) { bos.close(); }
+			    	}catch(Exception e) {
+			    		// do nothing, swallow the exception
+			    	}
+			    }
 			}
 			
 			//-------------------------------
