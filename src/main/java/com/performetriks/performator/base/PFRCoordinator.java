@@ -201,15 +201,20 @@ public class PFRCoordinator {
 		//------------------------------
 		// Send Jar File
 		logger.info("################################################");
-		logger.info("Send JAR File - Print Progress ");
+		logger.info("Transfer Test JAR File to Agents");
 		logger.info("################################################");
 		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		
+		logger.info("Start Transfers");
 		for(int i = 0 ; i < agentConnections.size(); i++) {
 			
 			agentConnections.get(i).sendJar(latch);
 		}
 		
+		//------------------------------
+		// Wait for Transfers to finish
 		try {
+			
 			while(latch.getCount() > 0) {
 				StringBuilder builder = new StringBuilder();
 				for(int i = 0 ; i < agentConnections.size(); i++) {
@@ -217,10 +222,10 @@ public class PFRCoordinator {
 					builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
 				}
 				logger.info("Upload Progress:"+builder.toString());
-				Thread.sleep(1000);
+				Thread.sleep(30);
 			}
 			
-			logger.info("all Uploads finished.");
+			logger.info("All Transfers finished");
 			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block

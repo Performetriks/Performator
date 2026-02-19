@@ -81,14 +81,14 @@ public class RemoteRequest{
 	/********************************************************
 	 * 
 	 ********************************************************/
-	private void initializeClient() throws IOException {
+	private void initializeConnection() throws IOException {
 		
 		if (clientSocket == null || clientSocket.isClosed()) {
 
 			SocketAddress address = new InetSocketAddress(client.getHost(), client.getPort());
 			clientSocket = new Socket();
-			clientSocket.connect(address, 5000); // 5-second timeout
-			clientSocket.setSoTimeout(10000); // read timeout
+			clientSocket.connect(address, 30000); // 30-second timeout
+			clientSocket.setSoTimeout(60000); // read timeout
 			
 			clientReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			clientWriter = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -124,7 +124,7 @@ public class RemoteRequest{
 	public RemoteResponse send() {
 	   
 		try {
-			initializeClient();
+			initializeConnection();
 				
 			//-------------------------------
 			// Write Command
@@ -185,35 +185,35 @@ public class RemoteRequest{
 
 			        bos.flush();
 			        
+			        clientSocket.shutdownOutput();
+			        //clientSocket.getOutputStream().close();
+					//-------------------------------
+					// Get Response
+					RemoteResponse response = new RemoteResponse(clientReader);
+					return response;
+					
 			    }catch(Exception e) {
 			    	logger.error("Exception sending remote request.", e);
 			    }finally {
 			    	try {
+			    		//-------------------------------
+						// Close Stuff
 			    		if(bos != null) { bos.close(); }
+						clientReader.close();
+						clientWriter.close();
 			    	}catch(Exception e) {
-			    		// do nothing, swallow the exception
+			    		// do nothing, swallow the exception to not spam log 
 			    	}
 			    }
 			}
 			
-			//-------------------------------
-			// Get Response
-			RemoteResponse response = new RemoteResponse(clientReader);
-			
-			//-------------------------------
-			// Close Stuff
-			clientReader.close();
-			clientWriter.close();
-			clientSocket.close();
-			
-			return response;
-			
+
+
 		} catch(IOException e) {
 			logger.error("Error on remote request.", e);
 		}
 		
 		return null;
-		
 		
 	}
 }

@@ -214,9 +214,9 @@ public class ZePFRServer {
 			}
 			
 			// Write response
-			
 			requestOut.writeBytes( PFR.JSON.toString(response) );
-
+			socket.shutdownOutput();
+			
 		} catch (IOException e) {
 			System.err.println("Error handling client: " + e.getMessage());
 		} 

@@ -15,7 +15,7 @@ import com.performetriks.performator.base.PFR;
  * 
  **********************************************************************************/
 public class RemoteResponse {
-	private static final Logger logger = LoggerFactory.getLogger(ZePFRClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(RemoteResponse.class);
 	
 	public static final String FIELD_PAYLOAD = "payload";
 	public static final String FIELD_MESSAGES = "messages";
@@ -40,7 +40,6 @@ public class RemoteResponse {
 			while (clientReader != null 
 				&& (line = clientReader.readLine()) != null) {
 				jsonBuilder.append(line);
-				
 			}
 			if(jsonBuilder.length() > 0) {
 				response = PFR.JSON.getGsonInstance().fromJson(jsonBuilder.toString(), JsonObject.class);
@@ -48,9 +47,15 @@ public class RemoteResponse {
 				response = RemoteResponse.createErrorObject(new Exception("Empty response received."));
 			}
 			
+			// this is done by remote request
+			//clientReader.close();
+			
 		} catch (IOException e) {
-
-			response = RemoteResponse.createErrorObject(e);
+//			if ("Socket closed".equals(e.getMessage())) {
+//		        // treat as normal termination
+//		    } else {
+		        response = RemoteResponse.createErrorObject(e);
+//		    }
 		} finally {
 			handleMessages();
 		}
@@ -83,7 +88,7 @@ public class RemoteResponse {
 	private void handleMessages() {
 		
 		for(JsonElement message : this.messages()) {
-			logger.error(message.getAsString());
+			logger.error("Message from remote machine: "+PFR.JSON.toJSON(message));
 		}
 
 	}
@@ -93,7 +98,7 @@ public class RemoteResponse {
 	 ********************************************************/
 		public static JsonObject createErrorObject(Throwable e) {
 		
-		String message = e.getMessage() + "\r\n"+ e.fillInStackTrace();
+		String message = e.getMessage() + "\r\n"+ PFR.Text.stacktraceToString(e);
 		
 		JsonArray messages = new JsonArray();
 		messages.add(message);

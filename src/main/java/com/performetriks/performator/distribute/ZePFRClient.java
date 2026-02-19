@@ -82,14 +82,13 @@ public class ZePFRClient {
 	        System.out.println("JAR File Path: "+jarFile.getAbsolutePath());
 			byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
 			
-			
 			new RemoteRequest(instance, Command.TRANSFER_JAR, test)
 				.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
 				.body(jarBytes)
 				.sendAsync(latch)
 			;
 			
-	    } catch (Exception e) {
+		}catch (Exception e) {
 	        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
 	    }
 			
