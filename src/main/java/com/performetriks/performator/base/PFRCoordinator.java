@@ -144,77 +144,79 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeOnAgents(PFRTest test) {
 		
-		//------------------------------
-		// Get Agents and Amount
-		disconnectAgents();
-		
-		//------------------------------
-		// Get Agents and Amount
-		PFRAgentPool pool = PFRConfig.getAgentPool();
-		
-		int amount = PFRConfig.getAgentAmount();
-		if(amount <= 0) {
-			amount = pool.size();
-		}
-		
-		//------------------------------
-		// Reserve available agents
-		logger.info("################################################");
-		logger.info("Check Agent Availability and Reserve. ");
-		logger.info("################################################");
-		for(int i = 0 ; i < amount; i++) {
-			
-			PFRAgent agent = pool.get(i);
-			ZePFRClient connection = new ZePFRClient(agent, test);
-			RemoteResponse status = connection.getStatus();
-			
-			//---------------------------
-			// Check success
-			if(status == null) {
-				logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
-				continue;
-			}
-			
-			if(!status.success()) {
-				logger.warn("Error while checking agent status: " 
-								+ agent.hostname() + ":" + agent.port() 
-								+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
-							);
-				continue;
-			}
-			
-			//---------------------------
-			// Check success
-			JsonObject payload = status.payload().getAsJsonObject();
-			logger.info(PFR.JSON.toJSON(payload));
-			
-			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
-			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
-				RemoteResponse reserve = connection.reserveAgent();
-				if(reserve != null && reserve.success()) {
-					agentConnections.add(connection);
-				}
-			}
-			
-		}
-		
-		//------------------------------
-		// Send Jar File
-		logger.info("################################################");
-		logger.info("Transfer Test JAR File to Agents");
-		logger.info("################################################");
-		CountDownLatch latch = new CountDownLatch(agentConnections.size());
-		
-		logger.info("Start Transfers");
-		for(int i = 0 ; i < agentConnections.size(); i++) {
-			
-			agentConnections.get(i).sendJar(latch);
-		}
-		
-		//------------------------------
-		// Wait for Transfers to finish
 		try {
+			//------------------------------
+			// Get Agents and Amount
+			disconnectAgents();
 			
+			//------------------------------
+			// Get Agents and Amount
+			PFRAgentPool pool = PFRConfig.getAgentPool();
+			
+			int amount = PFRConfig.getAgentAmount();
+			if(amount <= 0) {
+				amount = pool.size();
+			}
+			
+			//------------------------------
+			// Reserve available agents
+			logger.info("################################################");
+			logger.info("Check Agent Availability and Reserve. ");
+			logger.info("################################################");
+	
+			for(int i = 0 ; i < amount; i++) {
+				
+				PFRAgent agent = pool.get(i);
+				ZePFRClient connection = new ZePFRClient(agent, test);
+				RemoteResponse status = connection.getStatus();
+				
+				//---------------------------
+				// Check success
+				if(status == null) {
+					logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
+					continue;
+				}
+				
+				if(!status.success()) {
+					logger.warn("Error while checking agent status: " 
+									+ agent.hostname() + ":" + agent.port() 
+									+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
+								);
+					continue;
+				}
+				
+				//---------------------------
+				// Check success
+				JsonObject payload = status.payload().getAsJsonObject();
+				logger.info(PFR.JSON.toJSON(payload));
+				
+				if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
+				&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
+					RemoteResponse reserve = connection.reserveAgent();
+					if(reserve != null && reserve.success()) {
+						agentConnections.add(connection);
+					}
+				}
+				
+			}
+			
+			//------------------------------
+			// Send Jar File
+			logger.info("################################################");
+			logger.info("Transfer Test JAR File to Agents");
+			logger.info("################################################");
+			logger.info("Start Transfer of JAR File: " + ZePFRClient.getJarFileURIForTest(test) );
+	        
+			CountDownLatch latch = new CountDownLatch(agentConnections.size());
+			
+			for(int i = 0 ; i < agentConnections.size(); i++) {
+				
+				agentConnections.get(i).sendJar(latch);
+			}
+		
+			//------------------------------
+			// Wait for Transfers to finish
+
 			while(latch.getCount() > 0) {
 				StringBuilder builder = new StringBuilder();
 				for(int i = 0 ; i < agentConnections.size(); i++) {
@@ -228,7 +230,8 @@ public class PFRCoordinator {
 			logger.info("All Transfers finished");
 			
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		

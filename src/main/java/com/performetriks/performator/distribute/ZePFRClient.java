@@ -2,6 +2,8 @@ package com.performetriks.performator.distribute;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.concurrent.CountDownLatch;
 import java.util.jar.Attributes;
@@ -61,8 +63,18 @@ public class ZePFRClient {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
 	}
-
-	
+	/**********************************************************************************
+	 * Sends 
+	 * @throws URISyntaxException 
+	 **********************************************************************************/
+	public static URI getJarFileURIForTest(PFRTest test) throws URISyntaxException {
+		
+		return test.getClass()
+                .getProtectionDomain()
+                .getCodeSource()
+                .getLocation()
+                .toURI();
+	}
 
 	/**********************************************************************************
 	 * Sends 
@@ -73,16 +85,12 @@ public class ZePFRClient {
 
 	    try {
 	    	File jarFile = new File(
-	            test.getClass()
-	                .getProtectionDomain()
-	                .getCodeSource()
-	                .getLocation()
-	                .toURI()
+	    			getJarFileURIForTest(test)
 	        );
-	        System.out.println("JAR File Path: "+jarFile.getAbsolutePath());
+	    	
 			byte[] jarBytes = Files.readAllBytes(jarFile.toPath());
 			
-			new RemoteRequest(instance, Command.TRANSFER_JAR, test)
+			new RemoteRequest(instance, Command.transferjar, test)
 				.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
 				.body(jarBytes)
 				.sendAsync(latch)
@@ -100,7 +108,7 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse getStatus(){
 		
-		return new RemoteRequest(this, Command.GET_STATUS, test).send();
+		return new RemoteRequest(this, Command.status, test).send();
 	}
 	
 	/**********************************************************************************
@@ -108,7 +116,7 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse reserveAgent(){
 		
-		return new RemoteRequest(this, Command.RESERVE_AGENT, test).send();
+		return new RemoteRequest(this, Command.reserve, test).send();
 	}
 	
 	/**********************************************************************************
@@ -116,7 +124,7 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse stop(){
 		
-		return new RemoteRequest(this, Command.STOP, test).send();
+		return new RemoteRequest(this, Command.stoptest, test).send();
 	}
 	
 	

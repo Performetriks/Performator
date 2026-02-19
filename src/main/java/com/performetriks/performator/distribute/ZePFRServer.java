@@ -25,6 +25,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.utils.ByteSize;
 
 import ch.qos.logback.classic.Level;
 
@@ -56,17 +57,17 @@ public class ZePFRServer {
 	
 	public enum Command{
 		  /** STEP 1: Fetch the status of a remote process */
-		  GET_STATUS
+		  status
 		  /** STEP 2: Mark the agent as in use */
-		, RESERVE_AGENT
+		, reserve
 		  /** STEP 3: Send the jar file and other data to the agent */
-		, TRANSFER_JAR
+		, transferjar
 		  /** STEP 4: Start the received jar file as a new process. */
-		, START
-		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still is connected. */
-		, PING
+		, starttest
+		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still connected. */
+		, ping
 		  /** STEP 6: Stop the process. */
-		, STOP
+		, stoptest
 	}
 	
 	/**********************************************************************************
@@ -162,7 +163,7 @@ public class ZePFRServer {
 				addMessage(response, Level.ERROR, "Please specify a command.");
 			}
 			
-			Command command = Command.valueOf(paramCommand.trim().toUpperCase());
+			Command command = Command.valueOf(paramCommand.trim().toLowerCase());
 			
 			logger.info("Received command: " + command + ", Parameters: " + PFR.JSON.toJSON(parameters));
 			
@@ -190,16 +191,16 @@ public class ZePFRServer {
 			// Execute command
 			switch (command) {
 			
-				case GET_STATUS:
+				case status:
 					payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
 					payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
 					payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
 					payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
-					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE, runtime.freeMemory());
-					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, runtime.totalMemory());
+					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
+					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
 				break;
 				
-				case RESERVE_AGENT: 
+				case reserve: 
 					
 					if(!isAvailable) {
 						response.addProperty("success", false);
@@ -208,17 +209,17 @@ public class ZePFRServer {
 					//isAvailable = false; 
 				break;
 			
-				case TRANSFER_JAR:
+				case transferjar:
 	
 					storeJar(bodyBytes, test);
 					
 					break;
 	
-				case START:
+				case starttest:
 					executeProcess(response);
 				break;
 	
-				case STOP:
+				case stoptest:
 					stopProcess(response);
 					isAvailable = true; 
 				break;

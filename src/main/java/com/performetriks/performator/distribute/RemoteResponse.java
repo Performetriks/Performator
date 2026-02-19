@@ -1,8 +1,5 @@
 package com.performetriks.performator.distribute;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +18,8 @@ public class RemoteResponse {
 	public static final String FIELD_MESSAGES = "messages";
 	public static final String FIELD_SUCCESS = "success";
 	
-	public static final String FIELD_STATUS_MEMORYTOTAL = "memory.total";
-	public static final String FIELD_STATUS_MEMORYFREE = "memory.free";
+	public static final String FIELD_STATUS_MEMORYTOTAL = "agentMemoryTotalMB";
+	public static final String FIELD_STATUS_MEMORYFREE = "agentMemoryFreeMB";
 	public static final String FIELD_STATUS_JAVAVERSION = "javaversion";
 	public static final String FIELD_STATUS_PORT = "port";
 	public static final String FIELD_STATUS_HOST = "host";
