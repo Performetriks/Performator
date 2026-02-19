@@ -1,20 +1,18 @@
 package com.performetriks.performator.distribute;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
@@ -36,10 +34,10 @@ public class RemoteRequest{
 	private byte[] body = null;
 	
 	//------------------------------------
-	// Client connecting to another process
-	private Socket clientSocket;
-	private BufferedReader clientReader;
-	private PrintWriter clientWriter;
+	// HTTP Client 
+	private final HttpClient httpClient = HttpClient.newBuilder()
+			.connectTimeout(java.time.Duration.ofSeconds(30))
+			.build();
 	
 	/********************************************************
 	 * 
@@ -78,22 +76,6 @@ public class RemoteRequest{
 		return this;
 	}
 	
-	/********************************************************
-	 * 
-	 ********************************************************/
-	private void initializeConnection() throws IOException {
-		
-		if (clientSocket == null || clientSocket.isClosed()) {
-
-			SocketAddress address = new InetSocketAddress(client.getHost(), client.getPort());
-			clientSocket = new Socket();
-			clientSocket.connect(address, 30000); // 30-second timeout
-			clientSocket.setSoTimeout(60000); // read timeout
-			
-			clientReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			clientWriter = new PrintWriter(clientSocket.getOutputStream(), true);
-		}
-	}
 	
 	/********************************************************
 	 * Send a request and return a response.
@@ -119,101 +101,60 @@ public class RemoteRequest{
 
 	/********************************************************
 	 * Send a request and return a response.
-	 * @return response or null on error
 	 ********************************************************/
 	public RemoteResponse send() {
-	   
+		
 		try {
-			initializeConnection();
-				
-			//-------------------------------
-			// Write Command
-			clientWriter.println(command.toString());
-		   
-			//-------------------------------
-			// Write Parameters
+
 			
 			if(parameters == null) {
 				parameters = new JsonObject();
 			}
-			
-			int bodyLength = 0;
-			if(body != null) {
-				bodyLength = body.length;
-			}
-			
-			parameters.addProperty(ZePFRClient.PARAM_HOST, ZePFRServer.getLocalhost());
-			parameters.addProperty(ZePFRClient.PARAM_PORT, PFRConfig.port());
-			parameters.addProperty(ZePFRClient.PARAM_BODY_LENGTH, bodyLength);
-			
+
 			if(test != null) {
 				parameters.addProperty(ZePFRClient.PARAM_TEST, test.getName());
 			}
+
+			parameters.addProperty(ZePFRClient.PARAM_HOST, ZePFRServer.getLocalhost());
+			parameters.addProperty(ZePFRClient.PARAM_PORT, PFRConfig.port());
+
+			String query = buildQuery(parameters);
+
+			String url = "http://" + client.getHost() + ":" + client.getPort()
+							+ "/api?command=" + command.name() + "&" + query;
+
+			HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+					.uri(URI.create(url))
+					.timeout(java.time.Duration.ofMinutes(3));
+
+			client.getAgent().uploadProgressPercent(100);
 			
-			clientWriter.println(PFR.JSON.toJSON(parameters));
-			
-			//-------------------------------
-			// Write body
-			
-			if (body != null) {
-
-			    byte[] data = body;
-			    long totalBytes = data.length;
-			    long bytesWritten = 0;
-			    
-			    client.getAgent().uploadProgressPercent(0); // reset
-			   
-			    BufferedOutputStream bos = null;
-			    try {
-			    	
-			    	bos = new BufferedOutputStream(clientSocket.getOutputStream());
-			        int bufferSize = 8192; // 8 KB buffer
-			        int offset = 0;
-
-			        while (offset < totalBytes) {
-
-			            int bytesToWrite = (int) Math.min(bufferSize, totalBytes - offset);
-
-			            bos.write(data, offset, bytesToWrite);
-			            offset += bytesToWrite;
-			            bytesWritten += bytesToWrite;
-
-			            // Calculate percentage
-			            int percent = (int) ((bytesWritten * 100) / totalBytes);
-			            client.getAgent().uploadProgressPercent(percent);
-			        }
-
-			        bos.flush();
-			        
-			        clientSocket.shutdownOutput();
-			        //clientSocket.getOutputStream().close();
-					//-------------------------------
-					// Get Response
-					RemoteResponse response = new RemoteResponse(clientReader);
-					return response;
-					
-			    }catch(Exception e) {
-			    	logger.error("Exception sending remote request.", e);
-			    }finally {
-			    	try {
-			    		//-------------------------------
-						// Close Stuff
-			    		if(bos != null) { bos.close(); }
-						clientReader.close();
-						clientWriter.close();
-			    	}catch(Exception e) {
-			    		// do nothing, swallow the exception to not spam log 
-			    	}
-			    }
+			if(body != null) {
+				requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(body));
+			} else {
+				requestBuilder.POST(HttpRequest.BodyPublishers.noBody());
 			}
-			
 
+			HttpResponse<String> response =
+					httpClient.send(requestBuilder.build(),
+							HttpResponse.BodyHandlers.ofString());
 
-		} catch(IOException e) {
+			return new RemoteResponse(response.body());
+
+		} catch (Exception e) {
 			logger.error("Error on remote request.", e);
+			return null;
 		}
-		
-		return null;
-		
+	}
+
+	/********************************************************
+	 * Send a request and return a response.
+	 ********************************************************/
+	private String buildQuery(JsonObject json) {
+		return json.entrySet().stream()
+				.map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
+						+ "="
+						+ URLEncoder.encode(e.getValue().getAsString(), StandardCharsets.UTF_8))
+				.collect(Collectors.joining("&"));
 	}
 }

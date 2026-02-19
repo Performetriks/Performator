@@ -33,29 +33,17 @@ public class RemoteResponse {
 	/********************************************************
 	 * 
 	 ********************************************************/
-	public RemoteResponse(BufferedReader clientReader) {
-		StringBuilder jsonBuilder = new StringBuilder();
-		String line;
+	public RemoteResponse(String json) {
 		try {
-			while (clientReader != null 
-				&& (line = clientReader.readLine()) != null) {
-				jsonBuilder.append(line);
-			}
-			if(jsonBuilder.length() > 0) {
-				response = PFR.JSON.getGsonInstance().fromJson(jsonBuilder.toString(), JsonObject.class);
+			if(json != null && !json.isBlank()) {
+				response = PFR.JSON.getGsonInstance()
+						.fromJson(json, JsonObject.class);
 			}else {
-				response = RemoteResponse.createErrorObject(new Exception("Empty response received."));
+				response = RemoteResponse.createErrorObject(
+						new Exception("Empty response received."));
 			}
-			
-			// this is done by remote request
-			//clientReader.close();
-			
-		} catch (IOException e) {
-//			if ("Socket closed".equals(e.getMessage())) {
-//		        // treat as normal termination
-//		    } else {
-		        response = RemoteResponse.createErrorObject(e);
-//		    }
+		} catch (Exception e) {
+			response = RemoteResponse.createErrorObject(e);
 		} finally {
 			handleMessages();
 		}

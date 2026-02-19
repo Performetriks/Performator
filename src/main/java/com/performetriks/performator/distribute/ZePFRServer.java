@@ -1,22 +1,18 @@
 package com.performetriks.performator.distribute;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +21,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
 
 import ch.qos.logback.classic.Level;
@@ -50,8 +49,6 @@ public class ZePFRServer {
 	
 	//------------------------------------
 	// This as a Server / Agent
-	private Thread serverThread;
-	private ServerSocket serverSocket;
 	
 	private Boolean isAvailable = true; // Check is in use.
 	
@@ -85,35 +82,27 @@ public class ZePFRServer {
 	}
 	
 	/**********************************************************************************
-	 * Start server (multi-threaded)
-	 **********************************************************************************/
+	 * Start HTTP Server
+	  **********************************************************************************/
 	private void startServer() {
-		serverThread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
+		try {
+			HttpServer server = HttpServer.create( new java.net.InetSocketAddress(PFRConfig.port()) , 0);
 
-					serverSocket = new ServerSocket(PFRConfig.port());
-					logger.info("Server listening on port " + PFRConfig.port());
-
-					while (true) {
-						final Socket socket = serverSocket.accept();
-						Thread clientHandler = new Thread(new Runnable() {
-							@Override
-							public void run() {
-								handleRequest(socket);
-							}
-						});
-						clientHandler.start();
-					}
-					
-				} catch (IOException e) {
-					logger.error("Server error on port " + PFRConfig.port() + ": " + e.getMessage());
+			server.createContext("/api", new HttpHandler() {
+				@Override
+				public void handle(HttpExchange exchange) throws IOException {
+					handleRequest(exchange);
 				}
-			}
-		});
+			});
 
-		serverThread.start();
+			server.setExecutor(Executors.newFixedThreadPool(10));
+			server.start();
+
+			logger.info("HTTP Server listening on port " + PFRConfig.port());
+
+		} catch (IOException e) {
+			logger.error("Server error: " + e.getMessage());
+		}
 	}
 	
 	/**********************************************************************************
@@ -131,29 +120,12 @@ public class ZePFRServer {
 	 *  - 2nd Line: JsonObject with parameters {}
 	 *  - Then the binary data for that command
 	 **********************************************************************************/
-	private void handleRequest(Socket socket) {
+	private void handleRequest(HttpExchange exchange) {
 		
-		try ( BufferedReader requestIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			  DataOutputStream requestOut = new DataOutputStream(socket.getOutputStream())
-			){
-
-			//------------------------
-			//
-			String commandString = requestIn.readLine();
-			Command command = Command.valueOf(commandString);
+		try {
+			//String path = exchange.getRequestURI().getPath().substring(1);
 			
-			JsonObject parameters = null;
-			
-			String parametersJson = requestIn.readLine();
-			parameters = PFR.JSON.stringToJsonObject(parametersJson);
-			
-			logger.info("Received command: " + command + ", Parameters: " + parametersJson);
-			
-			String test = "TestnameUnknown";
-			if(parameters != null && parameters.has(ZePFRClient.PARAM_TEST) ) {
-				test = parameters.get(ZePFRClient.PARAM_TEST).getAsString();
-			}
-		
+			logger.info("requestURI: "+exchange.getRequestURI().toString());
 			//---------------------------
 			// Create Response object
 			// e.g. {
@@ -171,6 +143,49 @@ public class ZePFRServer {
 			JsonObject payload = new JsonObject();
 			response.add(RemoteResponse.FIELD_PAYLOAD, payload);
 			
+			//------------------------
+			// Get Params
+			Map<String, String> parameters = queryToMap(exchange.getRequestURI().getQuery());
+			
+			String test = "TestnameUnknown";
+			if(parameters.containsKey(ZePFRClient.PARAM_TEST) ) {
+				test = parameters.get(ZePFRClient.PARAM_TEST);
+			}
+			
+			
+			//------------------------
+			// Get Command
+			String paramCommand = parameters.get("command");
+			
+			if(paramCommand == null) {
+				response.addProperty(RemoteResponse.FIELD_SUCCESS, false);
+				addMessage(response, Level.ERROR, "Please specify a command.");
+			}
+			
+			Command command = Command.valueOf(paramCommand.trim().toUpperCase());
+			
+			logger.info("Received command: " + command + ", Parameters: " + PFR.JSON.toJSON(parameters));
+			
+			byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
+	
+			//------------------------
+			//
+	//		String commandString = requestIn.readLine();
+	//		Command command = Command.valueOf(commandString);
+	//		
+	//		JsonObject parameters = null;
+	//		
+	//		String parametersJson = requestIn.readLine();
+	//		parameters = PFR.JSON.stringToJsonObject(parametersJson);
+	//		
+	//		logger.info("Received command: " + command + ", Parameters: " + parametersJson);
+	//		
+	//		String test = "TestnameUnknown";
+	//		if(parameters != null && parameters.has(ZePFRClient.PARAM_TEST) ) {
+	//			test = parameters.get(ZePFRClient.PARAM_TEST).getAsString();
+	//		}
+		
+
 			//---------------------------
 			// Execute command
 			switch (command) {
@@ -194,44 +209,81 @@ public class ZePFRServer {
 				break;
 			
 				case TRANSFER_JAR:
-
-					storeJar(socket, test);
+	
+					storeJar(bodyBytes, test);
 					
 					break;
-
+	
 				case START:
 					executeProcess(response);
 				break;
-
+	
 				case STOP:
 					stopProcess(response);
 					isAvailable = true; 
 				break;
-
+	
 				default:
 					response.addProperty("success", false);
 					addMessage(response, Level.ERROR, "Unkown command: "+command);
 			}
 			
+			//--------------------------------
 			// Write response
-			requestOut.writeBytes( PFR.JSON.toString(response) );
-			socket.shutdownOutput();
-			
+	
+			byte[] json = PFR.JSON.toString(response).getBytes();
+
+
+			exchange.sendResponseHeaders(200, json.length);
+			exchange.getResponseBody().write(json);
 		} catch (IOException e) {
-			System.err.println("Error handling client: " + e.getMessage());
-		} 
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		
+		exchange.close();
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void storeJar(Socket socket, String test) throws IOException {
+	public Map<String, String> queryToMap(String query) {
+	    
+		if (query == null) {
+	        return null;
+	    }
+
+	    Map<String, String> result = new HashMap<>();
+	    for (String param : query.split("&")) {
+	        String[] entry = param.split("=");
+	        if (entry.length > 1) {
+	            
+	        	
+					result.put(
+					    URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
+					    URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
+					);
+
+	        	
+	        } else {
+	            result.put(
+	                URLDecoder.decode(entry[0], StandardCharsets.UTF_8),
+	                ""
+	            );
+	        }
+	    }
+	    return result;
+	    
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void storeJar(byte[] jarBytes, String test) throws IOException {
 
 	    final int MAX_FOLDERS = 10;
 	    
-	    byte[] jarBytes = socket.getInputStream().readAllBytes();
+	    //byte[] jarBytes = socket.getInputStream().readAllBytes();
 
 	    Path runDir = Paths.get(System.getProperty("user.dir"));
 
