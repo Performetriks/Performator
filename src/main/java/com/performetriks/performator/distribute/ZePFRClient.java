@@ -1,13 +1,10 @@
 package com.performetriks.performator.distribute;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.concurrent.CountDownLatch;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,9 +119,22 @@ public class ZePFRClient {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public RemoteResponse stop(){
-		
-		return new RemoteRequest(this, Command.stoptest, test).send();
+	public RemoteResponse testStart(){
+		return new RemoteRequest(this, Command.teststart, test).send();
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse testStatus(){
+		return new RemoteRequest(this, Command.teststatus, test).send();
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse testStop(){
+		return new RemoteRequest(this, Command.teststop, test).send();
 	}
 	
 	

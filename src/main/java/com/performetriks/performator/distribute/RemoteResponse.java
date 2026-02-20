@@ -24,6 +24,7 @@ public class RemoteResponse {
 	public static final String FIELD_STATUS_PORT = "port";
 	public static final String FIELD_STATUS_HOST = "host";
 	public static final String FIELD_STATUS_AVAILABLE = "available";
+	public static final String FIELD_STATUS_ISTESTRUNNING = "isTestRunning";
 	
 	JsonObject response;
 	
@@ -65,6 +66,30 @@ public class RemoteResponse {
 	 ********************************************************/
 	public JsonElement payload() {
 		return response.get(FIELD_PAYLOAD);
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public JsonObject payloadAsObject() {
+		return response.get(FIELD_PAYLOAD).getAsJsonObject();
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public JsonArray payloadAsArray() {
+		return response.get(FIELD_PAYLOAD).getAsJsonArray();
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public boolean payloadMemberAsBoolean(String memberName) {
+		return response.get(FIELD_PAYLOAD)
+					.getAsJsonObject()
+					.get(memberName)
+					.getAsBoolean();
 	}
 	
 	/********************************************************

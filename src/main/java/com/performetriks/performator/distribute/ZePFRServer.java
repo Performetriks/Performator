@@ -1,6 +1,5 @@
 package com.performetriks.performator.distribute;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
@@ -21,6 +20,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
+import com.performetriks.performator.base.PFRCoordinator;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -41,7 +41,7 @@ import ch.qos.logback.classic.Level;
  **************************************************************************************************************/
 public class ZePFRServer {
 	
-
+	private long tempStartMillis = 0;
 
 	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
 		
@@ -63,11 +63,15 @@ public class ZePFRServer {
 		  /** STEP 3: Send the jar file and other data to the agent */
 		, transferjar
 		  /** STEP 4: Start the received jar file as a new process. */
-		, starttest
+		, teststart
 		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still connected. */
 		, ping
-		  /** STEP 6: Stop the process. */
-		, stoptest
+		  /** STEP 6: Send a graceful stop request. */
+		, teststopgraceful
+		/** STEP 7: Stop the process. */
+		, teststop
+		/** Returns if the test is running or not. */
+		, teststatus
 	}
 	
 	/**********************************************************************************
@@ -168,25 +172,7 @@ public class ZePFRServer {
 			logger.info("Received command: " + command + ", Parameters: " + PFR.JSON.toJSON(parameters));
 			
 			byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
-	
-			//------------------------
-			//
-	//		String commandString = requestIn.readLine();
-	//		Command command = Command.valueOf(commandString);
-	//		
-	//		JsonObject parameters = null;
-	//		
-	//		String parametersJson = requestIn.readLine();
-	//		parameters = PFR.JSON.stringToJsonObject(parametersJson);
-	//		
-	//		logger.info("Received command: " + command + ", Parameters: " + parametersJson);
-	//		
-	//		String test = "TestnameUnknown";
-	//		if(parameters != null && parameters.has(ZePFRClient.PARAM_TEST) ) {
-	//			test = parameters.get(ZePFRClient.PARAM_TEST).getAsString();
-	//		}
-		
-
+			
 			//---------------------------
 			// Execute command
 			switch (command) {
@@ -198,6 +184,7 @@ public class ZePFRServer {
 					payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
 					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
 					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
+					payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
 				break;
 				
 				case reserve: 
@@ -210,20 +197,38 @@ public class ZePFRServer {
 				break;
 			
 				case transferjar:
-	
 					storeJar(bodyBytes, test);
-					
 					break;
 	
-				case starttest:
-					executeProcess(response);
+				case teststart:
+					tempStartMillis = System.currentTimeMillis();
+					//executeProcess(response);
 				break;
-	
-				case stoptest:
+				
+				case teststopgraceful:
+					stopProcess(response);
+					isAvailable = true; 
+				break;
+				
+				case teststop:
 					stopProcess(response);
 					isAvailable = true; 
 				break;
 	
+				case teststatus:
+					
+					if(System.currentTimeMillis() - tempStartMillis > 60_000) {
+						// done
+						payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, false );
+						
+					}else {
+						// running
+						payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, true );
+						
+					}
+					//payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
+					break;
+					
 				default:
 					response.addProperty("success", false);
 					addMessage(response, Level.ERROR, "Unkown command: "+command);
@@ -231,9 +236,7 @@ public class ZePFRServer {
 			
 			//--------------------------------
 			// Write response
-	
 			byte[] json = PFR.JSON.toString(response).getBytes();
-
 
 			exchange.sendResponseHeaders(200, json.length);
 			exchange.getResponseBody().write(json);
@@ -259,7 +262,6 @@ public class ZePFRServer {
 	        String[] entry = param.split("=");
 	        if (entry.length > 1) {
 	            
-	        	
 					result.put(
 					    URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
 					    URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
@@ -295,8 +297,6 @@ public class ZePFRServer {
 		
 		logger.info("JAR saved to: " + jarFilePath.toAbsolutePath());
 		
-	    
-	  
 	}
 	
 	/**********************************************************************************

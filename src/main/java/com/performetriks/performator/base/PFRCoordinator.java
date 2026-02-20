@@ -1,5 +1,6 @@
 package com.performetriks.performator.base;
 
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
@@ -50,6 +51,8 @@ public class PFRCoordinator {
 	private static ArrayList<ZePFRClient> agentConnections = new ArrayList<>();
 	
 	private static ZePFRServer server = null;
+	
+	private static boolean isTestRunning = true;
 	
 	/*************************************************************
 	 * Start the instance in the defined mode.
@@ -125,19 +128,7 @@ public class PFRCoordinator {
 		startTest(test);
 	}
 	
-	/*************************************************************
-	 * makes sure that all the agents are disconnected.
-	 * 
-	 *************************************************************/
-	public static void disconnectAgents() {
-		
-		for(ZePFRClient connection : agentConnections) {
-			connection.stop();
-		}
-		
-		agentConnections.clear();
-		
-	}
+	
 	/*************************************************************
 	 * Start the instance and distribute the test on agents.
 	 * 
@@ -146,99 +137,17 @@ public class PFRCoordinator {
 		
 		try {
 			//------------------------------
-			// Get Agents and Amount
-			disconnectAgents();
-			
-			//------------------------------
-			// Get Agents and Amount
-			PFRAgentPool pool = PFRConfig.getAgentPool();
-			
-			int amount = PFRConfig.getAgentAmount();
-			if(amount <= 0) {
-				amount = pool.size();
-			}
-			
-			//------------------------------
-			// Reserve available agents
-			logger.info("################################################");
-			logger.info("Check Agent Availability and Reserve. ");
-			logger.info("################################################");
-	
-			for(int i = 0 ; i < amount; i++) {
-				
-				PFRAgent agent = pool.get(i);
-				ZePFRClient connection = new ZePFRClient(agent, test);
-				RemoteResponse status = connection.getStatus();
-				
-				//---------------------------
-				// Check success
-				if(status == null) {
-					logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
-					continue;
-				}
-				
-				if(!status.success()) {
-					logger.warn("Error while checking agent status: " 
-									+ agent.hostname() + ":" + agent.port() 
-									+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
-								);
-					continue;
-				}
-				
-				//---------------------------
-				// Check success
-				JsonObject payload = status.payload().getAsJsonObject();
-				logger.info(PFR.JSON.toJSON(payload));
-				
-				if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
-				&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
-					RemoteResponse reserve = connection.reserveAgent();
-					if(reserve != null && reserve.success()) {
-						agentConnections.add(connection);
-					}
-				}
-				
-			}
+			// Reserve Agents
+			agentsDisconnect();
+			agentsReserve(test);
 			
 			//------------------------------
 			// Send Jar File
-			logger.info("################################################");
-			logger.info("Transfer Test JAR File to Agents");
-			logger.info("################################################");
-			logger.info("Start Transfer of JAR File: " + ZePFRClient.getJarFileURIForTest(test) );
-	        
-			CountDownLatch latch = new CountDownLatch(agentConnections.size());
+			agentsTransferJar(test);
 			
-			for(int i = 0 ; i < agentConnections.size(); i++) {
-				
-				agentConnections.get(i).sendJar(latch);
-			}
-
 			//------------------------------
-			// Wait for Transfers to finish
-			long waitTime = 1000;
-			int iteration = 1;
-			do {
-				
-				//----------------------------
-				// Incremental Wait
-				Thread.sleep(waitTime);
-				if(iteration % 3 == 0 && waitTime < 30000) {
-					waitTime *= 2;
-				}
-				
-				//----------------------------
-				// Create Progress Log
-				StringBuilder builder = new StringBuilder();
-				for(int i = 0 ; i < agentConnections.size(); i++) {
-					PFRAgent current = agentConnections.get(i).getAgent();
-					builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
-				}
-				logger.info("Upload Progress:"+builder.toString());
-				
-			}while(latch.getCount() > 0);
-			
-			logger.info("All Transfers finished");
+			// Start Test
+			agentsStartTest(test);
 			
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -247,6 +156,237 @@ public class PFRCoordinator {
 		}
 		
 	}
+	
+	/*************************************************************
+	 * Makes sure that all the agents are disconnected.
+	 * 
+	 *************************************************************/
+	public static void agentsDisconnect() {
+		
+		for(ZePFRClient connection : agentConnections) {
+			connection.testStop();
+		}
+		
+		agentConnections.clear();
+		
+	}
+
+	/*************************************************************
+	 * Transfers the JAR file to the connected agents.
+	 *************************************************************/
+	private static void agentsTransferJar(PFRTest test) throws URISyntaxException, InterruptedException {
+		logger.info("################################################");
+		logger.info("Transfer Test JAR File to Agents");
+		logger.info("################################################");
+		logger.info("Start Transfer of JAR File: " + ZePFRClient.getJarFileURIForTest(test) );
+		
+		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			
+			agentConnections.get(i).sendJar(latch);
+		}
+
+		//------------------------------
+		// Wait for Transfers to finish
+		long waitTime = 1000;
+		int iteration = 1;
+		do {
+			
+			//----------------------------
+			// Incremental Wait
+			Thread.sleep(waitTime);
+			if(iteration % 3 == 0 && waitTime < 30000) {
+				waitTime *= 2;
+			}
+			
+			//----------------------------
+			// Create Progress Log
+			StringBuilder builder = new StringBuilder();
+			for(int i = 0 ; i < agentConnections.size(); i++) {
+				PFRAgent current = agentConnections.get(i).getAgent();
+				builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
+			}
+			logger.info("Upload Progress:"+builder.toString());
+			
+		}while(latch.getCount() > 0);
+		
+		logger.info("All Transfers finished");
+	}
+	
+	/*************************************************************
+	 * Reserve agents based on data defined with:
+	 * <ul>
+	 *     <li>PFRConfig.getAgentPool();</li>
+	 *     <li>PFRConfig.getAgentAmount();</li>
+	 * </ul>
+	 *************************************************************/
+	private static void agentsReserve(PFRTest test) {
+		//------------------------------
+		// Get Agents and Amount
+		PFRAgentPool pool = PFRConfig.getAgentPool();
+		
+		int amount = PFRConfig.getAgentAmount();
+		if(amount <= 0) {
+			amount = pool.size();
+		}
+		
+		//------------------------------
+		// Reserve available agents
+		logger.info("################################################");
+		logger.info("Check Agent Availability and Reserve. ");
+		logger.info("################################################");
+
+		for(int i = 0 ; i < amount; i++) {
+			
+			PFRAgent agent = pool.get(i);
+			ZePFRClient connection = new ZePFRClient(agent, test);
+			RemoteResponse status = connection.getStatus();
+			
+			//---------------------------
+			// Check success
+			if(status == null) {
+				logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
+				continue;
+			}
+			
+			if(!status.success()) {
+				logger.warn("Error while checking agent status: " 
+								+ agent.hostname() + ":" + agent.port() 
+								+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
+							);
+				continue;
+			}
+			
+			//---------------------------
+			// Check success
+			JsonObject payload = status.payload().getAsJsonObject();
+			logger.info(PFR.JSON.toJSON(payload));
+			
+			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
+			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
+				RemoteResponse reserve = connection.reserveAgent();
+				if(reserve != null && reserve.success()) {
+					agentConnections.add(connection);
+				}
+			}
+			
+		}
+	}
+	
+	/*************************************************************
+	 * Return true if any of the tests on the agents is still 
+	 * running.
+	 * 
+	 * @param logStatus 
+	 *************************************************************/
+	private static boolean agentsIsTestRunning(boolean logStatus) {
+		
+		boolean isAnyTestRunning = false;
+		
+		StringBuilder builder = new StringBuilder();
+
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			ZePFRClient current = agentConnections.get(i);
+			RemoteResponse response = current.testStatus();
+
+			boolean isTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+			
+			isAnyTestRunning |= isTestRunning;
+			
+			//----------------------------
+			// Create Progress Log
+			PFRAgent agent = current.getAgent();
+			builder.append(" ["+agent.hostname()+": "+
+									((isTestRunning) ? "running" : "done") 
+							 +"] ");
+			
+		}
+		
+		if(logStatus) {
+			logger.info("Agent Test State:"+builder.toString());
+		}
+		
+		return isAnyTestRunning;
+	}
+		
+	/*************************************************************
+	 * Start the test with the given class name.
+	 * 
+	 * @param className 
+	 *************************************************************/
+	private static void agentsStartTest(PFRTest test) {
+
+		//-------------------------
+		// Start all the Tests
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			agentConnections.get(i).testStart();
+		}
+		
+		//-------------------------
+		// 
+		try {
+			
+			//-------------------------------
+			// Wait for tests to complete
+			// or max duration being reached
+			long startMillis = System.currentTimeMillis();
+			long endMillis = startMillis;
+			long maxMillis = test.maxDuration().toMillis();
+			
+			while(
+					agentsIsTestRunning(true)
+				&& (endMillis - startMillis) <= maxMillis
+			) {
+				
+				Thread.sleep(15000);
+				endMillis = System.currentTimeMillis();
+			}
+			
+			//-------------------------------
+			// Terminate test
+			if(agentsIsTestRunning(false)) {
+				terminateTest();
+				return;
+			}
+			
+			//-------------------------------
+			// Gracefully Stop Test
+			long graceStart = System.currentTimeMillis();
+			long graceEnd = graceStart;
+			long graceDuration = test.gracefulStop().toMillis();
+			
+			if(graceDuration > 0 && agentsIsTestRunning(false) ){
+				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
+				
+				gracefullyStopExecutorThreads();
+				
+				while(
+					    agentsIsTestRunning(true) 
+					&& (graceEnd - graceStart) <= graceDuration
+				) {
+					Thread.sleep(15000);
+					graceEnd = System.currentTimeMillis();
+				}
+			}
+			
+		}catch(Exception e) {
+			logger.info("Error during Executor Thread execution.");
+		}finally {
+			//-------------------------------
+			// Kill remaining Threads
+			if( agentsIsTestRunning(false) ) {
+				// kill ze agents
+				//killExecutorThreads(executorList);
+			}
+			
+			//-------------------------------
+			// Terminate Test
+			terminateTest();
+		}	
+		
+	}
+	
 	
 	/*************************************************************
 	 * Start the instance and run a test that has been received
@@ -298,6 +438,7 @@ public class PFRCoordinator {
 		return null;
 
 	}
+	
 	/*************************************************************
 	 * Start the test based on argument 
 	 * -Dtest=com.example.PFRTestYourImplementation.
@@ -386,6 +527,7 @@ public class PFRCoordinator {
 		CountDownLatch latch = new CountDownLatch(executorList.size());
 		try {
 			
+			isTestRunning = true;
 			//-------------------------
 			// Start Executor Threads
 			int i = 0;
@@ -519,12 +661,21 @@ public class PFRCoordinator {
 		}
 	}
 	
+	
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	public static boolean isTestRunning() {
+		return isTestRunning;
+	}
+	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
 	private static void terminateTest() {
 		logger.info("Terminate Test Execution");
 		HSRConfig.terminate();
+		isTestRunning = false;
 	}
 	
 	/*****************************************************************
