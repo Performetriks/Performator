@@ -113,7 +113,7 @@ public class RemoteRequest{
 										monitoredPublisher.getSentPercentage()
 								);
 							}
-							Thread.sleep(10);
+							Thread.sleep(100);
 						}
 						
 					} catch (Exception e) {

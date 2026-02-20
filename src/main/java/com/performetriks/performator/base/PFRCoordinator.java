@@ -213,19 +213,30 @@ public class PFRCoordinator {
 				
 				agentConnections.get(i).sendJar(latch);
 			}
-		
+
 			//------------------------------
 			// Wait for Transfers to finish
-
-			while(latch.getCount() > 0) {
+			long waitTime = 1000;
+			int iteration = 1;
+			do {
+				
+				//----------------------------
+				// Incremental Wait
+				Thread.sleep(waitTime);
+				if(iteration % 3 == 0 && waitTime < 30000) {
+					waitTime *= 2;
+				}
+				
+				//----------------------------
+				// Create Progress Log
 				StringBuilder builder = new StringBuilder();
 				for(int i = 0 ; i < agentConnections.size(); i++) {
 					PFRAgent current = agentConnections.get(i).getAgent();
 					builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
 				}
 				logger.info("Upload Progress:"+builder.toString());
-				Thread.sleep(30);
-			}
+				
+			}while(latch.getCount() > 0);
 			
 			logger.info("All Transfers finished");
 			
