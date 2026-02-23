@@ -2,7 +2,6 @@ package com.performetriks.performator.test.tests;
 
 import java.time.Duration;
 
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.executors.PFRExecStandard;
 import com.performetriks.performator.test.globals.Globals;

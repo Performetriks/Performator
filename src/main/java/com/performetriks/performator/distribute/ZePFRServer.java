@@ -41,6 +41,7 @@ import ch.qos.logback.classic.Level;
  **************************************************************************************************************/
 public class ZePFRServer {
 	
+	private long lastPingTime = 0;
 	private long tempStartMillis = 0;
 
 	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
@@ -64,7 +65,7 @@ public class ZePFRServer {
 		, transferjar
 		  /** STEP 4: Start the received jar file as a new process. */
 		, teststart
-		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still connected. */
+		  /** STEP 5: Agent will be pinged on an interval by controller so agent knows it is still connected. Returns the test status. */
 		, ping
 		  /** STEP 6: Send a graceful stop request. */
 		, teststopgraceful
@@ -81,9 +82,7 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	public ZePFRServer(){
-		
 		startServer();
-		
 	}
 	
 	/**********************************************************************************
@@ -157,7 +156,6 @@ public class ZePFRServer {
 				test = parameters.get(ZePFRClient.PARAM_TEST);
 			}
 			
-			
 			//------------------------
 			// Get Command
 			String paramCommand = parameters.get("command");
@@ -202,19 +200,19 @@ public class ZePFRServer {
 	
 				case teststart:
 					tempStartMillis = System.currentTimeMillis();
-					//executeProcess(response);
+					testStart(parameters, response);
 				break;
 				
 				case teststopgraceful:
-					stopProcess(response);
-					isAvailable = true; 
+					//testStop(response);
 				break;
 				
 				case teststop:
-					stopProcess(response);
-					isAvailable = true; 
+					testStop(response);
 				break;
 	
+				case ping: lastPingTime = System.currentTimeMillis();
+						
 				case teststatus:
 					
 					if(System.currentTimeMillis() - tempStartMillis > 60_000) {
@@ -320,26 +318,66 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void addMessage(JsonObject response, Level level, String message) {
 		
-		JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
-		
-		JsonObject messageObject = new JsonObject();
-		messageObject.addProperty("level", level.toString());
-		messageObject.addProperty("message", message);
-		
-		messages.add(messageObject);
-		
-		logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
+		if(response != null) {
+			JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
+			
+			JsonObject messageObject = new JsonObject();
+			messageObject.addProperty("level", level.toString());
+			messageObject.addProperty("message", message);
+			
+			messages.add(messageObject);
+			
+			logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
+		}
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void executeProcess(JsonObject response) {
+	public void testStart(Map<String, String> parameters, JsonObject response) {
+		
+		ZePFRServer instance = this;
+		//----------------------------------
+		// Setup Ping Tracker
+
+		Thread threadPingTracker = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				
+				//------------------------------
+				// Track Pings
+				lastPingTime = System.currentTimeMillis();
+				logger.info("Start Tracking Pings");
+				while( (System.currentTimeMillis() - lastPingTime) < 60_000) {
+					try {
+						Thread.sleep(5000);
+						logger.trace("ping tracker tracking: "+(System.currentTimeMillis() - lastPingTime) );
+					} catch (InterruptedException e) {
+						// do nothing
+					}
+				}
+				
+				//------------------------------
+				// Stop if not already stopped
+				// Make Agent available again
+				if(!isAvailable) {
+					logger.info("Start Tracking Pings");
+					instance.testStop(null);
+				}
+			}
+			
+		});
+		threadPingTracker.setName("Ping Tracker");
+		threadPingTracker.start();
+		
+		//----------------------------------
+		// Start Test
 		try {
 			simulatedProcess = new ProcessBuilder("echo", "Simulated process running").start();
 			addMessage(response, Level.INFO, "Simulated process started.");
 		} catch (IOException e) {
-			addMessage(response, Level.ERROR, "Simulated process started.");
+			addMessage(response, Level.ERROR, "Simulated process couldn't be started.");
 		}
 	}
 	
@@ -347,13 +385,18 @@ public class ZePFRServer {
 
 	/**********************************************************************************
 	 * 
+	 * @param response instance or null
 	 **********************************************************************************/
-	public void stopProcess(JsonObject response) {
+	public void testStop(JsonObject response) {
+		
+		logger.info("Stop any test if still running.");
 		if (simulatedProcess != null) {
 			simulatedProcess.destroy();
 			addMessage(response, Level.INFO, "Simulated process stopped.");
 		} else {
 			addMessage(response, Level.ERROR,"No process to stop.");
 		}
+		
+		isAvailable = true; 
 	}
 }

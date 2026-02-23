@@ -275,12 +275,10 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * Return true if any of the tests on the agents is still 
-	 * running.
 	 * 
 	 * @param logStatus 
 	 *************************************************************/
-	private static boolean agentsIsTestRunning(boolean logStatus) {
+	private static boolean agentsPingIsTestRunning(boolean logStatus) {
 		
 		boolean isAnyTestRunning = false;
 		
@@ -288,7 +286,7 @@ public class PFRCoordinator {
 
 		for(int i = 0 ; i < agentConnections.size(); i++) {
 			ZePFRClient current = agentConnections.get(i);
-			RemoteResponse response = current.testStatus();
+			RemoteResponse response = current.ping();
 
 			boolean isTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
 			
@@ -335,7 +333,7 @@ public class PFRCoordinator {
 			long maxMillis = test.maxDuration().toMillis();
 			
 			while(
-					agentsIsTestRunning(true)
+					agentsPingIsTestRunning(true)
 				&& (endMillis - startMillis) <= maxMillis
 			) {
 				
@@ -345,7 +343,7 @@ public class PFRCoordinator {
 			
 			//-------------------------------
 			// Terminate test
-			if(agentsIsTestRunning(false)) {
+			if(agentsPingIsTestRunning(false)) {
 				terminateTest();
 				return;
 			}
@@ -356,13 +354,13 @@ public class PFRCoordinator {
 			long graceEnd = graceStart;
 			long graceDuration = test.gracefulStop().toMillis();
 			
-			if(graceDuration > 0 && agentsIsTestRunning(false) ){
+			if(graceDuration > 0 && agentsPingIsTestRunning(false) ){
 				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
 				
 				gracefullyStopExecutorThreads();
 				
 				while(
-					    agentsIsTestRunning(true) 
+					    agentsPingIsTestRunning(true) 
 					&& (graceEnd - graceStart) <= graceDuration
 				) {
 					Thread.sleep(15000);
@@ -375,7 +373,7 @@ public class PFRCoordinator {
 		}finally {
 			//-------------------------------
 			// Kill remaining Threads
-			if( agentsIsTestRunning(false) ) {
+			if( agentsPingIsTestRunning(false) ) {
 				// kill ze agents
 				//killExecutorThreads(executorList);
 			}
