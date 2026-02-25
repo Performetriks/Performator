@@ -21,6 +21,7 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRCoordinator;
+import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -41,6 +42,7 @@ import ch.qos.logback.classic.Level;
  **************************************************************************************************************/
 public class ZePFRServer {
 	
+	private static final String JAR_FILE_NAME = "received.jar";
 	private long lastPingTime = 0;
 	private long tempStartMillis = 0;
 
@@ -50,12 +52,16 @@ public class ZePFRServer {
 	Runtime runtime = Runtime.getRuntime();
 	
 	//------------------------------------
-	// This as a Server / Agent
+	// Test Execution Variables
+	Path jarFilePath = null;
 	
+	PFRCLIExecutor executor;
+	
+	//------------------------------------
+	// 
+
 	private Boolean isAvailable = true; // Check is in use.
-	
-	private Process simulatedProcess;
-	
+		
 	public enum Command{
 		  /** STEP 1: Fetch the status of a remote process */
 		  status
@@ -190,8 +196,11 @@ public class ZePFRServer {
 					if(!isAvailable) {
 						response.addProperty("success", false);
 						addMessage(response, Level.WARN, "Agent is already in use.");
+					}else {
+						isAvailable = false; 
+						startPingTracker();
 					}
-					//isAvailable = false; 
+					
 				break;
 			
 				case transferjar:
@@ -290,7 +299,7 @@ public class ZePFRServer {
 
 	    Path executionDir = HSR.Files.createTimestampedFolder(runDir.toString(), test, MAX_FOLDERS);
 
-	    Path jarFilePath = executionDir.resolve("received.jar");
+	    jarFilePath = executionDir.resolve(JAR_FILE_NAME);
 		Files.write(jarFilePath, jarBytes);
 		
 		logger.info("JAR saved to: " + jarFilePath.toAbsolutePath());
@@ -332,14 +341,26 @@ public class ZePFRServer {
 	}
 	
 	/**********************************************************************************
+	 * Sets the last ping time to now.
+	 **********************************************************************************/
+	private void setPingNow() {
+		lastPingTime = System.currentTimeMillis();
+	}
+	
+	/**********************************************************************************
+	 * Starts a thread that tracks the last time a ping has been received.
+	 * If the ping Timeout has been reached, all running  tests will be stopped
+	 * and the agent will be made available for use again.
+	 * This mechanism should prevent agents from being unavailable until restarted after
+	 * a test got interrupted or similar situations.
 	 * 
 	 **********************************************************************************/
-	public void testStart(Map<String, String> parameters, JsonObject response) {
-		
-		ZePFRServer instance = this;
+	private void startPingTracker() {
 		//----------------------------------
 		// Setup Ping Tracker
-
+		long PING_TIMEOUT =  60_000;
+		ZePFRServer instance = this;
+		
 		Thread threadPingTracker = new Thread(new Runnable() {
 
 			@Override
@@ -347,9 +368,9 @@ public class ZePFRServer {
 				
 				//------------------------------
 				// Track Pings
-				lastPingTime = System.currentTimeMillis();
+				setPingNow();
 				logger.info("Start Tracking Pings");
-				while( (System.currentTimeMillis() - lastPingTime) < 60_000) {
+				while( (System.currentTimeMillis() - lastPingTime) < PING_TIMEOUT) {
 					try {
 						Thread.sleep(5000);
 						logger.trace("ping tracker tracking: "+(System.currentTimeMillis() - lastPingTime) );
@@ -370,14 +391,23 @@ public class ZePFRServer {
 		});
 		threadPingTracker.setName("Ping Tracker");
 		threadPingTracker.start();
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public void testStart(Map<String, String> parameters, JsonObject response) {
 		
 		//----------------------------------
 		// Start Test
 		try {
-			simulatedProcess = new ProcessBuilder("echo", "Simulated process running").start();
-			addMessage(response, Level.INFO, "Simulated process started.");
-		} catch (IOException e) {
-			addMessage(response, Level.ERROR, "Simulated process couldn't be started.");
+			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
+			executor = new PFRCLIExecutor(executionDirectory, "java -jar "+JAR_FILE_NAME);
+			executor.execute();
+			
+			addMessage(response, Level.INFO, "Test process started");
+		} catch (Exception e) {
+			addMessage(response, Level.ERROR, "Error while starting process: "+e.getMessage());
 		}
 	}
 	
@@ -390,8 +420,8 @@ public class ZePFRServer {
 	public void testStop(JsonObject response) {
 		
 		logger.info("Stop any test if still running.");
-		if (simulatedProcess != null) {
-			simulatedProcess.destroy();
+		if (executor != null) {
+			executor.kill();
 			addMessage(response, Level.INFO, "Simulated process stopped.");
 		} else {
 			addMessage(response, Level.ERROR,"No process to stop.");

@@ -44,7 +44,7 @@ public class RemoteRequest{
 	//------------------------------------
 	// HTTP Client 
 	private final HttpClient httpClient = HttpClient.newBuilder()
-			.connectTimeout(java.time.Duration.ofSeconds(30))
+			.connectTimeout(java.time.Duration.ofSeconds(5))
 			.build();
 	
 	

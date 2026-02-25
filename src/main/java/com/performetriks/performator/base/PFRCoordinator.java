@@ -200,11 +200,16 @@ public class PFRCoordinator {
 				waitTime *= 2;
 			}
 			
+
 			//----------------------------
-			// Create Progress Log
+			// Ping agents and create Progress Log
 			StringBuilder builder = new StringBuilder();
 			for(int i = 0 ; i < agentConnections.size(); i++) {
+				
+				agentConnections.get(i).ping(); // ping agent to not lose connection during longer upload times.
+				
 				PFRAgent current = agentConnections.get(i).getAgent();
+
 				builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
 			}
 			logger.info("Upload Progress:"+builder.toString());
