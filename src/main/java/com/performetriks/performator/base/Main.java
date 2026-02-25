@@ -31,6 +31,7 @@ public class Main {
 		
 		  pfr_mode(UnvalueType.STRING, "auto", "The mode to start the process with.")
 		, pfr_test(UnvalueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_target(UnvalueType.STRING, "./target", "The default directory for any outputs like log files and test data.")
 		, pfr_logfile(UnvalueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
 		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance.")
 		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")

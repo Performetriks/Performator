@@ -60,7 +60,8 @@ public abstract class PFRExec {
 	 * 
 	 * @param totalAgent agent count
 	 * @param agentIndex the number of the agent
-	 * @param recursionIndex can be used to call this method recursively.
+	 * @param recursionIndex can be used to call this method recursively first
+	 * call from the framework will always be 0.
 	 * 
 	 *****************************************************************/
 	public abstract void distributeLoad(int totalAgents, int agentIndex, int recursionIndex);

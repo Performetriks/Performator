@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRTest;
+import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
 
 /**************************************************************************************************************
@@ -112,9 +113,12 @@ public class ZePFRClient {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public RemoteResponse reserveAgent(){
+	public RemoteResponse reserveAgent(int agentTotal, int agentIndex){
 		
-		return new RemoteRequest(this, Command.reserve, test).send();
+		return new RemoteRequest(this, Command.reserve, test)
+				.param(CommandLineArgs.pfr_agentTotal.toString(), ""+agentTotal)
+				.param(CommandLineArgs.pfr_agentIndex.toString(), ""+agentIndex)
+				.send();
 	}
 	/**********************************************************************************
 	 * Starts the test on the agent.

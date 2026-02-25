@@ -10,15 +10,18 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
-import com.performetriks.performator.distribute.ZePFRClient;
-import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
 import com.performetriks.performator.distribute.RemoteResponse;
+import com.performetriks.performator.distribute.ZePFRClient;
+import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.executors.PFRExec;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRTestSettings;
+import com.xresch.hsr.reporting.HSRReporterCSV;
+import com.xresch.hsr.reporting.HSRReporterHTML;
+import com.xresch.hsr.reporting.HSRReporterJson;
 
 import ch.qos.logback.classic.Logger;
 
@@ -270,7 +273,7 @@ public class PFRCoordinator {
 			
 			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
 			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
-				RemoteResponse reserve = connection.reserveAgent();
+				RemoteResponse reserve = connection.reserveAgent(amount, i);
 				if(reserve != null && reserve.success()) {
 					agentConnections.add(connection);
 				}
@@ -398,14 +401,32 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeRemote() {
 		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		String targetDir = CommandLineArgs.pfr_target.getValue().getAsString();
+		int agentTotal = CommandLineArgs.pfr_agentTotal.getValue().getAsInteger();
+		int agentIndex = CommandLineArgs.pfr_agentIndex.getValue().getAsInteger();
 		
 		//This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = getTestInstance(testClass);
 		
-		if(test != null) {
-			// TODO Remove reporters
-			// TODO Add reporter to report to controller
+		//-------------------------------
+		// Remove All Reporters
+		HSRConfig.clearReporters();
+		HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
+		HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
+		HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
+		
+		//-------------------------------
+		// Distribute Load
+		for(PFRExec executor : test.getExecutors()) {
+			executor.distributeLoad(agentTotal, agentIndex, 0);
 		}
+		
+		//-------------------------
+		// Prepare and Execute
+		if(test != null && prepareTestExecution(test)) {
+			startTestLocally(test);
+		}
+
 	}
 	
 	/*************************************************************
@@ -486,12 +507,31 @@ public class PFRCoordinator {
 		}
 		
 		//-------------------------
-		// Get Executors
+		// Prepare and Execute
+		if(prepareTestExecution(test)) {
+			startTestLocally(test);
+		}
+		
+	}
+
+	/*************************************************************
+	 * Prepares a test execution, resetting the framework to 
+	 * an initial state if there was a test execution already
+	 * done in the currently running VM.
+	 * 
+	 * 
+	 * 
+	 * @param test 
+	 * @return true if successful and test can be started, false
+	 * if there is nothing to execute. 
+	 *************************************************************/
+	private static boolean prepareTestExecution(PFRTest test) {
+		
 		executorList = test.getExecutors();
 		
 		if(executorList.size() == 0) {
 			logger.info("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
-			return;
+			return false;
 		}
 		
 		//-------------------------
@@ -511,8 +551,8 @@ public class PFRCoordinator {
 		//-------------------------
 		// Execute
 		HSRConfig.enable();
-		startTestLocally(test);
 		
+		return true;
 		
 	}
 	

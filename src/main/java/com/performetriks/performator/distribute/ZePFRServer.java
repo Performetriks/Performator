@@ -21,6 +21,7 @@ import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRCoordinator;
+import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.sun.net.httpserver.HttpExchange;
@@ -28,6 +29,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.utils.ByteSize;
+import com.xresch.hsr.utils.Unvalue;
 
 import ch.qos.logback.classic.Level;
 
@@ -55,8 +57,9 @@ public class ZePFRServer {
 	//------------------------------------
 	// Test Execution Variables
 	Path jarFilePath = null;
-	
 	PFRCLIExecutor executor;
+	Integer agentTotal = null;
+	Integer agentIndex = null;
 	
 	//------------------------------------
 	// 
@@ -128,6 +131,17 @@ public class ZePFRServer {
 	}
 
 	/**********************************************************************************
+	 * Resets this server and all its related values and makes it available again.
+	 **********************************************************************************/
+	private void reset() {
+		lastPingTime = 0;
+		jarFilePath 	= null;
+		executor 		= null;
+		agentTotal 		= null;
+		agentIndex 		= null;
+		isAvailable		= true;
+	}
+	/**********************************************************************************
 	 * Protocol:
 	 *  - 1st Line: Command
 	 *  - 2nd Line: JsonObject with parameters {}
@@ -185,45 +199,18 @@ public class ZePFRServer {
 			// Execute command
 			switch (command) {
 			
-				case status:
-					payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
-					payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
-					payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
-					payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
-					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
-					payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
-					payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
-				break;
-				
-				case reserve: 
-					
-					if(!isAvailable) {
-						response.addProperty("success", false);
-						addMessage(response, Level.WARN, "Agent is already in use.");
-					}else {
-						isAvailable = false; 
-						startPingTracker();
-					}
-					
-				break;
-			
-				case transferjar:
-					storeJar(bodyBytes, test);
-					break;
+				case status:			handleCommandStatus(payload);						break;
+				case reserve: 			handleCommandReserveAgent(parameters, response);	break;
+				case transferjar:		handleCommandStoreJar(bodyBytes, test);				break;
+				case teststop:			handleCommandTestStop(response); 					break;
+				case processlog:		handleCommandProcesslog(response); 					break;
+				case teststopgraceful:	/*testStop(response);*/ 							break;
 	
 				case teststart:
 					tempStartMillis = System.currentTimeMillis();
-					testStart(parameters, response);
+					handleCommandTestStart(parameters, response);
 				break;
 				
-				case teststopgraceful:
-					//testStop(response);
-				break;
-				
-				case teststop:
-					testStop(response);
-				break;
-	
 				
 				case ping: lastPingTime = System.currentTimeMillis();
 					// vvvvvv fall-through vvvvvvv
@@ -242,24 +229,11 @@ public class ZePFRServer {
 					//payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
 					break;
 					
+				
 				default:
 					response.addProperty("success", false);
 					addMessage(response, Level.ERROR, "Unkown command: "+command);
 				
-				case processlog:
-					
-					JsonArray array = new JsonArray();
-					response.add("payload", array);
-					
-					if(executor != null) {
-						PFRReadableOutputStream out = executor.getOutputStream();
-						
-						while(out.hasLine()) {
-							array.add(out.readLine());
-						}
-						
-					}
-				break;
 			}
 			
 			//--------------------------------
@@ -276,42 +250,84 @@ public class ZePFRServer {
 		
 		exchange.close();
 	}
-	
+
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public Map<String, String> queryToMap(String query) {
-	    
-		if (query == null) {
-	        return null;
-	    }
-
-	    Map<String, String> result = new HashMap<>();
-	    for (String param : query.split("&")) {
-	        String[] entry = param.split("=");
-	        if (entry.length > 1) {
-	            
-					result.put(
-					    URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
-					    URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
-					);
-
-	        	
-	        } else {
-	            result.put(
-	                URLDecoder.decode(entry[0], StandardCharsets.UTF_8),
-	                ""
-	            );
-	        }
-	    }
-	    return result;
-	    
+	private void handleCommandStatus(JsonObject payload) throws UnknownHostException {
+		payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
+		payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
+		payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
+		payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
+		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
+		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
+		payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void storeJar(byte[] jarBytes, String test) throws IOException {
+	private void handleCommandProcesslog(JsonObject response) {
+		JsonArray array = new JsonArray();
+		response.add("payload", array);
+		
+		if(executor != null) {
+			PFRReadableOutputStream out = executor.getOutputStream();
+			
+			while(out.hasLine()) {
+				array.add(out.readLine());
+			}
+			
+		}
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandReserveAgent(Map<String, String> parameters, JsonObject response) {
+		
+		//-------------------------------
+		// Get AgentIndex
+		if(!isAvailable) {
+			response.addProperty("success", false);
+			addMessage(response, Level.WARN, "Agent is already in use.");
+		}
+		
+		//-------------------------------
+		// Reset
+		reset();
+		isAvailable = false; 
+		startPingTracker();
+		
+		//-------------------------------
+		// Get AgentTotal
+		String keyAgentTotal = CommandLineArgs.pfr_agentTotal.toString();
+		if( ! parameters.containsKey(keyAgentTotal) ) {
+			addMessage(response, Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
+			isAvailable = true;
+			return;
+		}
+		
+		agentTotal =  Unvalue.newString( parameters.get(keyAgentTotal) ).getAsInt();
+		
+		//-------------------------------
+		// Get AgentIndex
+		String keyAgentIndex = CommandLineArgs.pfr_agentIndex.toString();
+		if( ! parameters.containsKey(keyAgentIndex) ) {
+			addMessage(response, Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
+			isAvailable = true;
+			return;
+		}
+		
+		agentIndex =  Unvalue.newString( parameters.get(keyAgentIndex) ).getAsInt();
+
+
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandStoreJar(byte[] jarBytes, String test) throws IOException {
 
 	    final int MAX_FOLDERS = 10;
 	    
@@ -331,8 +347,97 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private static void deleteDirectoryRecursively(Path path) throws IOException {
+	public void handleCommandTestStart(Map<String, String> parameters, JsonObject response) {
+		
 
+		//----------------------------------
+		// Get Test class name
+		if( ! parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
+			addMessage(response, Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
+			isAvailable = true;
+			return;
+		}
+		
+		String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
+		
+		//----------------------------------
+		// Start Test
+		try {
+			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
+			String vmargs = " -Dpfr_mode=remote"
+						  //+ " -Dpfr_port=9876"
+						  + " -Dpfr_test="+classname+""
+						  + " -Dpfr_agentIndex="+agentIndex
+						  + " -Dpfr_agentTotal="+agentTotal
+						  ;
+			
+			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
+			System.out.println(startCommand);
+			addMessage(response, Level.INFO, "Start Test Process: "+ startCommand);
+			executor = new PFRCLIExecutor(executionDirectory, startCommand);
+			executor.execute();
+			
+			
+		} catch (Exception e) {
+			addMessage(response, Level.ERROR, "Error while starting process: "+e.getMessage());
+		}
+	}
+	
+
+
+	/**********************************************************************************
+	 * 
+	 * @param response instance or null
+	 **********************************************************************************/
+	public void handleCommandTestStop(JsonObject response) {
+		
+		logger.info("Stop any test if still running.");
+		if (executor != null) {
+			executor.kill();
+			addMessage(response, Level.INFO, "Simulated process stopped.");
+		} else {
+			addMessage(response, Level.ERROR,"No process to stop.");
+		}
+		
+		isAvailable = true; 
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public Map<String, String> queryToMap(String query) {
+	    
+		if (query == null) {
+	        return null;
+	    }
+	
+	    Map<String, String> result = new HashMap<>();
+	    for (String param : query.split("&")) {
+	        String[] entry = param.split("=");
+	        if (entry.length > 1) {
+	            
+					result.put(
+					    URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
+					    URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
+					);
+	
+	        	
+	        } else {
+	            result.put(
+	                URLDecoder.decode(entry[0], StandardCharsets.UTF_8),
+	                ""
+	            );
+	        }
+	    }
+	    return result;
+	    
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private static void deleteDirectoryRecursively(Path path) throws IOException {
+	
 	    Files.walk(path)
 	            .sorted(Comparator.reverseOrder()) // delete children first
 	            .forEach(p -> {
@@ -343,7 +448,7 @@ public class ZePFRServer {
 	                }
 	            });
 	}
-	
+
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
@@ -361,14 +466,14 @@ public class ZePFRServer {
 			logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
 		}
 	}
-	
+
 	/**********************************************************************************
 	 * Sets the last ping time to now.
 	 **********************************************************************************/
 	private void setPingNow() {
 		lastPingTime = System.currentTimeMillis();
 	}
-	
+
 	/**********************************************************************************
 	 * Starts a thread that tracks the last time a ping has been received.
 	 * If the ping Timeout has been reached, all running  tests will be stopped
@@ -384,7 +489,7 @@ public class ZePFRServer {
 		ZePFRServer instance = this;
 		
 		Thread threadPingTracker = new Thread(new Runnable() {
-
+	
 			@Override
 			public void run() {
 				
@@ -406,70 +511,12 @@ public class ZePFRServer {
 				// Make Agent available again
 				if(!isAvailable) {
 					logger.info("Start Tracking Pings");
-					instance.testStop(null);
+					instance.handleCommandTestStop(null);
 				}
 			}
 			
 		});
 		threadPingTracker.setName("Ping Tracker");
 		threadPingTracker.start();
-	}
-	
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	public void testStart(Map<String, String> parameters, JsonObject response) {
-		
-
-		//----------------------------------
-		// Get Test class name
-		if(!parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
-			addMessage(response, Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
-			isAvailable = true;
-			return;
-		}
-		
-		String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
-		
-		//----------------------------------
-		// Start Test
-		try {
-			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
-			String vmargs = " -Dpfr_mode=local"
-						  //+ " -Dpfr_port=9876"
-						  + " -Dpfr_test="+classname+""
-						  //+ " -Dpfr_agentIndex: null"
-						  //+ " -Dpfr_agentTotal: null"
-						  ;
-			
-			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
-			System.out.println(startCommand);
-			addMessage(response, Level.INFO, "Start Test Process: "+ startCommand);
-			executor = new PFRCLIExecutor(executionDirectory, startCommand);
-			executor.execute();
-			
-			
-		} catch (Exception e) {
-			addMessage(response, Level.ERROR, "Error while starting process: "+e.getMessage());
-		}
-	}
-	
-
-
-	/**********************************************************************************
-	 * 
-	 * @param response instance or null
-	 **********************************************************************************/
-	public void testStop(JsonObject response) {
-		
-		logger.info("Stop any test if still running.");
-		if (executor != null) {
-			executor.kill();
-			addMessage(response, Level.INFO, "Simulated process stopped.");
-		} else {
-			addMessage(response, Level.ERROR,"No process to stop.");
-		}
-		
-		isAvailable = true; 
 	}
 }
