@@ -160,11 +160,11 @@ public class RemoteRequest{
 		}
 
 		if(test != null) {
-			parameters.addProperty(ZePFRClient.PARAM_TEST, test.getName());
+			parameters.addProperty(ZePFRClient.PARAM_TESTNAME, test.getName());
 		}
 
 		parameters.addProperty(ZePFRClient.PARAM_HOST, ZePFRServer.getLocalhost());
-		parameters.addProperty(ZePFRClient.PARAM_PORT, PFRConfig.port());
+		//parameters.addProperty(ZePFRClient.PARAM_PORT, PFRConfig.port());
 
 		String query = buildQuery(parameters);
 

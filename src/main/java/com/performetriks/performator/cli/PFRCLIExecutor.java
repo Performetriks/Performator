@@ -156,6 +156,8 @@ public class PFRCLIExecutor extends Thread {
 				
 				ArrayList<String> commandAndParams = PFR.Text.splitQuotesAware(" ", command.trim(), true, true, true, false);
 				
+				commandAndParams.removeIf(s -> s.isEmpty());
+				
 				ProcessBuilder builder = new ProcessBuilder(commandAndParams);
 				builder.redirectErrorStream(true);
 				

@@ -29,7 +29,8 @@ public class ZePFRClient {
 	static final String PARAM_BODY_LENGTH = "body-length";
 	static final String PARAM_HOST = "host";
 	static final String PARAM_PORT = "port";
-	static final String PARAM_TEST = "test";
+	static final String PARAM_TESTCLASS = "test";
+	static final String PARAM_TESTNAME = "testname";
 	
 	private PFRAgent agent;
 	private String remoteHost;
@@ -115,12 +116,20 @@ public class ZePFRClient {
 		
 		return new RemoteRequest(this, Command.reserve, test).send();
 	}
-	
+	/**********************************************************************************
+	 * Starts the test on the agent.
+	 **********************************************************************************/
+	public RemoteResponse testStart(){
+		return testStart(test.getClass().getName());
+	}
+		
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public RemoteResponse testStart(){
-		return new RemoteRequest(this, Command.teststart, test).send();
+	public RemoteResponse testStart(String fullyQualifiedClassName){
+		return new RemoteRequest(this, Command.teststart, test)
+				.param(PARAM_TESTCLASS, fullyQualifiedClassName)
+				.send();
 	}
 	
 	/**********************************************************************************

@@ -22,6 +22,7 @@ import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRCoordinator;
 import com.performetriks.performator.cli.PFRCLIExecutor;
+import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -79,6 +80,8 @@ public class ZePFRServer {
 		, teststop
 		/** Returns if the test is running or not. */
 		, teststatus
+		/** returns the current sysout log of the test process started by an agent. */
+		, processlog
 	}
 	
 	/**********************************************************************************
@@ -135,7 +138,8 @@ public class ZePFRServer {
 		try {
 			//String path = exchange.getRequestURI().getPath().substring(1);
 			
-			logger.info("requestURI: "+exchange.getRequestURI().toString());
+			//logger.info("requestURI: "+exchange.getRequestURI().toString());
+			
 			//---------------------------
 			// Create Response object
 			// e.g. {
@@ -158,8 +162,8 @@ public class ZePFRServer {
 			Map<String, String> parameters = queryToMap(exchange.getRequestURI().getQuery());
 			
 			String test = "TestnameUnknown";
-			if(parameters.containsKey(ZePFRClient.PARAM_TEST) ) {
-				test = parameters.get(ZePFRClient.PARAM_TEST);
+			if(parameters.containsKey(ZePFRClient.PARAM_TESTNAME) ) {
+				test = parameters.get(ZePFRClient.PARAM_TESTNAME);
 			}
 			
 			//------------------------
@@ -220,8 +224,10 @@ public class ZePFRServer {
 					testStop(response);
 				break;
 	
+				
 				case ping: lastPingTime = System.currentTimeMillis();
-						
+					// vvvvvv fall-through vvvvvvv
+					// vvvvvvvvvvvvvvvvvvvvvvvvvvv
 				case teststatus:
 					
 					if(System.currentTimeMillis() - tempStartMillis > 60_000) {
@@ -239,12 +245,28 @@ public class ZePFRServer {
 				default:
 					response.addProperty("success", false);
 					addMessage(response, Level.ERROR, "Unkown command: "+command);
+				
+				case processlog:
+					
+					JsonArray array = new JsonArray();
+					response.add("payload", array);
+					
+					if(executor != null) {
+						PFRReadableOutputStream out = executor.getOutputStream();
+						
+						while(out.hasLine()) {
+							array.add(out.readLine());
+						}
+						
+					}
+				break;
 			}
 			
 			//--------------------------------
 			// Write response
 			byte[] json = PFR.JSON.toString(response).getBytes();
 
+			exchange.getResponseHeaders().add("Content-Type", "application/json");
 			exchange.sendResponseHeaders(200, json.length);
 			exchange.getResponseBody().write(json);
 		} catch (IOException e) {
@@ -398,14 +420,35 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	public void testStart(Map<String, String> parameters, JsonObject response) {
 		
+
+		//----------------------------------
+		// Get Test class name
+		if(!parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
+			addMessage(response, Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
+			isAvailable = true;
+			return;
+		}
+		
+		String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
+		
 		//----------------------------------
 		// Start Test
 		try {
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
-			executor = new PFRCLIExecutor(executionDirectory, "java -jar "+JAR_FILE_NAME);
+			String vmargs = " -Dpfr_mode=local"
+						  //+ " -Dpfr_port=9876"
+						  + " -Dpfr_test="+classname+""
+						  //+ " -Dpfr_agentIndex: null"
+						  //+ " -Dpfr_agentTotal: null"
+						  ;
+			
+			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
+			System.out.println(startCommand);
+			addMessage(response, Level.INFO, "Start Test Process: "+ startCommand);
+			executor = new PFRCLIExecutor(executionDirectory, startCommand);
 			executor.execute();
 			
-			addMessage(response, Level.INFO, "Test process started");
+			
 		} catch (Exception e) {
 			addMessage(response, Level.ERROR, "Error while starting process: "+e.getMessage());
 		}
