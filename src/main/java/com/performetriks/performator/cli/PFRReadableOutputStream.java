@@ -22,11 +22,21 @@ public class PFRReadableOutputStream extends OutputStream{
 	
 	protected int newline = (int)'\n';
 	
+	private int maxLinesInQueue = 10000;
+	
+	/************************************************************************
+	 * 
+	 ************************************************************************/
+	public  PFRReadableOutputStream(int maxLinesInQueue) {
+		this.maxLinesInQueue = maxLinesInQueue;
+	}
+	
 	/************************************************************************
 	 * 
 	 ************************************************************************/
 	@Override
 	public void write(int b) throws IOException {
+		
 		if(b != newline) {
 			byteQueue.add(b);
 		}else {
@@ -35,6 +45,12 @@ public class PFRReadableOutputStream extends OutputStream{
 				line.append( (char)((int)byteQueue.poll()) );
 			}
 			lineQueue.add(line.toString());
+			
+			//-------------------------
+			// Limit Queue Size
+			if( lineQueue.size() > maxLinesInQueue) {
+				lineQueue.poll();
+			}
 			
 		}
 	}

@@ -50,7 +50,7 @@ public class PFRCLIExecutor extends Thread {
 	private PFRMonitor monitor = null;
 	private ArrayList<ArrayList<ProcessBuilder>> pipelines = new ArrayList<>();
 	
-	PFRReadableOutputStream out = new PFRReadableOutputStream();
+	PFRReadableOutputStream out = new PFRReadableOutputStream(10000);
 	
 	private boolean isInterrupted = false;
 	private boolean isCompleted = false;
