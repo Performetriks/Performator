@@ -1,6 +1,7 @@
 package com.performetriks.performator.data;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -51,7 +52,7 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
-	 * Adds a value for a key. If a value has alread been assigned 
+	 * Adds a value for a key. If a value has already been assigned 
 	 * for that key it will be replaced.
 	 * 
 	 * @param key
@@ -63,6 +64,176 @@ public class PFRDataRecord {
 		keyValues.put(key, value);
 		return this;
 	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, String value) {
+		keyValues.put(key, Unvalue.newString(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, JsonObject value) {
+		keyValues.put(key, Unvalue.newJson(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, JsonArray value) {
+		keyValues.put(key, Unvalue.newJson(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, ArrayList<String> value) {
+		keyValues.put(key, Unvalue.newFromStringArray(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, boolean value) {
+		keyValues.put(key, Unvalue.newBoolean(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, int value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, long value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, float value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, double value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, short value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, Number value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds a value for a key. If a value has already been assigned 
+	 * for that key it will be replaced.
+	 * 
+	 * @param key
+	 * @param value
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord add(String key, BigDecimal value) {
+		keyValues.put(key, Unvalue.newNumber(value));
+		return this;
+	}
+	
+
 	
 	/***********************************************************************
 	 * Removes a value for a key. If a value has alread been assigned 

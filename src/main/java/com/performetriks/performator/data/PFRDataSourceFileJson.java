@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.performetriks.performator.base.PFR;
@@ -32,15 +33,51 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 	 * If this is not the case, the data source will be empty on
 	 * load.
 	 * 
-	 * @param datasourceName uniqueName for this data source.
 	 * @param packagePath the path of the package that contains the
 	 * testdata file
 	 * @param filename the name of the file
 	 *****************************************************************/
-	public PFRDataSourceFileJson(String datasourceName, String packagePath, String filename) {
-		super(datasourceName);
+	public PFRDataSourceFileJson(String packagePath, String filename) {
+		this(null, packagePath, filename);
+	}
+	
+	/*****************************************************************
+	 * Creates a new data source for a JSON file.
+	 * The file has to contain a JsonArray of JsonObjects.
+	 * If this is not the case, the data source will be empty on
+	 * load.
+	 * 
+	 * @param uniqueName unique name for this data source.
+	 * @param packagePath the path of the package that contains the
+	 * testdata file
+	 * @param filename the name of the file
+	 *****************************************************************/
+	public PFRDataSourceFileJson(String uniqueName, String packagePath, String filename) {
+		super(uniqueName);
 		this.packagePath = packagePath;
 		this.filename = filename;
+	}
+	
+	/*****************************************************************
+	 * This method should return a unique identifier for your data source.
+	 * This is either the custom data source name, or a combination of
+	 * values that uniquely identify the source.
+	 * 
+	 * @return String Datasource unique name
+	 * 
+	 *****************************************************************/
+	public String getUniqueName() {
+		
+		if(!Strings.isNullOrEmpty(uniqueName)) {
+			uniqueName =  packagePath 
+						+ "-" + filename
+						+ "-" + accessMode()
+						+ "-" + retainMode()
+						+ "isLocal:" + isLocal()
+						;
+		}
+		
+		return uniqueName;
 	}
 
 	/*****************************************************************

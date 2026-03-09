@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.performetriks</groupId>
 	<artifactId>performator</artifactId>
-	<version>1.1.7</version>
+	<version>1.1.8</version>
 	
 	<name>Performator</name>
 	<description>A small performance testing framework that can execute anything you can write in java!</description>

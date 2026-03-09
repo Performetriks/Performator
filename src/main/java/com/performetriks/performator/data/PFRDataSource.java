@@ -4,6 +4,9 @@ import java.util.HashMap;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+import com.performetriks.performator.base.PFRConfig;
+
 import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
@@ -18,9 +21,10 @@ public abstract class PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSource.class.getName());
 	
+	// data source key plus source itself
 	private static HashMap<String, PFRDataSource> registeredDataSources = new HashMap<>();
 	
-	private String datasourceName; 
+	protected String uniqueName; 
 	private boolean isLocal = false;
 	
 	protected AccessMode accessMode = AccessMode.SEQUENTIAL;
@@ -49,17 +53,44 @@ public abstract class PFRDataSource {
 	/*****************************************************************
 	 * Constructor
 	 *****************************************************************/
+	public PFRDataSource() {
+	}
+	
+	/*****************************************************************
+	 * Constructor
+	 *****************************************************************/
 	public PFRDataSource(String datasourceName) {
-		this.datasourceName = datasourceName;
+		this.uniqueName = datasourceName;
 	}
 	
 	/*****************************************************************
 	 * Removes a registered data source.
 	 * 
+	 * @param datasourceName the unique name of the source
 	 * @return the removed source 
 	 *****************************************************************/
 	public static PFRDataSource unregisterSource(String datasourceName) {
 		return registeredDataSources.remove(datasourceName);
+	}
+	
+	/*****************************************************************
+	 * Gets the source with the specified name from the registry.
+	 * @param datasourceName the unique name of the source
+	 * @return the removed source 
+	 *****************************************************************/
+	public static PFRDataSource getSource(String datasourceName) {
+		return registeredDataSources.get(datasourceName);
+	}
+	
+	/*****************************************************************
+	 * Checks if the registry contains the source with the given
+	 * unique name.
+	 * 
+	 * @param datasourceName the unique name of the source
+	 * @return true if registered, false otherwise 
+	 *****************************************************************/
+	public static boolean hasSource(String datasourceName) {
+		return registeredDataSources.containsKey(datasourceName);
 	}
 	
 	
@@ -80,19 +111,30 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	public PFRDataSource build() {
 		
+		String uniqueName = getUniqueName();
 		//------------------------------------
 		// register Data Source
-		if(!isLocal 
-		&& registeredDataSources.containsKey(datasourceName)) {
-			throw new RuntimeException("Data Source with name '"+datasourceName+"' has already been registered."
-									+ " Best thing to do is to rename the data source and make sure it is only loaded once."
-									+ " Or use the method yourSource.local() to define that it should not be shared between agents.");
+		if( PFRConfig.hasAgents()
+		&& ! isLocal
+		&& registeredDataSources.containsKey(uniqueName)) {
+			logger.warn("Data Source with name '"+uniqueName+"' has been reset for all agents."
+					+ "In case you want to use the source only locally, use the method yourSource.local() to define that it should not be shared between agents.");
 		}
-		registeredDataSources.put(datasourceName, this);
+		registeredDataSources.put(uniqueName, this);
 		
 		return buildSource();
 		
 	}
+	
+	/*****************************************************************
+	 * This method should return a unique identifier for your data source.
+	 * This is either the custom data source name, or a combination of
+	 * values that uniquely identify the source.
+	 * 
+	 * @return String Datasource unique name
+	 * 
+	 *****************************************************************/
+	public abstract String getUniqueName();
 	
 	/*****************************************************************
 	 * This method prepares the data source for being used.
@@ -128,6 +170,14 @@ public abstract class PFRDataSource {
 	public PFRDataSource local() {
 		this.isLocal = true;
 		return this;
+	}
+	
+	/*****************************************************************
+	 * 
+	 * @return true if local, false otherwise
+	 *****************************************************************/
+	public boolean isLocal() {
+		return isLocal;
 	}
 	
 	/*****************************************************************
@@ -191,7 +241,7 @@ public abstract class PFRDataSource {
 	 * @return the retain mode
 	 *****************************************************************/
 	public String name() {
-		return this.datasourceName;
+		return this.uniqueName;
 	}
 	
 	/*****************************************************************

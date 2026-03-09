@@ -2,6 +2,7 @@ package com.performetriks.performator.data;
 
 import java.util.ArrayList;
 
+import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
@@ -19,13 +20,48 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 	JsonArray array;
 	
 	/*****************************************************************
-	 * Constructor
+	 * Creates a data source based on the given JsonArray.
+	 * The data will be loaded once, changes to the array will
+	 * not be reflected in the data source.
+	 * 
+	 * @param array the array to base the data source one.
 	 *****************************************************************/
-	public PFRDataSourceJsonArray(String datasourceName, JsonArray array) {
-		super(datasourceName);
+	public PFRDataSourceJsonArray(JsonArray array) {
+		this(null, array);
+	}
+	/*****************************************************************
+	 * Creates a data source based on the given JsonArray.
+	 * The data will be loaded once, changes to the array will
+	 * not be reflected in the data source.
+	 * 
+	 * @param uniqueName unique name for this data source
+	 * @param array the array to base the data source one.
+	 *****************************************************************/
+	public PFRDataSourceJsonArray(String uniqueName, JsonArray array) {
+		super(uniqueName);
 		this.array = array;
 	}
 
+	/*****************************************************************
+	 * This method should return a unique identifier for your data source.
+	 * This is either the custom data source name, or a combination of
+	 * values that uniquely identify the source.
+	 * 
+	 * @return String Datasource unique name
+	 * 
+	 *****************************************************************/
+	public String getUniqueName() {
+		
+		if(!Strings.isNullOrEmpty(uniqueName)) {
+			uniqueName = "" + array.hashCode()
+						+ "-" + accessMode()
+						+ "-" + retainMode()
+						+ "isLocal:" + isLocal()
+						;
+		}
+		
+		return uniqueName;
+	}
 	/*****************************************************************
 	 * Loads the data.
 	 * 
