@@ -93,7 +93,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public PFRDataRecord next() {
+	public PFRDataRecord nextInternal() {
 		
 		if( ! hasBeenBuilt ) { logger.warn("The data source '"+name()+"' has not been built correctly. Make sure to call the build()-method on the instance."); }
 

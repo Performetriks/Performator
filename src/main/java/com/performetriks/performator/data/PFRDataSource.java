@@ -150,11 +150,24 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	public abstract boolean hasNext();
 	
+
 	/*****************************************************************
 	 * The method that will be called by the user to load the next
 	 * data record.
 	 *****************************************************************/
-	public abstract PFRDataRecord next();
+	protected abstract PFRDataRecord nextInternal();
+	
+	/*****************************************************************
+	 * Returns a clone of the data record. Clones are used to ensure
+	 * data is not overwritten by multiple users using the same 
+	 * data record as the same time.
+	 * This allows you to add additional data to your record while
+	 *  using it.
+	 *****************************************************************/
+	public PFRDataRecord next() {
+		
+		return nextInternal().clone();
+	}
 	
 	/*****************************************************************
 	 * Returns the number of data records.

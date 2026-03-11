@@ -3,6 +3,7 @@ package com.performetriks.performator.data;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -30,6 +31,12 @@ public class PFRDataRecord {
 	
 	LinkedHashMap<String, Unvalue> keyValues = new LinkedHashMap<>();
 	
+	public static final String LB = "${";
+	public static final String RB = "}";
+
+	public static final int LB_SIZE = LB.length();
+	public static final int RB_SIZE = RB.length();
+	
 	/***********************************************************************
 	 * 
 	 ***********************************************************************/
@@ -49,6 +56,23 @@ public class PFRDataRecord {
 			
 		}
 		
+	}
+	
+	/***********************************************************************
+	 * Creates a new record using the values in the map.
+	 * 
+	 ***********************************************************************/
+	public PFRDataRecord(Map<String, Unvalue> keyValues) {
+		
+		this.keyValues.putAll(keyValues);
+	}
+	
+	/***********************************************************************
+	 * Create a clone of the data record.
+	 * @return clone of this instance
+	 ***********************************************************************/
+	public PFRDataRecord clone() {
+		return new PFRDataRecord(keyValues);
 	}
 	
 	/***********************************************************************
@@ -236,6 +260,15 @@ public class PFRDataRecord {
 
 	
 	/***********************************************************************
+	 * 
+	 * @param key
+	 * @return true if the record contains a value for the given key
+	 ***********************************************************************/
+	public boolean containsKey(String key) {
+		return keyValues.containsKey(key);
+	}
+	
+	/***********************************************************************
 	 * Removes a value for a key. If a value has alread been assigned 
 	 * for that key it will be replaced.
 	 * 
@@ -393,6 +426,64 @@ public class PFRDataRecord {
 	public JsonElement getJsonElement(Object key) {
 		return get(key).getAsJsonElement();
 	}
+	
+	/***********************************************************************
+	 * Inserts the values of this data record into a string by replacing 
+	 * placeholders. The placeholders syntax is "${fieldname}".
+	 * This method is faster than using multiple String.replace() calls as  
+	 * it only parses the string once from left to right.	 * 
+	 * 
+	 * @param insertHere
+	 * @return string with replaced placeholders
+	 ***********************************************************************/
+	public String insert(String insertHere) {
+		
+
+		if(keyValues == null || keyValues.isEmpty()) {
+			return insertHere;
+		}
+
+		StringBuilder sb = new StringBuilder(insertHere);
+		
+		int fromIndex = 0;
+		int leftIndex = 0;
+		int rightIndex = 0;
+		int length = sb.length();
+
+		while (fromIndex < length && leftIndex < length) {
+
+			leftIndex = sb.indexOf(LB, fromIndex);
+
+			if (leftIndex != -1) {
+				rightIndex = sb.indexOf(RB, leftIndex);
+
+				if (rightIndex != -1 && (leftIndex + LB_SIZE) < rightIndex) {
+
+					String propertyName = sb.substring(leftIndex + LB_SIZE, rightIndex);
+					if(keyValues != null 
+					&& keyValues.containsKey(propertyName)) {
+						sb.replace(leftIndex, rightIndex + RB_SIZE,
+								keyValues.get(propertyName).getAsString());
+					}
+					// start again from leftIndex
+					fromIndex = leftIndex + 1;
+
+				} else {
+					logger.trace("Parameter was missing the right bound");
+
+					break;
+				}
+
+			} else {
+				// no more stuff found to replace
+				break;
+			}
+		}
+
+		return sb.toString();
+
+	}
+	
 	
 	/***********************************************************************
 	 * Returns the number of key-value mappings in this data record.
