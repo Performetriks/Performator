@@ -59,6 +59,26 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
+	 * Creates a new record based on the key-value pairs of a Map.
+	 ***********************************************************************/
+	public PFRDataRecord(Map<String, String> map, boolean convertTypes) {
+		
+		for(Entry<String, String> entry : map.entrySet()) {
+			String name = entry.getKey();
+			
+			if(!convertTypes) {
+				Unvalue unvalue = Unvalue.newString(map.get(name));
+				this.add(name, unvalue);
+			}else {
+				Unvalue unvalue = Unvalue.newFromString(map.get(name));
+				this.add(name, unvalue);
+			}
+			
+		}
+		
+	}
+	
+	/***********************************************************************
 	 * Creates a new record using the values in the map.
 	 * 
 	 ***********************************************************************/
@@ -257,7 +277,30 @@ public class PFRDataRecord {
 		return this;
 	}
 	
-
+	/***********************************************************************
+	 * Adds all the key-value pairs of the record to this class.
+	 * 
+	 * @param record
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord addAll(PFRDataRecord record) {
+		keyValues.putAll(record.keyValues);
+		return this;
+	}
+	
+	/***********************************************************************
+	 * Adds all the key-value pairs of the map to this class.
+	 * 
+	 * @param map
+	 * 
+	 * @return instance for chaining
+	 ***********************************************************************/
+	public PFRDataRecord addAll(Map<String, Unvalue> map) {
+		keyValues.putAll(map);
+		return this;
+	}
+	
 	
 	/***********************************************************************
 	 * 

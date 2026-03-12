@@ -1,6 +1,7 @@
 package com.performetriks.performator.data;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeSet;
 
@@ -121,7 +122,7 @@ public class PFRData {
 	}
 	
 	/****************************************************************************
-	 * Creates a new data source for a JSON file.
+	 * Creates a new data source for a JSON Array.
 	 * The file has to contain a JsonArray of JsonObjects.
 	 * If this is not the case, the data source will be empty on
 	 * load.
@@ -133,6 +134,7 @@ public class PFRData {
 	public static PFRDataSourceJsonArray newSourceJsonArray(JsonArray array) {
 		return new PFRDataSourceJsonArray(array);
 	}
+	
 	
 	/****************************************************************************
 	 * Creates a new data source for a JSON file.
@@ -146,6 +148,45 @@ public class PFRData {
 	 ****************************************************************************/
 	public static PFRDataSourceJsonArray newSourceJsonArray(String datasourceName, JsonArray array) {
 		return new PFRDataSourceJsonArray(datasourceName, array);
+	}
+	
+	/****************************************************************************
+	 * Creates a new data source for an array of Maps.
+	 * Each map will be converted to a record.
+	 * 
+	 * @param mapArray the array to be used for creating the source
+	 ****************************************************************************/
+	public static PFRDataSourceMap newSourceMaps(ArrayList<Map<String, String>> mapArray) {
+		return new PFRDataSourceMap(mapArray);
+	}
+	
+	/****************************************************************************
+	 * Creates a new data source for an array of Maps.
+	 * Each map will be converted to a record.
+	 * 
+	 * @param mapArray the array to be used for creating the source
+	 * @param convertTypes if data type conversion should be done. E.g.
+	 *        a number String will be converted to a number, a boolean
+	 *        String to boolean etc... This will save conversion time 
+	 *        later.
+	 ****************************************************************************/
+	public static PFRDataSourceMap newSourceMaps(ArrayList<Map<String, String>> mapArray, boolean convertTypes) {
+		return new PFRDataSourceMap(mapArray, convertTypes);
+	}
+	
+	/****************************************************************************
+	 * Creates a new data source for an array of Maps.
+	 * Each map will be converted to a record.
+	 * 
+	 * @param datasourceName uniqueName for this data source.
+	 * @param mapArray the array to be used for creating the source
+	 * @param convertTypes if data type conversion should be done. E.g.
+	 *        a number String will be converted to a number, a boolean
+	 *        String to boolean etc... This will save conversion time 
+	 *        later.
+	 ****************************************************************************/
+	public static PFRDataSourceMap newSourceMaps(String datasourceName, ArrayList<Map<String, String>> mapArray, boolean convertTypes) {
+		return new PFRDataSourceMap(datasourceName, mapArray, convertTypes);
 	}
 	
 	/****************************************************************************
