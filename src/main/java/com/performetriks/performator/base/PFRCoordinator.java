@@ -81,7 +81,7 @@ public class PFRCoordinator {
 		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
 		
 		//This also loads all the PFRConfig set in the constructor of the test.
-		PFRTest test = getTestInstance(testClass);
+		PFRTest test = createTestInstance(testClass);
 		
 		if(test != null) {
 			if(PFRConfig.hasAgents()) {
@@ -116,7 +116,7 @@ public class PFRCoordinator {
 		
 		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
 		
-		PFRTest test = getTestInstance(testClass);
+		PFRTest test = createTestInstance(testClass);
 		
 		if(test != null) {
 			executeLocal(test);
@@ -137,6 +137,8 @@ public class PFRCoordinator {
 	 * 
 	 *************************************************************/
 	public static void executeOnAgents(PFRTest test) {
+		
+		if( ! checkCanExecute(test) ) { return; }
 		
 		try {
 			//------------------------------
@@ -179,7 +181,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	private static void agentsTransferJar(PFRTest test) throws URISyntaxException, InterruptedException {
 		logger.info("################################################");
-		logger.info("Transfer Test JAR File to Agents");
+		logger.info("# Transfer Test JAR File to Agents");
 		logger.info("################################################");
 		logger.info("Start Transfer of JAR File: " + ZePFRClient.getJarFileURIForTest(test) );
 		
@@ -242,7 +244,7 @@ public class PFRCoordinator {
 		//------------------------------
 		// Reserve available agents
 		logger.info("################################################");
-		logger.info("Check Agent Availability and Reserve. ");
+		logger.info("# Check Agent Availability and Reserve. ");
 		logger.info("################################################");
 
 		for(int i = 0 ; i < amount; i++) {
@@ -322,7 +324,13 @@ public class PFRCoordinator {
 	 * @param className 
 	 *************************************************************/
 	private static void agentsStartTest(PFRTest test) {
-
+		
+		//-------------------------
+		// Start all the Tests
+		if( !prepareTestExecution(test) ) {
+			return;
+		}
+		
 		//-------------------------
 		// Start all the Tests
 		for(int i = 0 ; i < agentConnections.size(); i++) {
@@ -406,7 +414,7 @@ public class PFRCoordinator {
 		int agentIndex = CommandLineArgs.pfr_agentIndex.getValue().getAsInteger();
 		
 		//This also loads all the PFRConfig set in the constructor of the test.
-		PFRTest test = getTestInstance(testClass);
+		PFRTest test = createTestInstance(testClass);
 		
 		//-------------------------------
 		// Remove All Reporters
@@ -435,7 +443,10 @@ public class PFRCoordinator {
 	 * @param className 
 	 * @return instance or null on error.
 	 *************************************************************/
-	public static PFRTest getTestInstance(String className) {
+	private static PFRTest createTestInstance(String className) {
+			
+		//----------------------------------
+		// Check Null
 		if(className == null) {
 			logger.info("Please specify the class name of the test");
 			return null;
@@ -443,6 +454,8 @@ public class PFRCoordinator {
 		
 		try {
 
+			//----------------------------------
+			// Get Class
 			Class<?> clazz = Class.forName(className);
 		    
 			if(! PFRTest.class.isAssignableFrom(clazz) ){
@@ -450,6 +463,13 @@ public class PFRCoordinator {
 				return null;
 		    }
 			
+			//----------------------------------
+			// Reset the test execution before
+			// Creating new Instance
+			resetTestExecution();
+			
+			//----------------------------------
+			// Create Instance
 			Object instance = clazz.getDeclaredConstructor().newInstance();
 			
 		    return (PFRTest)instance;
@@ -487,7 +507,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void startTest(String className) {
 		
-		PFRTest test = getTestInstance(className);
+		PFRTest test = createTestInstance(className);
 		startTest(test);
 		
 	}
@@ -515,11 +535,19 @@ public class PFRCoordinator {
 	}
 
 	/*************************************************************
-	 * Prepares a test execution, resetting the framework to 
-	 * an initial state if there was a test execution already
-	 * done in the currently running VM.
+	 * Used to reset a test execution before starting another one.
 	 * 
-	 * 
+	 *************************************************************/
+	private static void resetTestExecution() {
+
+		PFRDataSource.clearSources();
+		HSR.reset();
+		HSRConfig.reset();
+	}
+		
+	/*************************************************************
+	 * Prepares a test execution, registers executors and
+	 * starts the HSR framework.
 	 * 
 	 * @param test 
 	 * @return true if successful and test can be started, false
@@ -529,21 +557,12 @@ public class PFRCoordinator {
 		
 		executorList = test.getExecutors();
 		
-		if(executorList.size() == 0) {
-			logger.info("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
-			return false;
-		}
+		if( !checkCanExecute(test) ) { return false; }
 		
 		//-------------------------
 		// Set Test Name
 		HSR.setTest(test.getName());
-		
-		//-------------------------
-		// Reset
-		PFRDataSource.clearSources();
-		HSR.reset();
-		HSRConfig.reset();
-		
+				
 		//-------------------------
 		// Register Settings
 		registerExecutorSettings();
@@ -554,6 +573,22 @@ public class PFRCoordinator {
 		
 		return true;
 		
+	}
+	
+	/*************************************************************
+	 * Checks if the test can be executed.
+	 * 
+	 * @param true if it can be executed, false otherwise.
+	 *  
+	 *************************************************************/
+	private static boolean checkCanExecute(PFRTest test) {
+		
+		if(executorList.isEmpty()) {
+			logger.info("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
+			return false;
+		}
+		
+		return true;
 	}
 	
 	
