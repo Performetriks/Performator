@@ -36,7 +36,7 @@ public class Main {
 		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance.")
 		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(UnvalueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_controllerPort(UnvalueType.NUMBER, null, "INTERNAL: The port used to connect from a remote process to the load test controller. This is set by a controller or agent, used to report data back to a controller.")
+		, pfr_agentbornePort(UnvalueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();

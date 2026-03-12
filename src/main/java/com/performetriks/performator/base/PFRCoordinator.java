@@ -65,9 +65,9 @@ public class PFRCoordinator {
 		
 		switch(mode) {
 			case AUTO 	-> executeAuto();
-			case AGENT 	-> executeAgentInstance();
 			case LOCAL 	-> executeLocal();
-			case REMOTE -> executeRemote();
+			case AGENT 	-> executeAgentInstance();
+			case AGENTBORNE -> executeAgentborne();
 		}
 	}
 	
@@ -407,7 +407,7 @@ public class PFRCoordinator {
 	 * from an agent. This mode is used by agents to run tests.
 	 * 	 * 
 	 *************************************************************/
-	public static void executeRemote() {
+	public static void executeAgentborne() {
 		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
 		String targetDir = CommandLineArgs.pfr_target.getValue().getAsString();
 		int agentTotal = CommandLineArgs.pfr_agentTotal.getValue().getAsInteger();
@@ -583,8 +583,13 @@ public class PFRCoordinator {
 	 *************************************************************/
 	private static boolean checkCanExecute(PFRTest test) {
 		
-		if(executorList.isEmpty()) {
-			logger.info("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
+		if(test == null) {
+			logger.warn("The test was null and nothing could be executed.");
+			return false;
+		}
+		
+		if(test.getExecutors().isEmpty()) {
+			logger.warn("The test "+test.getName()+" does not have any executors defined, nothing to execute.");
 			return false;
 		}
 		

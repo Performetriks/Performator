@@ -363,12 +363,15 @@ public class ZePFRServer {
 		//----------------------------------
 		// Start Test
 		try {
+			
+			int agentbornePort = CommandLineArgs.pfr_agentbornePort.getValue().getAsInt();
+			
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
-			String vmargs = " -Dpfr_mode=remote"
-						  //+ " -Dpfr_port=9876"
-						  + " -Dpfr_test="+classname+""
-						  + " -Dpfr_agentIndex="+agentIndex
-						  + " -Dpfr_agentTotal="+agentTotal
+			String vmargs = " -Dpfr_mode=agentborne"
+						  + " -Dpfr_port=" + agentbornePort
+						  + " -Dpfr_test=" + classname
+						  + " -Dpfr_agentIndex=" + agentIndex
+						  + " -Dpfr_agentTotal=" + agentTotal
 						  ;
 			
 			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
