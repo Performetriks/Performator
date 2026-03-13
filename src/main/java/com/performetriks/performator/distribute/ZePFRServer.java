@@ -18,16 +18,18 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
+import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.base.PFRCoordinator;
-import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.stats.HSRStatsEngine;
 import com.xresch.hsr.utils.ByteSize;
 import com.xresch.hsr.utils.Unvalue;
 
@@ -48,6 +50,8 @@ public class ZePFRServer {
 	private static final String JAR_FILE_NAME = "received.jar";
 	private long lastPingTime = 0;
 	private long tempStartMillis = 0;
+	
+	private int agentbornePort = -1;
 
 	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
 		
@@ -81,10 +85,12 @@ public class ZePFRServer {
 		, teststopgraceful
 		/** STEP 7: Stop the process. */
 		, teststop
-		/** Returns if the test is running or not. */
+		/** Returns if the status of the test. */
 		, teststatus
 		/** returns the current sysout log of the test process started by an agent. */
 		, processlog
+		/** Returns the current statistics without deleting them. */
+		, statspeek
 	}
 	
 	/**********************************************************************************
@@ -94,6 +100,9 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	public ZePFRServer(){
+		
+		agentbornePort = CommandLineArgs.pfr_agentbornePort.getValue().getAsInt();
+		
 		startServer();
 	}
 	
@@ -162,14 +171,7 @@ public class ZePFRServer {
 			// 		, payload: { ... } or [ ... ]
 			// }
 			
-			JsonObject response = new JsonObject(); 
-			response.addProperty(RemoteResponse.FIELD_SUCCESS, true);
-			
-			JsonArray messages = new JsonArray();
-			response.add(RemoteResponse.FIELD_MESSAGES, messages);
-			
-			JsonObject payload = new JsonObject();
-			response.add(RemoteResponse.FIELD_PAYLOAD, payload);
+			RemoteResponse response = new RemoteResponse(); 
 			
 			//------------------------
 			// Get Params
@@ -185,8 +187,8 @@ public class ZePFRServer {
 			String paramCommand = parameters.get("command");
 			
 			if(paramCommand == null) {
-				response.addProperty(RemoteResponse.FIELD_SUCCESS, false);
-				addMessage(response, Level.ERROR, "Please specify a command.");
+				response.setSuccess(false);
+				response.addMessage(Level.ERROR, "Please specify a command.");
 			}
 			
 			Command command = Command.valueOf(paramCommand.trim().toLowerCase());
@@ -199,11 +201,12 @@ public class ZePFRServer {
 			// Execute command
 			switch (command) {
 			
-				case status:			handleCommandStatus(payload);						break;
+				case status:			handleCommandStatus(response);						break;
 				case reserve: 			handleCommandReserveAgent(parameters, response);	break;
 				case transferjar:		handleCommandStoreJar(bodyBytes, test);				break;
 				case teststop:			handleCommandTestStop(response); 					break;
 				case processlog:		handleCommandProcesslog(response); 					break;
+				case statspeek:			handleCommandStatsPeek(response); 				break;
 				case teststopgraceful:	/*testStop(response);*/ 							break;
 	
 				case teststart:
@@ -219,11 +222,11 @@ public class ZePFRServer {
 					
 					if(System.currentTimeMillis() - tempStartMillis > 60_000) {
 						// done
-						payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, false );
+						response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, false );
 						
 					}else {
 						// running
-						payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, true );
+						response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, true );
 						
 					}
 					//payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
@@ -231,14 +234,14 @@ public class ZePFRServer {
 					
 				
 				default:
-					response.addProperty("success", false);
-					addMessage(response, Level.ERROR, "Unkown command: "+command);
+					response.setSuccess(false);
+					response.addMessage(Level.ERROR, "Unkown command: "+command);
 				
 			}
 			
 			//--------------------------------
 			// Write response
-			byte[] json = PFR.JSON.toString(response).getBytes();
+			byte[] json = response.toJsonString().getBytes();
 
 			exchange.getResponseHeaders().add("Content-Type", "application/json");
 			exchange.sendResponseHeaders(200, json.length);
@@ -254,7 +257,10 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void handleCommandStatus(JsonObject payload) throws UnknownHostException {
+	private void handleCommandStatus(RemoteResponse response) throws UnknownHostException {
+		
+		JsonObject payload = response.payloadAsObject();
+		
 		payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
 		payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
@@ -267,30 +273,13 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void handleCommandProcesslog(JsonObject response) {
-		JsonArray array = new JsonArray();
-		response.add("payload", array);
-		
-		if(executor != null) {
-			PFRReadableOutputStream out = executor.getOutputStream();
-			
-			while(out.hasLine()) {
-				array.add(out.readLine());
-			}
-			
-		}
-	}
-	
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	private void handleCommandReserveAgent(Map<String, String> parameters, JsonObject response) {
+	private void handleCommandReserveAgent(Map<String, String> parameters, RemoteResponse response) {
 		
 		//-------------------------------
 		// Get AgentIndex
 		if(!isAvailable) {
-			response.addProperty("success", false);
-			addMessage(response, Level.WARN, "Agent is already in use.");
+			response.setSuccess(false);
+			response.addMessage(Level.WARN, "Agent is already in use.");
 		}
 		
 		//-------------------------------
@@ -303,7 +292,8 @@ public class ZePFRServer {
 		// Get AgentTotal
 		String keyAgentTotal = CommandLineArgs.pfr_agentTotal.toString();
 		if( ! parameters.containsKey(keyAgentTotal) ) {
-			addMessage(response, Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
+			response.setSuccess(false);
+			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
 			isAvailable = true;
 			return;
 		}
@@ -314,7 +304,8 @@ public class ZePFRServer {
 		// Get AgentIndex
 		String keyAgentIndex = CommandLineArgs.pfr_agentIndex.toString();
 		if( ! parameters.containsKey(keyAgentIndex) ) {
-			addMessage(response, Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
+			response.setSuccess(false);
+			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
 			isAvailable = true;
 			return;
 		}
@@ -347,13 +338,13 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void handleCommandTestStart(Map<String, String> parameters, JsonObject response) {
+	public void handleCommandTestStart(Map<String, String> parameters, RemoteResponse response) {
 		
 
 		//----------------------------------
 		// Get Test class name
 		if( ! parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
-			addMessage(response, Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
+			response.addMessage(Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
 			isAvailable = true;
 			return;
 		}
@@ -364,8 +355,6 @@ public class ZePFRServer {
 		// Start Test
 		try {
 			
-			int agentbornePort = CommandLineArgs.pfr_agentbornePort.getValue().getAsInt();
-			
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
 			String vmargs = " -Dpfr_mode=agentborne"
 						  + " -Dpfr_port=" + agentbornePort
@@ -375,15 +364,73 @@ public class ZePFRServer {
 						  ;
 			
 			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
-			System.out.println(startCommand);
-			addMessage(response, Level.INFO, "Start Test Process: "+ startCommand);
+			
+			logger.debug("Start test"+startCommand);
+			
 			executor = new PFRCLIExecutor(executionDirectory, startCommand);
 			executor.execute();
 			
-			
 		} catch (Exception e) {
-			addMessage(response, Level.ERROR, "Error while starting process: "+e.getMessage());
+			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
 		}
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandProcesslog(RemoteResponse response) {
+		JsonArray array = new JsonArray();
+		response.setPayload(array);
+		
+		if(executor != null) {
+			PFRReadableOutputStream out = executor.getOutputStream();
+			
+			while(out.hasLine()) {
+				array.add(out.readLine());
+			}
+			
+		}
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandStatsPeek(RemoteResponse response) {
+		
+		//---------------------------------------------
+		// If agent, forward request to Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENT) {
+			
+			if(executor.checkKeepExecuting()) {
+				
+				ZePFRClient agentClient = new ZePFRClient("localhost", agentbornePort);
+				
+				RemoteResponse peekResponse = agentClient.statsPeek();
+				peekResponse.overrideResponse(response);
+				
+			}else {
+				response.addMessage(Level.INFO, "Test already finished, no metrics to peek.");
+			}
+			return;
+		}
+		
+		//---------------------------------------------
+		// If agent, forward request to Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
+			
+			if(!PFRCoordinator.hasPeekPoll()) {
+				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
+				return;
+			}
+			JsonArray recordStatsArray = PFRCoordinator.getPeekPoll().peekRecordsJson();
+			response.setPayload(recordStatsArray);
+			return;
+		}
+		
+		//---------------------------------------------
+		// All other Modes
+		response.addMessage(Level.INFO, "Command" + Command.statspeek + " not available for execution mode:" + PFRConfig.executionMode());
+		
 	}
 	
 
@@ -392,14 +439,13 @@ public class ZePFRServer {
 	 * 
 	 * @param response instance or null
 	 **********************************************************************************/
-	public void handleCommandTestStop(JsonObject response) {
+	public void handleCommandTestStop(RemoteResponse response) {
 		
 		logger.info("Stop any test if still running.");
 		if (executor != null) {
 			executor.kill();
-			addMessage(response, Level.INFO, "Simulated process stopped.");
 		} else {
-			addMessage(response, Level.ERROR,"No process to stop.");
+			response.addMessage(Level.ERROR,"No process to stop.");
 		}
 		
 		isAvailable = true; 
@@ -452,23 +498,6 @@ public class ZePFRServer {
 	            });
 	}
 
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	private void addMessage(JsonObject response, Level level, String message) {
-		
-		if(response != null) {
-			JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
-			
-			JsonObject messageObject = new JsonObject();
-			messageObject.addProperty("level", level.toString());
-			messageObject.addProperty("message", message);
-			
-			messages.add(messageObject);
-			
-			logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
-		}
-	}
 
 	/**********************************************************************************
 	 * Sets the last ping time to now.
@@ -513,7 +542,7 @@ public class ZePFRServer {
 				// Stop if not already stopped
 				// Make Agent available again
 				if(!isAvailable) {
-					logger.info("Start Tracking Pings");
+					logger.info("End Tracking Pings");
 					instance.handleCommandTestStop(null);
 				}
 			}

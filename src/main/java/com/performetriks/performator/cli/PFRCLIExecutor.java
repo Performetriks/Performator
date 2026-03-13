@@ -111,10 +111,10 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Returns true if the process has not finished and is not interrupted.
 	 * 
 	 ***************************************************************************/
-	private boolean checkKeepExecuting() {
+	public boolean checkKeepExecuting() {
 		
 		return !isCompleted 
 			&& !Thread.interrupted()

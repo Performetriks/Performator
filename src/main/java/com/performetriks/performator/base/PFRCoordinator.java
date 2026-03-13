@@ -22,6 +22,7 @@ import com.xresch.hsr.base.HSRTestSettings;
 import com.xresch.hsr.reporting.HSRReporterCSV;
 import com.xresch.hsr.reporting.HSRReporterHTML;
 import com.xresch.hsr.reporting.HSRReporterJson;
+import com.xresch.hsr.reporting.HSRReporterPeekPoll;
 
 import ch.qos.logback.classic.Logger;
 
@@ -54,6 +55,8 @@ public class PFRCoordinator {
 	private static ArrayList<ZePFRClient> agentConnections = new ArrayList<>();
 	
 	private static ZePFRServer server = null;
+	
+	private static HSRReporterPeekPoll peekPoll = null;
 	
 	private static boolean isTestRunning = true;
 	
@@ -103,8 +106,6 @@ public class PFRCoordinator {
 										.getValue()
 										.getAsInteger();
 			
-		PFRConfig.port(agentPort);
-		
 		server = new ZePFRServer();
 	}
 	
@@ -408,26 +409,36 @@ public class PFRCoordinator {
 	 * 	 * 
 	 *************************************************************/
 	public static void executeAgentborne() {
+		
+		//-------------------------------
+		// Variables
 		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
 		String targetDir = CommandLineArgs.pfr_target.getValue().getAsString();
 		int agentTotal = CommandLineArgs.pfr_agentTotal.getValue().getAsInteger();
 		int agentIndex = CommandLineArgs.pfr_agentIndex.getValue().getAsInteger();
 		
-		//This also loads all the PFRConfig set in the constructor of the test.
+		// This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);
 		
 		//-------------------------------
-		// Remove All Reporters
+		// Change Reporters
 		HSRConfig.clearReporters();
 		HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
 		HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
 		HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
+		
+		peekPoll = new HSRReporterPeekPoll();
+		HSRConfig.addReporter(peekPoll);
 		
 		//-------------------------------
 		// Distribute Load
 		for(PFRExec executor : test.getExecutors()) {
 			executor.distributeLoad(agentTotal, agentIndex, 0);
 		}
+		
+		//-------------------------------
+		// Start Server
+		server = new ZePFRServer();
 		
 		//-------------------------
 		// Prepare and Execute
@@ -543,6 +554,10 @@ public class PFRCoordinator {
 		PFRDataSource.clearSources();
 		HSR.reset();
 		HSRConfig.reset();
+		
+		peekPoll = null;
+		
+		
 	}
 		
 	/*************************************************************
@@ -708,6 +723,23 @@ public class PFRCoordinator {
 		}
 		
 	}
+	
+	/*****************************************************************
+	 * Returns true if this instance has an active peekPoll reporter.
+	 *****************************************************************/
+	public static boolean hasPeekPoll() {
+		return peekPoll != null;
+	}
+	
+	/*****************************************************************
+	 * Returns the peekPoll reporter.
+	 *****************************************************************/
+	public static HSRReporterPeekPoll getPeekPoll() {
+		return peekPoll;
+	}
+	
+	
+	
 	/*****************************************************************
 	 * 
 	 *****************************************************************/

@@ -205,6 +205,14 @@ public class Main {
 		PFRConfig.executionMode(mode);
 		
 		//------------------------------------------
+		// Set port
+		int port = CommandLineArgs.pfr_port
+						.getValue()
+						.getAsInt();
+		
+		PFRConfig.port(port);
+		
+		//------------------------------------------
 		// Execute Mode
 		PFRCoordinator.executeMode(mode);
 		

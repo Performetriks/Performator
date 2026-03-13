@@ -8,6 +8,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
 
+import ch.qos.logback.classic.Level;
+
 /**********************************************************************************
  * 
  **********************************************************************************/
@@ -27,6 +29,13 @@ public class RemoteResponse {
 	public static final String FIELD_STATUS_ISTESTRUNNING = "isTestRunning";
 	
 	JsonObject response;
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public RemoteResponse() {
+		response = createResponseObject(true, null, null);
+	}
 	
 	/********************************************************
 	 * 
@@ -67,6 +76,7 @@ public class RemoteResponse {
 	public JsonElement payload() {
 		return response.get(FIELD_PAYLOAD);
 	}
+	
 	
 	/********************************************************
 	 * 
@@ -115,6 +125,61 @@ public class RemoteResponse {
 		
 		return createResponseObject(false, messages, null);
 	}
+		
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public void setSuccess(boolean success) {
+		response.addProperty(FIELD_SUCCESS, success);
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public void setPayload(JsonElement element) {
+		response.add(FIELD_PAYLOAD, element);
+	}
+	
+	/********************************************************
+	 * Override all messages
+	 ********************************************************/
+	public void setMessages(JsonArray messages) {
+		response.add(FIELD_MESSAGES, messages);
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public void addMessage( Level level, String message) {
+		
+		if(response != null) {
+			JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
+			
+			JsonObject messageObject = new JsonObject();
+			messageObject.addProperty("level", level.toString());
+			messageObject.addProperty("message", message);
+			
+			messages.add(messageObject);
+			
+			logger.info("Add Response Message: " + PFR.JSON.toJSON(messageObject) );
+		}
+	}
+	
+	/********************************************************
+	 * Override the data in the given response object with
+	 * what this RemoteResponse instance contains.
+	 ********************************************************/
+	public JsonObject getResponse() {
+		return response;
+	}
+	
+	/********************************************************
+	 * Override the data in the given response object with
+	 * what this RemoteResponse instance contains.
+	 ********************************************************/
+	public String toJsonString() {
+		return PFR.JSON.toJSON(response);
+	}
 	
 	/********************************************************
 	 * 
@@ -122,12 +187,25 @@ public class RemoteResponse {
 	public static JsonObject createResponseObject(boolean success, JsonArray messages, JsonElement payload) {
 		
 		if(messages == null) { messages = new JsonArray(); }
+		if(payload == null) { payload = new JsonObject(); }
 		
 		JsonObject responseObject = new JsonObject();
 		responseObject.addProperty(FIELD_SUCCESS, success);
 		responseObject.add(FIELD_MESSAGES, messages);
 		responseObject.add(FIELD_PAYLOAD, payload);
 		return responseObject;
+	}
+	
+	/********************************************************
+	 * Override the data in the given response object with
+	 * what this RemoteResponse instance contains.
+	 ********************************************************/
+	public void overrideResponse(RemoteResponse otherResponse) {
+		
+		otherResponse.setSuccess(this.success());
+		otherResponse.setMessages(this.messages());
+		otherResponse.setPayload(this.payload());
+
 	}
 	
 }
