@@ -147,6 +147,14 @@ public class ZePFRClient {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
+	public RemoteResponse statsPoll(){
+		return new RemoteRequest(this, Command.statspoll, test)
+				.send();
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
 	public RemoteResponse ping(){
 		return new RemoteRequest(this, Command.ping, test).send();
 	}

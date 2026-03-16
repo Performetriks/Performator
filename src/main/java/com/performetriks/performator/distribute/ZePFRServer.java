@@ -89,8 +89,10 @@ public class ZePFRServer {
 		, teststatus
 		/** returns the current sysout log of the test process started by an agent. */
 		, processlog
-		/** Returns the current statistics without deleting them. */
+		/** Returns the current statistics without clearing the list of stats. */
 		, statspeek
+		/** Returns the current statistics and empties the list of stats. */
+		, statspoll
 	}
 	
 	/**********************************************************************************
@@ -201,13 +203,14 @@ public class ZePFRServer {
 			// Execute command
 			switch (command) {
 			
-				case status:			handleCommandStatus(response);						break;
-				case reserve: 			handleCommandReserveAgent(parameters, response);	break;
-				case transferjar:		handleCommandStoreJar(bodyBytes, test);				break;
-				case teststop:			handleCommandTestStop(response); 					break;
-				case processlog:		handleCommandProcesslog(response); 					break;
-				case statspeek:			handleCommandStatsPeek(response); 				break;
-				case teststopgraceful:	/*testStop(response);*/ 							break;
+				case status:			handleCommandStatus(response);								break;
+				case reserve: 			handleCommandReserveAgent(parameters, response);			break;
+				case transferjar:		handleCommandStoreJar(bodyBytes, test);						break;
+				case teststop:			handleCommandTestStop(response); 							break;
+				case processlog:		handleCommandProcesslog(response); 							break;
+				case statspeek:			handleCommandStatsPeekPoll(response, Command.statspeek); 	break;
+				case statspoll:			handleCommandStatsPeekPoll(response, Command.statspoll); 	break;
+				case teststopgraceful:	/*testStop(response);*/ 									break;
 	
 				case teststart:
 					tempStartMillis = System.currentTimeMillis();
@@ -220,7 +223,7 @@ public class ZePFRServer {
 					// vvvvvvvvvvvvvvvvvvvvvvvvvvv
 				case teststatus:
 					
-					if(System.currentTimeMillis() - tempStartMillis > 60_000) {
+					if(executor == null || ! executor.checkKeepExecuting() ) {
 						// done
 						response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, false );
 						
@@ -395,7 +398,7 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void handleCommandStatsPeek(RemoteResponse response) {
+	private void handleCommandStatsPeekPoll(RemoteResponse response, Command command) {
 		
 		//---------------------------------------------
 		// If agent, forward request to Agentborne
@@ -405,8 +408,10 @@ public class ZePFRServer {
 				
 				ZePFRClient agentClient = new ZePFRClient("localhost", agentbornePort);
 				
-				RemoteResponse peekResponse = agentClient.statsPeek();
-				peekResponse.overrideResponse(response);
+				RemoteResponse agentborneResponse = null;
+				if(command == Command.statspeek) {			agentborneResponse = agentClient.statsPeek(); }
+				else if(command == Command.statspoll) {		agentborneResponse = agentClient.statsPoll(); }
+				agentborneResponse.overrideResponse(response);
 				
 			}else {
 				response.addMessage(Level.INFO, "Test already finished, no metrics to peek.");
@@ -415,15 +420,20 @@ public class ZePFRServer {
 		}
 		
 		//---------------------------------------------
-		// If agent, forward request to Agentborne
+		// Get Data if Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
 			
 			if(!PFRCoordinator.hasPeekPoll()) {
 				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
 				return;
 			}
-			JsonArray recordStatsArray = PFRCoordinator.getPeekPoll().peekRecordsJson();
+			
+			JsonArray recordStatsArray = null;
+			if(command == Command.statspeek) {			recordStatsArray = PFRCoordinator.getPeekPoll().peekRecordsJson(); }
+			else if(command == Command.statspoll) {		recordStatsArray = PFRCoordinator.getPeekPoll().pollRecordsJson(); }
+			
 			response.setPayload(recordStatsArray);
+			
 			return;
 		}
 		

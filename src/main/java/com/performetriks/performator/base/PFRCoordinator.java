@@ -2,10 +2,13 @@ package com.performetriks.performator.base;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
@@ -23,6 +26,10 @@ import com.xresch.hsr.reporting.HSRReporterCSV;
 import com.xresch.hsr.reporting.HSRReporterHTML;
 import com.xresch.hsr.reporting.HSRReporterJson;
 import com.xresch.hsr.reporting.HSRReporterPeekPoll;
+import com.xresch.hsr.stats.HSRRecordStats;
+import com.xresch.hsr.stats.HSRStatsEngine;
+import com.xresch.hsr.stats.HSRStatsEngine.SummarizedStats;
+import com.xresch.hsr.stats.HSRStatsEngineHooks;
 
 import ch.qos.logback.classic.Logger;
 
@@ -152,6 +159,10 @@ public class PFRCoordinator {
 			agentsTransferJar(test);
 			
 			//------------------------------
+			// Send Jar File
+			agentsRegisterStatsEngineHooks();
+			
+			//------------------------------
 			// Start Test
 			agentsStartTest(test);
 			
@@ -225,6 +236,62 @@ public class PFRCoordinator {
 		logger.info("All Transfers finished");
 	}
 	
+	/*************************************************************
+	 * Adds the hooks needed to collect the statistics from the
+	 * agents before aggregating the reports.
+	 * 
+	 *************************************************************/
+	private static void agentsRegisterStatsEngineHooks() {
+		
+		HSRStatsEngine.setHooks( new HSRStatsEngineHooks() {
+			
+			@Override
+			public void beforeAggregate() {
+				//-------------------------------------
+				// Fetch data from all agents
+				TreeMap<String, ArrayList<HSRRecordStats>> groupedStats = new TreeMap<>();
+				
+				for(int i = 0 ; i < agentConnections.size(); i++) {
+					ZePFRClient current = agentConnections.get(i);
+					
+					RemoteResponse response = current.statsPoll();
+	
+					if(response != null) { 
+				
+						JsonArray recordStatsArray = response.payloadAsArray();
+						
+						for(JsonElement e : recordStatsArray) {
+							if(e.isJsonObject()) {
+								HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
+								
+								String statsId = stats.statsIdentifier();
+								
+								if( !groupedStats.containsKey(statsId) ) {
+									groupedStats.put(statsId,  new ArrayList<>());
+								}
+								
+								groupedStats.get(statsId).add(stats);
+							}
+						}
+						
+					}
+				}
+				
+				//-------------------------------------
+				// Summarize Stats from Agents
+				SummarizedStats summary = HSRStatsEngine.summarizeGroupedStats(groupedStats, true);
+				
+				//-------------------------------------
+				// Add all to Engine
+				for(HSRRecordStats stats : summary.finalRecords()) {
+					HSRStatsEngine.addRecordStats(stats);
+				}
+				
+			}
+		});
+	}
+		
+		
 	/*************************************************************
 	 * Reserve agents based on data defined with:
 	 * <ul>
