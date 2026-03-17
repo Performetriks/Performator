@@ -52,7 +52,7 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 	 *****************************************************************/
 	public String getUniqueName() {
 		
-		if(!Strings.isNullOrEmpty(uniqueName)) {
+		if( Strings.isNullOrEmpty(uniqueName) ) {
 			uniqueName = "" + array.hashCode()
 						+ "-" + accessMode()
 						+ "-" + retainMode()

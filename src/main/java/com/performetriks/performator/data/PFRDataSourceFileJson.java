@@ -68,7 +68,7 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 	 *****************************************************************/
 	public String getUniqueName() {
 		
-		if(!Strings.isNullOrEmpty(uniqueName)) {
+		if( Strings.isNullOrEmpty(uniqueName) ) {
 			uniqueName =  packagePath 
 						+ "-" + filename
 						+ "-" + accessMode()

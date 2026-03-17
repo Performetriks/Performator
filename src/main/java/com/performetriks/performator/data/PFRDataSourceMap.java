@@ -71,7 +71,7 @@ public class PFRDataSourceMap extends PFRDataSourceStatic {
 	 *****************************************************************/
 	public String getUniqueName() {
 		
-		if(!Strings.isNullOrEmpty(uniqueName)) {
+		if( Strings.isNullOrEmpty(uniqueName) ) {
 			uniqueName = "" + mapArray.hashCode()
 						+ "-" + accessMode()
 						+ "-" + retainMode()

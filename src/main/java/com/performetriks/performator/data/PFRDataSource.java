@@ -120,6 +120,7 @@ public abstract class PFRDataSource {
 			logger.warn("Data Source with name '"+uniqueName+"' has been reset for all agents."
 					+ "In case you want to use the source only locally, use the method yourSource.local() to define that it should not be shared between agents.");
 		}
+		
 		registeredDataSources.put(uniqueName, this);
 		
 		return buildSource();
