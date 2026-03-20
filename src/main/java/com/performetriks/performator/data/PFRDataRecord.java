@@ -549,12 +549,27 @@ public class PFRDataRecord {
 	/***********************************************************************
 	 * Returns a clone of the HashMap that holds this record's key-value pairs.
 	 * 
-	 * @return map
+	 * @return LinkedHashMap<String, Unvalue>
 	 ***********************************************************************/
 	public LinkedHashMap<String, Unvalue> toHashMap() {
 		return new LinkedHashMap<>(keyValues);
 	}
 	
+	/***********************************************************************
+	 * Converts the key-value pairs of this record to a HashMap that holds
+	 * strings as values.
+	 * 
+	 * @return LinkedHashMap<String, String>
+	 ***********************************************************************/
+	public LinkedHashMap<String, String> toHashMapStrings() {
+		LinkedHashMap<String, String> stringMap = new LinkedHashMap<>();
+		
+		for(Entry<String, Unvalue> entry : keyValues.entrySet()) {
+			stringMap.put(entry.getKey(), entry.getValue().getAsString());
+		}
+		
+		return stringMap;
+	}
 	/***********************************************************************
 	 * Converts the key-value pairs of this record to a JsonObject.
 	 * 
