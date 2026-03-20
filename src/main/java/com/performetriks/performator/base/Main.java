@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.xresch.hsr.base.HSRConfig;
-import com.xresch.hsr.utils.Unvalue;
-import com.xresch.hsr.utils.Unvalue.UnvalueType;
+import com.xresch.xrutils.data.Unvalue;
+import com.xresch.xrutils.data.Unvalue.UnvalueType;
 
 /***************************************************************************
  * The main class of the Performator framework that allows to kick off

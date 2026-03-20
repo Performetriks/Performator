@@ -3,9 +3,8 @@ package com.performetriks.performator.base;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
-import com.google.common.base.Joiner;
 import com.performetriks.performator.data.PFRDataRecord;
-import com.xresch.hsr.utils.Unvalue;
+import com.xresch.xrutils.data.Unvalue;
 
 /***************************************************************************
  * 

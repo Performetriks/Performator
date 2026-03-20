@@ -29,9 +29,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
-import com.xresch.hsr.stats.HSRStatsEngine;
-import com.xresch.hsr.utils.ByteSize;
-import com.xresch.hsr.utils.Unvalue;
+import com.xresch.xrutils.data.ByteSize;
+import com.xresch.xrutils.data.Unvalue;
 
 import ch.qos.logback.classic.Level;
 

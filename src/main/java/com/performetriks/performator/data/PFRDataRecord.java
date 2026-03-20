@@ -13,7 +13,7 @@ import com.google.common.base.Joiner;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xresch.hsr.utils.Unvalue;
+import com.xresch.xrutils.data.Unvalue;
 
 import ch.qos.logback.classic.Logger;
 
