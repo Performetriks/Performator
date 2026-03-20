@@ -536,6 +536,7 @@ public class PFRDataRecord {
 	public int size() {
 		return keyValues.size();
 	}
+	
 	/***********************************************************************
 	 * Returns the entry set of key-value mappings in this data record.
 	 * 
@@ -546,9 +547,33 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
-	 * Returns the record as an array string oneliner.
+	 * Returns a clone of the HashMap that holds this record's key-value pairs.
 	 * 
-	 * @return size
+	 * @return map
+	 ***********************************************************************/
+	public LinkedHashMap<String, Unvalue> toHashMap() {
+		return new LinkedHashMap<>(keyValues);
+	}
+	
+	/***********************************************************************
+	 * Converts the key-value pairs of this record to a JsonObject.
+	 * 
+	 * @return JsonObject
+	 ***********************************************************************/
+	public JsonObject toJsonObject() {
+		JsonObject object = new JsonObject();
+		
+		for(Entry<String, Unvalue> entry : keyValues.entrySet()) {
+			object.add(entry.getKey(), entry.getValue().getAsJsonElement());
+		}
+		
+		return object;
+	}
+	
+	/***********************************************************************
+	 * Returns the record as an array-like string oneliner.
+	 * Useful for debugging.
+	 * @return string
 	 ***********************************************************************/
 	public  String toString() {
 
@@ -563,9 +588,10 @@ public class PFRDataRecord {
 	}
 	
 	/***********************************************************************
-	 * Returns the record as an array string with pretty print.
+	 * Returns the record as an array-like string with pretty print.
+	 * Useful for debugging.
 	 * 
-	 * @return size
+	 * @return string
 	 ***********************************************************************/
 	public  String toStringPretty() {
 
