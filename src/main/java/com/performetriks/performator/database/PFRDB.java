@@ -45,8 +45,8 @@ public class PFRDB {
 
 	private BasicDataSource pooledSource;
 	
-
-	private static HashMap<String, BasicDataSource> managedConnectionPools = new HashMap<>();
+	// used to prevent JIT optimization
+	protected static volatile Object SINK;
 	
 	public PFRDB(BasicDataSource pooledSource) {
 		this.pooledSource = pooledSource;
@@ -948,7 +948,7 @@ public class PFRDB {
 		 * @param values the values to be placed in the prepared statement
 		 * @throws SQLException 
 		 ********************************************************************************************/
-		public ResultSet executeQueryAndRead(String sql, Object... values){	
+		public void executeQueryAndRead(String sql, Object... values){	
 	        		
 			Connection conn = null;
 			PreparedStatement prepared = null;
@@ -957,14 +957,15 @@ public class PFRDB {
 				//-----------------------------------------
 				// Initialize Variables
 				conn = db.getConnection();
-				prepared = conn.prepareStatement(sql, 
-						  ResultSet.TYPE_SCROLL_INSENSITIVE, 
-						  ResultSet.CONCUR_READ_ONLY);
+				conn.setAutoCommit(false); // enable streaming
+				
+				prepared = conn.prepareStatement(sql);
+				prepared.setFetchSize(100); // enable streaming
 				
 				//-----------------------------------------
 				// Prepare Statement
 				PFRDB.prepareStatement(prepared, values);
-				
+	
 				//-----------------------------------------
 				// Execute
 				String finalName = (metricName != null) ? metricName : sql;
@@ -975,27 +976,26 @@ public class PFRDB {
 				//-----------------------------------------
 				// 
 				HSRRecord recordFetch = null;
-				Object readObject = null;
+
+				int resultSize = 0;
+				int jitPreventionCounter = 0;
 				if(result != null) {
+					
+					int columns = result.getMetaData().getColumnCount();
+					
 					HSR.start(finalName + " [FETCH]"); 
 						while(result.next()) {
-							for(int i = 1; i <= result.getMetaData().getColumnCount(); i++) {
-								readObject = result.getObject(i);
+							resultSize++;
+							for(int i = 1; i <= columns; i++) {
+								jitPreventionCounter += 
+										(result.getObject(i) != null) ? 1 : 0;
 							}
 						}
 					recordFetch = HSR.end();
 				}
 				
-				// IMPORTANT: This log has the purpose of preventing the JVM to throw away our reading loop with JIT optimization
-				logger.trace("Last Read Object: " + readObject);
-				
-				//-----------------------------------------
-				// Execute
-
-				result.last();
-				int resultSize = result.getRow();
-			    result.beforeFirst();
-				
+				// IMPORTANT: prevent JIT optimization
+				SINK = jitPreventionCounter;
 				
 				//-----------------------------------------
 				// Ranged Metric [EXEC]
@@ -1022,8 +1022,8 @@ public class PFRDB {
 
 				
 			} catch (SQLException e) {
-				
 				logger.error("Issue executing prepared statement: "+e.getLocalizedMessage(), e);
+			} finally {
 				try {
 					if(conn != null && db.transactionConnection.get() == null) { 
 						db.removeOpenConnection(conn);
@@ -1033,11 +1033,10 @@ public class PFRDB {
 				} catch (SQLException e2) {
 					logger.error("Issue closing resources.", e2);
 				}
-			} 
+			}
 			
 			logger.trace("SQL Statement: "+sql);
-					 
-			return result;
+
 		}
 
 	}
