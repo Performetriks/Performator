@@ -2,12 +2,11 @@ package com.performetriks.performator.data;
 
 import java.util.HashMap;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Strings;
 import com.performetriks.performator.base.PFRConfig;
 
-import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
  * 
@@ -19,13 +18,15 @@ import ch.qos.logback.classic.Logger;
  ***************************************************************************/
 public abstract class PFRDataSource {
 	
-	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSource.class.getName());
+	Logger logger = LoggerFactory.getLogger(PFRDataSource.class.getName());
 	
 	// data source key plus source itself
 	private static HashMap<String, PFRDataSource> registeredDataSources = new HashMap<>();
 	
 	protected String uniqueName; 
 	private boolean isLocal = false;
+	
+	private boolean isBuilt = false;
 	
 	protected AccessMode accessMode = AccessMode.SEQUENTIAL;
 	protected RetainMode retainMode = RetainMode.INFINITE;
@@ -123,6 +124,8 @@ public abstract class PFRDataSource {
 		
 		registeredDataSources.put(uniqueName, this);
 		
+		isBuilt = true;
+		
 		return buildSource();
 		
 	}
@@ -138,12 +141,13 @@ public abstract class PFRDataSource {
 	public abstract String getUniqueName();
 	
 	/*****************************************************************
-	 * This method prepares the data source for being used.
+	 * This is the internal method that you implement so it 
+	 * prepares the data source for being used.
 	 * 
 	 * @return instance for chaining
 	 * 
 	 *****************************************************************/
-	public abstract PFRDataSource buildSource();
+	protected abstract PFRDataSource buildSource();
 	
 	/*****************************************************************
 	 * Return true if this data source still has data.
@@ -167,6 +171,7 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	public PFRDataRecord next() {
 		
+		if( ! isBuilt ) { logger.warn("The data source's .build() method was not called and it might not work correctly: "+this.getUniqueName() ); }
 		return nextInternal().clone();
 	}
 	

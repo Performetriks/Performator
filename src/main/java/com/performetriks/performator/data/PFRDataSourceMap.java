@@ -72,10 +72,10 @@ public class PFRDataSourceMap extends PFRDataSourceStatic {
 	public String getUniqueName() {
 		
 		if( Strings.isNullOrEmpty(uniqueName) ) {
-			uniqueName = "" + mapArray.hashCode()
-						+ "-" + accessMode()
-						+ "-" + retainMode()
-						+ "isLocal:" + isLocal()
+			uniqueName = "Map " + mapArray.hashCode()
+						+ " | accessMode: " + accessMode()
+						+ " | retainMode: " + retainMode()
+						+ " | isLocal:" + isLocal()
 						;
 		}
 		

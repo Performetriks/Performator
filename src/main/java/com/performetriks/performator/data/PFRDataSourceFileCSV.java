@@ -2,13 +2,12 @@ package com.performetriks.performator.data;
 
 import java.util.ArrayList;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
-
-import ch.qos.logback.classic.Logger;
 
 
 /***************************************************************************
@@ -21,7 +20,7 @@ import ch.qos.logback.classic.Logger;
  ***************************************************************************/
 public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 
-	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSourceStatic.class.getName());
+	Logger logger =  LoggerFactory.getLogger(PFRDataSourceStatic.class.getName());
 	
 	private String packagePath;
 	private String filename;
@@ -74,11 +73,11 @@ public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 		
 		if( Strings.isNullOrEmpty(uniqueName) ) {
 			uniqueName =  packagePath 
-						+ "-" + filename
-						+ "-" + separator
-						+ "-" + accessMode()
-						+ "-" + retainMode()
-						+ "isLocal:" + isLocal()
+						+ " | " + filename
+						+ " | " + separator
+						+ " | accessMode: " + accessMode()
+						+ " | retainMode: " + retainMode()
+						+ " | isLocal:" + isLocal()
 						;
 		}
 		

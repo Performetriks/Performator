@@ -53,10 +53,10 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 	public String getUniqueName() {
 		
 		if( Strings.isNullOrEmpty(uniqueName) ) {
-			uniqueName = "" + array.hashCode()
-						+ "-" + accessMode()
-						+ "-" + retainMode()
-						+ "isLocal:" + isLocal()
+			uniqueName = "JsonArray: " + array.hashCode()
+						+ " | accessMode: " + accessMode()
+						+ " | retainMode: " + retainMode()
+						+ " | isLocal:" + isLocal()
 						;
 		}
 		

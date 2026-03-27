@@ -70,10 +70,10 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 		
 		if( Strings.isNullOrEmpty(uniqueName) ) {
 			uniqueName =  packagePath 
-						+ "-" + filename
-						+ "-" + accessMode()
-						+ "-" + retainMode()
-						+ "isLocal:" + isLocal()
+						+ " | " + filename
+						+ " | accessMode: " + accessMode()
+						+ " | retainMode: " + retainMode()
+						+ " | isLocal:" + isLocal()
 						;
 		}
 		
