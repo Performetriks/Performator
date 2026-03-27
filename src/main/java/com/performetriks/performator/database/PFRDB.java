@@ -25,6 +25,8 @@ import com.google.gson.JsonObject;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRRecord;
 
+import ch.qos.logback.classic.Level;
+
 /**************************************************************************************************************
  * Performator Interface to test database queries.
  * 
@@ -352,6 +354,12 @@ public class PFRDB {
 		}
 	}
 	
+	/************************************************************************
+	 * 
+	 ************************************************************************/
+	public PFRDBSQLBuilder create() {
+		return new PFRDBSQLBuilder(this, null);
+	}
 	
 	/************************************************************************
 	 * 
@@ -366,12 +374,10 @@ public class PFRDB {
 	public static PFRDB initDBInterfaceH2(String servername, int port, String storePath, String databaseName, String username, String password) {
 		
 		String urlPart = servername+":"+port+"/"+storePath+"/"+databaseName;
-		String uniqueName = "H2:"+urlPart;
 		String connectionURL = "jdbc:h2:tcp://"+urlPart+";MODE=MYSQL;IGNORECASE=TRUE";
 		String driverClass = "org.h2.Driver";
 
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -385,12 +391,10 @@ public class PFRDB {
 	public static PFRDB initDBInterfaceH2AutoServer(int port, String storePath, String databaseName, String username, String password) {
 		
 		String urlPart = storePath+"/"+databaseName;
-		String uniqueName = "H2:"+urlPart;
 		String connectionURL = "jdbc:h2:"+urlPart+";IGNORECASE=TRUE;AUTO_SERVER=TRUE;AUTO_SERVER_PORT="+port;
 		String driverClass = "org.h2.Driver";
 
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -401,16 +405,14 @@ public class PFRDB {
 	/************************************************************************
 	 * 
 	 ************************************************************************/
-	public static PFRDB initDBInterfaceMySQL(String uniqueNamePrefix, String servername, int port, String dbName, String username, String password) {
+	public static PFRDB initDBInterfaceMySQL(String servername, int port, String dbName, String username, String password) {
 		
 		
 		String urlPart = servername+":"+port+"/"+dbName;
-		String uniqueName = uniqueNamePrefix+"MySQL:"+servername+":"+port;
 		String connectionURL = "jdbc:mysql://"+urlPart;
 		String driverClass = "com.mysql.cj.jdbc.Driver";
 		
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -421,15 +423,13 @@ public class PFRDB {
 	/************************************************************************
 	 * 
 	 ************************************************************************/
-	public static PFRDB initDBInterfacePostgres(String uniqueNamePrefix, String servername, int port, String dbName, String username, String password) {
+	public static PFRDB initDBInterfacePostgres(String servername, int port, String dbName, String username, String password) {
 		
 		String urlPart = servername+":"+port+"/"+dbName;
-		String uniqueName = uniqueNamePrefix+"MySQL:"+servername+":"+port;
 		String connectionURL = "jdbc:postgresql://"+urlPart;
 		String driverClass = "org.postgresql.Driver";
 
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -441,15 +441,13 @@ public class PFRDB {
 	/************************************************************************
 	 * 
 	 ************************************************************************/
-	public static PFRDB initDBInterfaceMSSQL(String uniqueNamePrefix, String servername, int port, String dbName, String username, String password) {
+	public static PFRDB initDBInterfaceMSSQL(String servername, int port, String dbName, String username, String password) {
 		
 		String urlPart = servername+":"+port+";databaseName="+dbName;
-		String uniqueName = uniqueNamePrefix+":MSSQL:"+servername+":"+port;
 		String connectionURL = "jdbc:sqlserver://"+urlPart;
 		String driverClass = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 		
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -461,7 +459,7 @@ public class PFRDB {
 	/************************************************************************
 	 * 
 	 ************************************************************************/
-	public static PFRDB initDBInterfaceOracle(String uniqueNamePrefix, String servername, int port, String name, String type, String username, String password) {
+	public static PFRDB initDBInterfaceOracle(String servername, int port, String name, String type, String username, String password) {
 		
 		String urlPart = "";
 		if(type.trim().equals("SID")) {
@@ -472,13 +470,11 @@ public class PFRDB {
 			urlPart = servername+":"+port+"/"+name;
 		}
 
-		String uniqueName = uniqueNamePrefix+":Oracle:"+servername+":"+port;
 		String connectionURL = "jdbc:oracle:thin:@"+urlPart;
 		String driverClass = "oracle.jdbc.OracleDriver";
 		String validationQuery = null;
 		
 		return initDBInterface(
-				uniqueName, 
 				driverClass, 
 				connectionURL, 
 				username, 
@@ -496,8 +492,8 @@ public class PFRDB {
 	 * @return DBInterface
 	 * 
 	 ************************************************************************/
-	public static PFRDB initDBInterface(String uniquepoolName, String driverName, String url, String username, String password) {
-		return initDBInterface(uniquepoolName, driverName, url, username, password, "SELECT 1");
+	public static PFRDB initDBInterface(String driverName, String url, String username, String password) {
+		return initDBInterface(driverName, url, username, password, "SELECT 1");
 	}
 
 	/************************************************************************
@@ -509,7 +505,7 @@ public class PFRDB {
 	 * 
 	 ************************************************************************/
 	@SuppressWarnings("deprecation")
-	public static PFRDB initDBInterface(String uniquepoolName, String driverName, String url, String username, String password, String validationQuery) {
+	public static PFRDB initDBInterface(String driverName, String url, String username, String password, String validationQuery) {
 		
 		BasicDataSource datasource;
 		
@@ -541,8 +537,6 @@ public class PFRDB {
 			//pooledSource.setLoginTimeout(5);
 			Connection connection = datasource.getConnection();
 			connection.close();
-			
-			PFRDB.registerManagedConnectionPool(uniquepoolName, datasource);
 			
 		} catch (Exception e) {
 			logger
@@ -617,66 +611,7 @@ public class PFRDB {
 		pooledSource.setMaxOpenPreparedStatements(100);
 	}
 	
-	/********************************************************************************************
-	 * Add a connection pool as a managed connection pool.
-	 * The connection pool will show up in the Database Analytics.
-	 * 
-	 ********************************************************************************************/
-	public static void registerManagedConnectionPool(String uniqueName, BasicDataSource datasource) {	
-		
-		if(!managedConnectionPools.containsKey(uniqueName)) {
-			managedConnectionPools.put(uniqueName, datasource);
-		}else {
-			removeManagedConnectionPool(uniqueName);
-			managedConnectionPools.put(uniqueName, datasource);
-			
-			logger.info("A connection pool with the name '"+uniqueName+"' was already registered and was updated.");
-		}
-		
-	}
-	
-	/********************************************************************************************
-	 * Remove connection pool from the managed connection pools.
-	 ********************************************************************************************/
-	public static void removeManagedConnectionPool(String uniqueName) {	
-		BasicDataSource removedPool = managedConnectionPools.remove(uniqueName);	
 
-		try {
-			removedPool.close();
-		} catch (SQLException e) {
-			logger.error("Error closing connection pool: "+e.getMessage(), e);
-		}
-	}
-	
-	/********************************************************************************************
-	 * Remove connection pool from the managed connection pools.
-	 * 
-	 * @throws SQLException 
-	 ********************************************************************************************/
-	@SuppressWarnings("deprecation")
-	public static JsonArray getConnectionPoolStatsAsJSON() {	
-		
-		JsonArray result = new JsonArray();
-		for(Entry<String, BasicDataSource> entry : managedConnectionPools.entrySet()) {
-			
-			JsonObject stats = new JsonObject();
-			
-			BasicDataSource source = entry.getValue();
-			
-			stats.addProperty("NAME", entry.getKey());
-			stats.addProperty("MAX_CONNECTION_LIFETIME", source.getMaxConnLifetimeMillis());
-			stats.addProperty("EVICTION_INTERVAL", source.getTimeBetweenEvictionRunsMillis());
-			stats.addProperty("MIN_IDLE_CONNECTIONS", source.getMinIdle());
-			stats.addProperty("MAX_IDLE_CONNECTIONS", source.getMaxIdle());
-			stats.addProperty("MAX_TOTAL_CONNECTIONS", source.getMaxTotal());
-			stats.addProperty("IDLE_COUNT", source.getNumIdle());
-			stats.addProperty("ACTIVE_COUNT", source.getNumActive());
-			
-			result.add(stats);
-		}
-		
-		return result;
-	}
 	
 	
 	/********************************************************************************************
@@ -710,14 +645,16 @@ public class PFRDB {
 		}
 		
 		/********************************************************************************************
-		 * Executes a query using the PreparedStatement.execute() function.
+		 * Executes any type of SQL, query, update, delete etc...
+		 * Does only return true if there was an update count, does always return false if you execute
+		 * a query.
 		 * 
-		 * @param metricName name of the metric or null if not defined.
 		 * @param sql with or without placeholders
 		 * @param values the values to be placed in the prepared statement
+		 * 
 		 * @return true if update count is > 0, false otherwise
 		 ********************************************************************************************/
-		public boolean execute(String sql, Object... values){	
+		protected boolean execute(String sql, Object... values){	
 	        
 			//System.out.println("SQL: "+sql);
 			Connection conn = null;
@@ -737,20 +674,21 @@ public class PFRDB {
 				
 				//-----------------------------------------
 				// Execute
-				HSRRecord r = null;
-				if(metricName != null) { HSR.start(metricName); }
+				String finalName = (metricName != null) ? metricName : sql;
+				HSR.start(finalName); 
 					boolean isResultSet = prepared.execute();
-				if(metricName != null) { r = HSR.end(); }
-				
+				HSRRecord r = HSR.end();
 				
 				if(!isResultSet) {
 					int updateCount = prepared.getUpdateCount();
 					
 					if(updateCount > 0) { result = true; }
 					
+					//-----------------------------------------
+					// Ranged Metric
 					if(enableRangedMetric && r != null ) {
 						HSR.addMetricRanged(
-							    metricName + " - " + rangeName
+							    finalName + " - " + rangeName
 							  , r.value()
 							  , updateCount
 							  , initialRange
@@ -781,6 +719,17 @@ public class PFRDB {
 		}
 		
 		/********************************************************************************************
+		 * Executes an update query using the PreparedStatement.execute() function.
+		 * 
+		 * @param sql with or without placeholders
+		 * @param values the values to be placed in the prepared statement
+		 * @return true if update count is > 0, false otherwise
+		 ********************************************************************************************/
+		public boolean executeUpdate(String sql, Object... values){	
+			return execute(sql, values);
+		}
+		
+		/********************************************************************************************
 		 * Executes a query using the PreparedStatement.executeBatch() function.
 		 * 
 		 * @param metricName name of the metric or null if not defined.
@@ -802,16 +751,15 @@ public class PFRDB {
 				
 				//-----------------------------------------
 				// Prepare Statement
-				db.prepareStatement(prepared, values);
+				PFRDB.prepareStatement(prepared, values);
 				prepared.addBatch();
 				
 				//-----------------------------------------
 				// Execute
-				HSRRecord r = null;
-				if(metricName != null) { HSR.start(metricName); }
-				int[] resultCounts = prepared.executeBatch();
-				if(metricName != null) { r = HSR.end(); }
-				
+				String finalName = (metricName != null) ? metricName : sql;
+				HSR.start(finalName); 
+					int[] resultCounts = prepared.executeBatch();
+				HSRRecord r = HSR.end();
 
 				int totalRows = 0;
 				for(int i : resultCounts) {
@@ -820,17 +768,17 @@ public class PFRDB {
 					}
 				}
 				
+				//-----------------------------------------
+				// Ranged Metric
 				if(enableRangedMetric && r != null ) {
 					HSR.addMetricRanged(
-						    metricName + " - " + rangeName
+						    finalName + " - " + rangeName
 						  , r.value()
 						  , totalRows
 						  , initialRange
 						);
 				}
 					
-				
-				
 				return totalRows;
 				
 			} catch (SQLException e) {
@@ -863,7 +811,7 @@ public class PFRDB {
 		 * @param values the values to be placed in the prepared statement
 		 * @return generated key, null if not successful
 		 ********************************************************************************************/
-		public Integer preparedInsertGetKey(String sql, String generatedKeyName, Object... values){	
+		public Integer insertGetKey(String sql, String generatedKeyName, Object... values){	
 	        
 			Connection conn = null;
 			PreparedStatement prepared = null;
@@ -879,17 +827,33 @@ public class PFRDB {
 				// Prepare Statement
 				prepareStatement(prepared, values);
 				
+				
 				//-----------------------------------------
 				// Execute
-				int affectedRows = prepared.executeUpdate();
-
+				String finalName = (metricName != null) ? metricName : sql;
+				HSR.start(finalName); 
+					int affectedRows = prepared.executeUpdate();
+				HSRRecord r = HSR.end();
+				
 				if(affectedRows > 0) {
 					ResultSet result = prepared.getGeneratedKeys();
 					result.next();
 					generatedID = result.getInt(generatedKeyName);
 				}
 				
+				//-----------------------------------------
+				// Ranged Metric
+				if(enableRangedMetric && r != null ) {
+					HSR.addMetricRanged(
+						    finalName + " - " + rangeName
+						  , r.value()
+						  , affectedRows
+						  , initialRange
+						);
+				}
+				
 			} catch (SQLException e) {
+				if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
 				
 				logger.error("Database Error: "+e.getMessage(), e);
 			} finally {
@@ -908,26 +872,72 @@ public class PFRDB {
 			logger.trace("SQL Statement: "+sql);
 			return generatedID;
 		}
-		/********************************************************************************************
-		 * Returns the result or null if there was any issue.
-		 * 
-		 * @param sql string with placeholders
-		 * @param values the values to be placed in the prepared statement
-		 * @throws SQLException 
-		 ********************************************************************************************/
-		public ResultSet preparedExecuteQuery(String sql, Object... values){
-			return preparedExecuteQuery(false, sql, values);
-		}
+
 		
 		/********************************************************************************************
 		 * Returns the result or null if there was any issue.
-		 * Errors will be written to log but not be propagated to client.
+		 * 
+		 * @param isSilent write errors to log but do not propagate to client
 		 * @param sql string with placeholders
 		 * @param values the values to be placed in the prepared statement
 		 * @throws SQLException 
 		 ********************************************************************************************/
-		public ResultSet preparedExecuteQuerySilent(String sql, Object... values){
-			return preparedExecuteQuery(true, sql, values);
+		public ResultSet executeQuery(String sql, Object... values){	
+	        		
+			Connection conn = null;
+			PreparedStatement prepared = null;
+			ResultSet result = null;
+			try {
+				//-----------------------------------------
+				// Initialize Variables
+				conn = db.getConnection();
+				prepared = conn.prepareStatement(sql, 
+						  ResultSet.TYPE_SCROLL_INSENSITIVE, 
+						  ResultSet.CONCUR_READ_ONLY);
+				
+				//-----------------------------------------
+				// Prepare Statement
+				PFRDB.prepareStatement(prepared, values);
+				
+				//-----------------------------------------
+				// Execute
+				String finalName = (metricName != null) ? metricName : sql;
+				HSR.start(finalName); 
+					result = prepared.executeQuery();
+				HSRRecord r = HSR.end();
+				
+				result.last();
+			    int resultSize = result.getRow();
+			    result.beforeFirst();
+				
+				//-----------------------------------------
+				// Ranged Metric
+				if(enableRangedMetric && r != null ) {
+					HSR.addMetricRanged(
+						    finalName + " - " + rangeName
+						  , r.value()
+						  , resultSize
+						  , initialRange
+						);
+				}
+				
+			} catch (SQLException e) {
+				
+				logger.error("Issue executing prepared statement: "+e.getLocalizedMessage(), e);
+				try {
+					if(conn != null && db.transactionConnection.get() == null) { 
+						db.removeOpenConnection(conn);
+						conn.close(); 
+					}
+					if(prepared != null) { prepared.close(); }
+				} catch (SQLException e2) {
+					logger.error("Issue closing resources.", e2);
+				}
+			} 
+			
+			logger.trace("SQL Statement: "+sql);
+					 
+			return result;
 		}
 		
 		/********************************************************************************************
@@ -938,7 +948,7 @@ public class PFRDB {
 		 * @param values the values to be placed in the prepared statement
 		 * @throws SQLException 
 		 ********************************************************************************************/
-		private ResultSet preparedExecuteQuery(boolean isSilent, String sql, Object... values){	
+		public ResultSet executeQueryAndRead(String sql, Object... values){	
 	        		
 			Connection conn = null;
 			PreparedStatement prepared = null;
@@ -947,7 +957,9 @@ public class PFRDB {
 				//-----------------------------------------
 				// Initialize Variables
 				conn = db.getConnection();
-				prepared = conn.prepareStatement(sql);
+				prepared = conn.prepareStatement(sql, 
+						  ResultSet.TYPE_SCROLL_INSENSITIVE, 
+						  ResultSet.CONCUR_READ_ONLY);
 				
 				//-----------------------------------------
 				// Prepare Statement
@@ -955,14 +967,66 @@ public class PFRDB {
 				
 				//-----------------------------------------
 				// Execute
-				result = prepared.executeQuery();
+				String finalName = (metricName != null) ? metricName : sql;
+				HSR.start(finalName + " [EXEC]"); 
+					result = prepared.executeQuery();
+				HSRRecord recordExec = HSR.end();
+				
+				//-----------------------------------------
+				// 
+				HSRRecord recordFetch = null;
+				Object readObject = null;
+				if(result != null) {
+					HSR.start(finalName + " [FETCH]"); 
+						while(result.next()) {
+							for(int i = 1; i <= result.getMetaData().getColumnCount(); i++) {
+								readObject = result.getObject(i);
+							}
+						}
+					recordFetch = HSR.end();
+				}
+				
+				// IMPORTANT: This log has the purpose of preventing the JVM to throw away our reading loop with JIT optimization
+				logger.trace("Last Read Object: " + readObject);
+				
+				//-----------------------------------------
+				// Execute
+
+				result.last();
+				int resultSize = result.getRow();
+			    result.beforeFirst();
+				
+				
+				//-----------------------------------------
+				// Ranged Metric [EXEC]
+				if(enableRangedMetric && recordExec != null ) {
+					HSR.addMetricRanged(
+						    finalName + " [EXEC] - " + rangeName
+						  , recordExec.value()
+						  , resultSize
+						  , initialRange
+						);
+				}
+				
+				//-----------------------------------------
+				// Ranged Metric [FETCH]
+				if(enableRangedMetric && recordFetch != null ) {
+					HSR.addMetricRanged(
+						    finalName + " [FETCH] - " + rangeName
+						  , recordFetch.value()
+						  , resultSize
+						  , initialRange
+						);
+				}
+				
+
 				
 			} catch (SQLException e) {
 				
 				logger.error("Issue executing prepared statement: "+e.getLocalizedMessage(), e);
 				try {
-					if(conn != null && transactionConnection.get() == null) { 
-						removeOpenConnection(conn);
+					if(conn != null && db.transactionConnection.get() == null) { 
+						db.removeOpenConnection(conn);
 						conn.close(); 
 					}
 					if(prepared != null) { prepared.close(); }
