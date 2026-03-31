@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.JsonArray;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.stats.HSRExpression.Operator;
@@ -25,9 +28,8 @@ import com.xresch.xrutils.database.XRResultSetUtils;
  ********************************************************************************************/
 public class PFRDBSQLBuilder {
 	
-	/**
-	 * 
-	 */
+	static Logger logger = LoggerFactory.getLogger(PFRDBSQLBuilder.class.getName());
+	
 	private String metricName = null;
 	private PFRDB db = null;
 	
@@ -146,21 +148,12 @@ public class PFRDBSQLBuilder {
 		} catch (SQLException e) {
 			if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
 			
-			PFRDB.logger.error("Database Error: "+e.getMessage(), e);
+			handleException(prepared, e);
 		} finally {
-			try {
-				if(conn != null && db.transactionConnection.get() == null) { 
-					db.removeOpenConnection(conn);
-					conn.close(); 
-				}
-				if(prepared != null) { prepared.close(); }
-			} catch (SQLException e) {
-				PFRDB.logger.error("Issue closing resources.", e);
-			}
-			
+			doClose(conn, prepared);
 		}
 		
-		PFRDB.logger.trace("SQL Statement: "+sql);
+		logger.trace("SQL Statement: "+sql);
 		return result;
 	}
 	
@@ -230,21 +223,12 @@ public class PFRDBSQLBuilder {
 		} catch (SQLException e) {
 			if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
 			
-			PFRDB.logger.error("Database Error: "+e.getMessage(), e);
+			handleException(prepared, e);
 		} finally {
-			try {
-				if(conn != null && db.transactionConnection.get() == null) { 
-					db.removeOpenConnection(conn);
-					conn.close(); 
-				}
-				if(prepared != null) { prepared.close(); }
-			} catch (SQLException e) {
-				PFRDB.logger.error("Issue closing resources.", e);
-			}
-			
+			doClose(conn, prepared);
 		}
 		
-		PFRDB.logger.trace("SQL Statement: "+sql);
+		logger.trace("SQL Statement: "+sql);
 		return -1;
 	}
 	
@@ -301,21 +285,12 @@ public class PFRDBSQLBuilder {
 		} catch (SQLException e) {
 			if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
 			
-			PFRDB.logger.error("Database Error: "+e.getMessage(), e);
+			handleException(prepared, e);
 		} finally {
-			try {
-				if(conn != null && db.transactionConnection.get() == null) { 
-					db.removeOpenConnection(conn);
-					conn.close(); 
-				}
-				if(prepared != null) { prepared.close(); }
-			} catch (SQLException e) {
-				PFRDB.logger.error("Issue closing resources.", e);
-			}
-			
+			doClose(conn, prepared);
 		}
 		
-		PFRDB.logger.trace("SQL Statement: "+sql);
+		logger.trace("SQL Statement: "+sql);
 		return generatedID;
 	}
 
@@ -370,20 +345,48 @@ public class PFRDBSQLBuilder {
 			
 		} catch (SQLException e) {
 			
-			PFRDB.logger.error("Issue executing prepared statement: "+e.getLocalizedMessage(), e);
-			try {
-				if(conn != null && db.transactionConnection.get() == null) { 
-					db.removeOpenConnection(conn);
-					conn.close(); 
-				}
-				if(prepared != null) { prepared.close(); }
-			} catch (SQLException e2) {
-				PFRDB.logger.error("Issue closing resources.", e2);
-			}
+			if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
+			
+			handleException(prepared, e);
+			doClose(conn, prepared);
 		} 
 		
-		PFRDB.logger.trace("SQL Statement: "+sql);
+		logger.trace("SQL Statement: "+sql);
 		return this;
+	}
+
+	/********************************************************************************************
+	 * Returns the result or null if there was any issue.
+	 * 
+	 * @param prepared
+	 * @param exception
+	 * 
+	 ********************************************************************************************/
+	private void handleException(PreparedStatement prepared, SQLException e) {
+		
+		if(prepared != null) {
+			logger.error("Exception during DB call: \""+e.getLocalizedMessage()+"\" For Statement: "+prepared.toString(), e);
+		}else {
+			logger.error("Exception during DB call: \""+e.getLocalizedMessage(), e);
+		}
+	}
+	/********************************************************************************************
+	 * Closes Connections and such.
+	 * 
+	 * @param conn
+	 * @param prepared
+	 ********************************************************************************************/
+	private void doClose(Connection conn, PreparedStatement prepared) {
+		
+		try {
+			if(conn != null && db.transactionConnection.get() == null) { 
+				db.removeOpenConnection(conn);
+				conn.close(); 
+			}
+			if(prepared != null) { prepared.close(); }
+		} catch (SQLException e) {
+			logger.error("Error while closing DB connection: "+e.getMessage(), e);
+		}
 	}
 			
 	/********************************************************************************************
@@ -467,12 +470,13 @@ public class PFRDBSQLBuilder {
 			
 
 		} catch (SQLException e) {
-			PFRDB.logger.error("Issue executing prepared statement: "+e.getLocalizedMessage(), e);
+			if(metricName != null) { HSR.end(false, ""+e.getErrorCode() ); }
+			handleException(prepared, e);
 		} finally {
 			close();
 		}
 		
-		PFRDB.logger.trace("SQL Statement: "+sql);
+		logger.trace("SQL Statement: "+sql);
 
 	}
 	
