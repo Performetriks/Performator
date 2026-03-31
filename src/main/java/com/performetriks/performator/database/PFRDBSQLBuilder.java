@@ -1,5 +1,6 @@
 package com.performetriks.performator.database;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,11 +11,14 @@ import java.util.LinkedHashMap;
 
 import com.google.gson.JsonArray;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.stats.HSRExpression.Operator;
 import com.xresch.hsr.stats.HSRRecord;
+import com.xresch.hsr.stats.HSRRecordStats.HSRMetric;
+import com.xresch.hsr.stats.HSRSLA;
 import com.xresch.xrutils.base.XR;
 import com.xresch.xrutils.data.Unrecord;
+import com.xresch.xrutils.database.XRResultSetAsJsonReader;
 import com.xresch.xrutils.database.XRResultSetUtils;
-import com.xresch.xrutils.database.XRResultSetUtils.ResultSetAsJsonReader;
 
 /********************************************************************************************
  * Class used to prepare the SQL executions
@@ -31,6 +35,8 @@ public class PFRDBSQLBuilder {
 	private String rangeName = null;
 	private int initialRange = 5;
 	
+	private HSRSLA sla = null;
+	
 	private ResultSet result = null;
 	
 	/********************************************************************************************
@@ -39,6 +45,39 @@ public class PFRDBSQLBuilder {
 	public PFRDBSQLBuilder(PFRDB db, String metricName) {
 		this.db = db;
 		this.metricName = metricName;
+	}
+	
+	
+	/***************************************************************************
+	 * Set an SLA for this SQL. You can only set one SLA per SQL.
+	 ***************************************************************************/
+	public PFRDBSQLBuilder sla(HSRSLA sla) {
+		this.sla = sla;
+		return this;
+	}
+	
+	/***************************************************************************
+	 * Set an SLA for this SQL. You can only set one SLA per SQL.
+	 ***************************************************************************/
+	public PFRDBSQLBuilder sla(HSRMetric metric, Operator operator, int value) {
+		this.sla = new HSRSLA(metric, operator, value);
+		return this;
+	}
+	
+	/***************************************************************************
+	 * Set an SLA for this SQL. You can only set one SLA per SQL.
+	 ***************************************************************************/
+	public PFRDBSQLBuilder sla(HSRMetric metric, Operator operator, Number value) {
+		this.sla = new HSRSLA(metric, operator, value);
+		return this;
+	}
+	
+	/***************************************************************************
+	 * Set an SLA for this SQL. You can only set one SLA per SQL.
+	 ***************************************************************************/
+	public PFRDBSQLBuilder sla(HSRMetric metric, Operator operator, BigDecimal value) {
+		this.sla = new HSRSLA(metric, operator, value);
+		return this;
 	}
 	
 	/********************************************************************************************
@@ -82,7 +121,7 @@ public class PFRDBSQLBuilder {
 			//-----------------------------------------
 			// Execute
 			String finalName = (metricName != null) ? metricName : sql;
-			HSR.start(finalName); 
+			HSR.start(finalName, sla); 
 				boolean isResultSet = prepared.execute();
 			HSRRecord r = HSR.end();
 			
@@ -164,7 +203,7 @@ public class PFRDBSQLBuilder {
 			//-----------------------------------------
 			// Execute
 			String finalName = (metricName != null) ? metricName : sql;
-			HSR.start(finalName); 
+			HSR.start(finalName, sla); 
 				int[] resultCounts = prepared.executeBatch();
 			HSRRecord r = HSR.end();
 
@@ -238,7 +277,7 @@ public class PFRDBSQLBuilder {
 			//-----------------------------------------
 			// Execute
 			String finalName = (metricName != null) ? metricName : sql;
-			HSR.start(finalName); 
+			HSR.start(finalName, sla); 
 				int affectedRows = prepared.executeUpdate();
 			HSRRecord r = HSR.end();
 			
@@ -310,7 +349,7 @@ public class PFRDBSQLBuilder {
 			//-----------------------------------------
 			// Execute
 			String finalName = (metricName != null) ? metricName : sql;
-			HSR.start(finalName); 
+			HSR.start(finalName, sla); 
 				result = prepared.executeQuery();
 			HSRRecord r = HSR.end();
 			
@@ -376,7 +415,7 @@ public class PFRDBSQLBuilder {
 			//-----------------------------------------
 			// Execute
 			String finalName = (metricName != null) ? metricName : sql;
-			HSR.start(finalName + " [EXEC]"); 
+			HSR.start(finalName + " [EXEC]", sla); 
 				result = prepared.executeQuery();
 			HSRRecord recordExec = HSR.end();
 			
@@ -390,7 +429,7 @@ public class PFRDBSQLBuilder {
 				
 				int columns = result.getMetaData().getColumnCount();
 				
-				HSR.start(finalName + " [FETCH]"); 
+				HSR.start(finalName + " [FETCH]", sla); 
 					while(result.next()) {
 						resultSize++;
 						for(int i = 1; i <= columns; i++) {
@@ -615,7 +654,7 @@ public class PFRDBSQLBuilder {
 	 * 
 	 * @return ResultSetAsJsonReader
 	 ********************************************************************************************/
-	public ResultSetAsJsonReader toJSONReader() {
+	public XRResultSetAsJsonReader toJSONReader() {
 		return XRResultSetUtils.toJSONReader(result);
 	}
 	
