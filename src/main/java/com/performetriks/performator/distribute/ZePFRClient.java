@@ -173,6 +173,23 @@ public class ZePFRClient {
 		return new RemoteRequest(this, Command.teststop, test).send();
 	}
 	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public void testStop(CountDownLatch latch){
+		 new RemoteRequest(this, Command.teststop, test)
+		 		.sendAsync(latch);
+	}
+	
+;
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse testStopGracefully(){
+		return new RemoteRequest(this, Command.teststopgraceful, test).send();
+	}
+	
 	
 	/**********************************************************************************
 	 * Returns the agent the client connects too.

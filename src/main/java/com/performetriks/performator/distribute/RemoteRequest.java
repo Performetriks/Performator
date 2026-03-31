@@ -154,7 +154,7 @@ public class RemoteRequest{
 	/********************************************************
 	 * Prepare the request
 	 ********************************************************/
-	private HttpRequest.Builder prepareRequestBuilder() throws UnknownHostException {
+	private HttpRequest.Builder prepareRequestBuilder() {
 		if(parameters == null) {
 			parameters = new JsonObject();
 		}

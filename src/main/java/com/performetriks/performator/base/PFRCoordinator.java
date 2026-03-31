@@ -55,6 +55,7 @@ public class PFRCoordinator {
 	
 	private static Logger logger = (Logger) LoggerFactory.getLogger(PFRCoordinator.class.getName());
 	
+	private static CountDownLatch latch = null;
 	private static ArrayList<Thread> executorThreadList = new ArrayList<>();
 	
 	private static ArrayList<PFRExec> executorList = null;
@@ -167,6 +168,7 @@ public class PFRCoordinator {
 			agentsStartTest(test);
 			
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
 			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -319,8 +321,10 @@ public class PFRCoordinator {
 			
 			PFRAgent agent = pool.get(i);
 			ZePFRClient connection = new ZePFRClient(agent, test);
-			RemoteResponse status = connection.getStatus();
 			
+			RemoteResponse status = connection.getStatus();
+
+
 			//---------------------------
 			// Check success
 			if(status == null) {
@@ -366,15 +370,15 @@ public class PFRCoordinator {
 			ZePFRClient current = agentConnections.get(i);
 			RemoteResponse response = current.ping();
 
-			boolean isTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
 			
-			isAnyTestRunning |= isTestRunning;
+			isAnyTestRunning |= isAgentTestRunning;
 			
 			//----------------------------
 			// Create Progress Log
 			PFRAgent agent = current.getAgent();
 			builder.append(" ["+agent.hostname()+": "+
-									((isTestRunning) ? "running" : "done") 
+									((isAgentTestRunning) ? "running" : "done") 
 							 +"] ");
 			
 		}
@@ -384,6 +388,104 @@ public class PFRCoordinator {
 		}
 		
 		return isAnyTestRunning;
+	}
+	
+	/*************************************************************
+	 * 
+	 * @param logStatus 
+	 *************************************************************/
+	private static boolean agentsStopGracefully() {
+		
+		boolean isAnyTestRunning = false;
+		
+		StringBuilder builder = new StringBuilder();
+
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			ZePFRClient current = agentConnections.get(i);
+			RemoteResponse response = current.testStopGracefully();
+
+//			boolean isTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+//			
+//			isAnyTestRunning |= isTestRunning;
+//			
+//			//----------------------------
+//			// Create Progress Log
+//			PFRAgent agent = current.getAgent();
+//			builder.append(" ["+agent.hostname()+": "+
+//									((isTestRunning) ? "running" : "done") 
+//							 +"] ");
+			
+		}
+		
+//		if(logStatus) {
+//			logger.info("Agent Test State:"+builder.toString());
+//		}
+		
+		return isAnyTestRunning;
+	}
+	
+	/*************************************************************
+	 * Transfers the JAR file to the connected agents.
+	 *************************************************************/
+	private static void agentsStopNow(PFRTest test) {
+		logger.info("################################################");
+		logger.info("# Stop Agents");
+		logger.info("################################################");
+		logger.info("Stop remaining agents." );
+		
+		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		
+		ArrayList<ZePFRClient> agentsToStop = new ArrayList<>();
+		for(int i = 0 ; i < agentConnections.size(); i++) {
+			ZePFRClient current = agentConnections.get(i);
+			RemoteResponse response = current.ping();
+
+			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+			
+			if(isAgentTestRunning) {
+				agentsToStop.add(current);
+				current.testStop(latch);
+			}else {
+				latch.countDown(); // nothing todo
+			}
+		}
+
+		//------------------------------
+		// Wait for Transfers to finish
+		try {
+			long waitTime = 1000;
+			int iteration = 1;
+			do {
+				
+				//----------------------------
+				// Incremental Wait
+				Thread.sleep(waitTime);
+				if(iteration % 3 == 0 && waitTime < 30000) {
+					waitTime *= 2;
+				}
+				
+	
+				//----------------------------
+				// Ping agents and create Progress Log
+				StringBuilder builder = new StringBuilder();
+				for(int i = 0 ; i < agentsToStop.size(); i++) {
+					
+					ZePFRClient current = agentsToStop.get(i);
+					RemoteResponse response = current.getStatus();
+	
+					boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+	
+					builder.append(" ["+current.getAgent().hostname()+": "+(isAgentTestRunning ? "stopping" : "DONE")+"] ");
+				}
+				
+				logger.info("Stopping Progress:" + builder.toString());
+				
+			}while(latch.getCount() > 0);
+			
+			logger.info("All Agents finished");
+		}catch(InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
+		}
 	}
 		
 	/*************************************************************
@@ -441,7 +543,7 @@ public class PFRCoordinator {
 			if(graceDuration > 0 && agentsPingIsTestRunning(false) ){
 				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
 				
-				gracefullyStopExecutorThreads();
+				agentsStopGracefully();
 				
 				while(
 					    agentsPingIsTestRunning(true) 
@@ -458,8 +560,7 @@ public class PFRCoordinator {
 			//-------------------------------
 			// Kill remaining Threads
 			if( agentsPingIsTestRunning(false) ) {
-				// kill ze agents
-				//killExecutorThreads(executorList);
+				agentsStopNow(test);
 			}
 			
 			//-------------------------------
@@ -689,7 +790,7 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Latch
-		CountDownLatch latch = new CountDownLatch(executorList.size());
+		latch = new CountDownLatch(executorList.size());
 		try {
 			
 			isTestRunning = true;
@@ -742,7 +843,7 @@ public class PFRCoordinator {
 			
 			if(graceDuration > 0 && latch.getCount() > 0 ){
 				logger.info("Max Duration reached, initialize graceful stop of "+(graceDuration/1000)+" seconds.");
-				gracefullyStopExecutorThreads();
+				stopTestGracefully();
 				
 				while(
 					latch.getCount() > 0 
@@ -759,7 +860,7 @@ public class PFRCoordinator {
 			//-------------------------------
 			// Kill remaining Threads
 			if(latch.getCount() > 0) {
-				killExecutorThreads(executorList);
+				killExecutorThreads();
 			}
 			
 			//-------------------------------
@@ -808,9 +909,9 @@ public class PFRCoordinator {
 	
 	
 	/*****************************************************************
-	 * 
+	 * Requests the executors to stop gracefully.
 	 *****************************************************************/
-	private static void gracefullyStopExecutorThreads() {
+	public static void stopTestGracefully() {
 		
 		for(PFRExec executor : executorList) {
 			executor.requestGracefulStop();
@@ -818,28 +919,53 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
+	 * Stops the test without gracefulness.
 	 * 
 	 *****************************************************************/
-	private static void killExecutorThreads(ArrayList<PFRExec> executorList) {
+	public static void stopTestNow() {
 		
-		//-----------------------------------
-		// Terminate Executors
-		for(PFRExec executor : executorList) {
-			executor.terminate();
+		//---------------------------
+		// Run down the latch
+		while(latch.getCount() > 0) {
+			latch.countDown();
 		}
 		
-		//-----------------------------------
-		//
-		for(Thread thread : executorThreadList) {
-			
-			try {
-				if(thread.isAlive() && !thread.isInterrupted()) {
-					thread.interrupt();
-				}
-			}catch(Throwable e) {
-				HSR.addException(e);
-				logger.error("Error while stopping executor thread: " + e.getMessage(), e);
+		//---------------------------
+		// Kill the Threads
+		killExecutorThreads();
+		
+		//-------------------------------
+		// Terminate Test
+		terminateTest();
+		
+	}
+	
+	/*****************************************************************
+	 * 
+	 *****************************************************************/
+	private static void killExecutorThreads() {
+		
+		try {
+			//-----------------------------------
+			// Terminate Executors
+			for(PFRExec executor : executorList) {
+				executor.doStopNow();
+				executor.terminate();
 			}
+			
+			//-----------------------------------
+			//
+			for(Thread thread : executorThreadList) {
+				
+				
+					if(thread.isAlive() && !thread.isInterrupted()) {
+						thread.interrupt();
+					}
+				}
+			}
+		catch(Throwable e) {
+			HSR.addException(e);
+			logger.error("Error while stopping execution: " + e.getMessage(), e);
 		}
 	}
 	

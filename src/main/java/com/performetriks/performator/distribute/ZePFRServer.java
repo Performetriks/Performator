@@ -35,8 +35,7 @@ import com.xresch.xrutils.data.Unvalue;
 import ch.qos.logback.classic.Level;
 
 /**************************************************************************************************************
- * This class is used to establish a connection between an agent and a controller or vice versa.
- * It has to be created after a PFRTest instance has been loaded to get let the user set the configuration.
+ * This class is used to start a web server and provide API endpoints for agents and such.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0
@@ -82,8 +81,10 @@ public class ZePFRServer {
 		, ping
 		  /** STEP 6: Send a graceful stop request. */
 		, teststopgraceful
-		/** STEP 7: Stop the process. */
+		/** STEP 7: Stop the test process. */
 		, teststop
+		/** Makes the agent available again. */
+		, disconnect
 		/** Returns if the status of the test. */
 		, teststatus
 		/** returns the current sysout log of the test process started by an agent. */
@@ -136,8 +137,16 @@ public class ZePFRServer {
 	 * @return Hostname of the local machine
 	 * @throws UnknownHostException
 	  **********************************************************************************/
-	public static String getLocalhost() throws UnknownHostException {
-		return InetAddress.getLocalHost().getHostName();
+	public static String getLocalhost(){
+		
+		String host = "unknown";
+		try {
+			host = InetAddress.getLocalHost().getHostName();
+		}catch (Exception e) {
+			logger.warn("Couldn't retrieve hostname.");
+		}
+		
+		return host;
 	}
 
 	/**********************************************************************************
@@ -205,34 +214,23 @@ public class ZePFRServer {
 				case status:			handleCommandStatus(response);								break;
 				case reserve: 			handleCommandReserveAgent(parameters, response);			break;
 				case transferjar:		handleCommandStoreJar(bodyBytes, test);						break;
-				case teststop:			handleCommandTestStop(response); 							break;
+				case teststop:			handleCommandTestStop(response, Command.teststop); 			break;
+				case teststopgraceful:	handleCommandTestStop(response, Command.teststopgraceful); 	break;
 				case processlog:		handleCommandProcesslog(response); 							break;
 				case statspeek:			handleCommandStatsPeekPoll(response, Command.statspeek); 	break;
 				case statspoll:			handleCommandStatsPeekPoll(response, Command.statspoll); 	break;
-				case teststopgraceful:	/*testStop(response);*/ 									break;
 	
 				case teststart:
 					tempStartMillis = System.currentTimeMillis();
 					handleCommandTestStart(parameters, response);
 				break;
 				
-				
 				case ping: lastPingTime = System.currentTimeMillis();
 					// vvvvvv fall-through vvvvvvv
 					// vvvvvvvvvvvvvvvvvvvvvvvvvvv
 				case teststatus:
-					
-					if(executor == null || ! executor.checkKeepExecuting() ) {
-						// done
-						response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, false );
-						
-					}else {
-						// running
-						response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, true );
-						
-					}
-					//payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
-					break;
+					response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, isTestRunning() );
+				break;
 					
 				
 				default:
@@ -259,17 +257,52 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void handleCommandStatus(RemoteResponse response) throws UnknownHostException {
+	private void handleCommandStatus(RemoteResponse response) {
 		
 		JsonObject payload = response.payloadAsObject();
 		
 		payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
+		payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, isTestRunning());
 		payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
 		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
-		payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, PFRCoordinator.isTestRunning() );
+		
+	}
+
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private boolean isTestRunning() {
+		
+		//---------------------------------------------
+		// If agent, forward request to Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENT) {
+			
+			if(executor != null && executor.checkKeepExecuting()) {
+				
+//				ZePFRClient agentClient = new ZePFRClient("localhost", agentbornePort);
+//				
+//				RemoteResponse agentborneResponse = agentClient.testStatus();
+//
+//				try {
+//					return agentborneResponse.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+//				}catch(Throwable e) {
+//					return false;
+//				}
+				
+				return true;
+				
+			}else {
+				return false;
+			}
+
+		}
+		
+		//---------------------------------------------
+		// everything else
+		return PFRCoordinator.isTestRunning();
 	}
 	
 	/**********************************************************************************
@@ -403,7 +436,7 @@ public class ZePFRServer {
 		// If agent, forward request to Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENT) {
 			
-			if(executor.checkKeepExecuting()) {
+			if(executor != null && executor.checkKeepExecuting()) {
 				
 				ZePFRClient agentClient = new ZePFRClient("localhost", agentbornePort);
 				
@@ -442,22 +475,71 @@ public class ZePFRServer {
 		
 	}
 	
+	/**********************************************************************************
+	 * Either graceful or full stop
+	 **********************************************************************************/
+	private void handleCommandTestStop(RemoteResponse response, Command command) {
+		
+		//---------------------------------------------
+		// If agent, forward request to Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENT) {
+			
+			if(executor != null && executor.checkKeepExecuting()) {
+				
+				ZePFRClient agentClient = new ZePFRClient("localhost", agentbornePort);
+				
+				RemoteResponse agentborneResponse = null;
+				if(command == Command.teststopgraceful) {	agentborneResponse = agentClient.testStopGracefully(); }
+				else if(command == Command.teststop) {		
+					agentborneResponse = agentClient.testStop(); 
+				}
+				
+				agentborneResponse.overrideResponse(response);
+				
+			}else {
+				if(response != null) {
+					response.addMessage(Level.INFO, "Test already finished, no thing to stop.");
+				}
+			}
+			return;
+		}
+		
+		//---------------------------------------------
+		// Get Data if Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
+			
+			if(!PFRCoordinator.hasPeekPoll()) {
+				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
+				return;
+			}
+			
+			JsonArray recordStatsArray = null;
+			if(command == Command.teststopgraceful) {	PFRCoordinator.stopTestGracefully(); }
+			else if(command == Command.teststop) {		PFRCoordinator.stopTestNow(); }
+
+			return;
+		}
+		
+		//---------------------------------------------
+		// All other Modes
+		response.addMessage(Level.INFO, "Command" + Command.statspeek + " not available for execution mode:" + PFRConfig.executionMode());
+		
+	}
+	
 
 
 	/**********************************************************************************
 	 * 
 	 * @param response instance or null
 	 **********************************************************************************/
-	public void handleCommandTestStop(RemoteResponse response) {
+	public void handleCommandDisconnect(RemoteResponse response) {
 		
-		logger.info("Stop any test if still running.");
 		if (executor != null) {
 			executor.kill();
-		} else {
-			response.addMessage(Level.ERROR,"No process to stop.");
-		}
+			executor = null;
+		} 
 		
-		isAvailable = true; 
+		isAvailable = true;
 	}
 
 	/**********************************************************************************
@@ -526,7 +608,7 @@ public class ZePFRServer {
 	private void startPingTracker() {
 		//----------------------------------
 		// Setup Ping Tracker
-		long PING_TIMEOUT =  60_000;
+		long PING_TIMEOUT =  90_000;
 		ZePFRServer instance = this;
 		
 		Thread threadPingTracker = new Thread(new Runnable() {
@@ -552,7 +634,8 @@ public class ZePFRServer {
 				// Make Agent available again
 				if(!isAvailable) {
 					logger.info("End Tracking Pings");
-					instance.handleCommandTestStop(null);
+					instance.handleCommandTestStop(null, Command.teststop);
+					instance.handleCommandDisconnect(null);
 				}
 			}
 			

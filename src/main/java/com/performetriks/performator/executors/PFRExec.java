@@ -46,6 +46,7 @@ public abstract class PFRExec {
 	protected Object GRACEFUL_LOCK = true;
 	protected boolean gracefulStopRequested = false;  
 	protected boolean gracefulStopDone = false;  
+	protected boolean isStopNow = false;
 	
 	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
 			
@@ -78,6 +79,7 @@ public abstract class PFRExec {
 	 * Implement it to handle any kind of runtime exceptions.
 	 *****************************************************************/
 	public abstract void executeThreads();
+	
 	
 	
 	/*****************************************************************
@@ -172,6 +174,17 @@ public abstract class PFRExec {
 	}
 	
 	/*****************************************************************
+	 * To hell with graceful! Just stop it already!
+	 * 
+	 *****************************************************************/
+	public void doStopNow()  {
+		
+		isStopNow = true;
+		doGracefulStop(Duration.ofMillis(0));
+		
+	}
+	
+	/*****************************************************************
 	 * Returns the amount of tasks that has not yet finished.
 	 *****************************************************************/
 	protected int getCurrentTaskCount() {
@@ -239,8 +252,10 @@ public abstract class PFRExec {
 				long shutdownStart = System.currentTimeMillis();
 				long shutdownEnd = shutdownStart;
 				long graceMillis = waitTime.getSeconds();
-				while( previousTasksCount > 0 && (shutdownEnd - shutdownStart) <= graceMillis ) {
-					Thread.sleep(1000);
+				while( previousTasksCount > 0 
+				    && (shutdownEnd - shutdownStart) <= graceMillis 
+				    && !isStopNow ) {
+					Thread.sleep(100);
 					
 					int currentTasksCount = getCurrentTaskCount();
 					HSR.decreaseUsers(previousTasksCount - currentTasksCount);
@@ -254,12 +269,14 @@ public abstract class PFRExec {
 				scheduledUserThreadExecutor.awaitTermination(1, TimeUnit.SECONDS);
 				
 			} catch (InterruptedException e) {
-				// do nothing
+				Thread.currentThread().interrupt(); // restore interrupt flag
 			}finally {
 				gracefulStopDone = true;
 			}
 		}
 	}
+	
+	
 	
 	
 

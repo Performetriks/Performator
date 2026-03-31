@@ -202,6 +202,8 @@ public class RemoteResponse {
 	 ********************************************************/
 	public void overrideResponse(RemoteResponse otherResponse) {
 		
+		if(otherResponse == null) { return;}
+		
 		otherResponse.setSuccess(this.success());
 		otherResponse.setMessages(this.messages());
 		otherResponse.setPayload(this.payload());
