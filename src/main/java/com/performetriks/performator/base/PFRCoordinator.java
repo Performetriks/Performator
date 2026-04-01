@@ -167,11 +167,17 @@ public class PFRCoordinator {
 			// Start Test
 			agentsStartTest(test);
 			
+			
+			
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt(); // restore interrupt flag
 			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			//------------------------------
+			// Reserve Agents
+			agentsDisconnect();
 		}
 		
 	}
@@ -183,7 +189,7 @@ public class PFRCoordinator {
 	public static void agentsDisconnect() {
 		
 		for(ZePFRClient connection : agentConnections) {
-			connection.testStop();
+			connection.disconnect();
 		}
 		
 		agentConnections.clear();

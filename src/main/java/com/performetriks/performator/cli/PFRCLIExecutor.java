@@ -210,6 +210,7 @@ public class PFRCLIExecutor extends Thread {
 			
 		} catch (InterruptedException e) {
 			logger.error("Thread got interrupted while executing CLI commands.", e);
+			Thread.currentThread().interrupt(); // restore interrupt flag
 		}
 
 	}
