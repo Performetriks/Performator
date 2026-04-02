@@ -7,11 +7,14 @@ import java.util.ServiceLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.xrutils.data.Unvalue;
 import com.xresch.xrutils.data.Unvalue.UnvalueType;
+
+import ch.qos.logback.classic.Level;
 
 /***************************************************************************
  * The main class of the Performator framework that allows to kick off
@@ -33,6 +36,7 @@ public class Main {
 		, pfr_test(UnvalueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
 		, pfr_target(UnvalueType.STRING, "./target", "The default directory for any outputs like log files and test data.")
 		, pfr_logfile(UnvalueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_loglevel(UnvalueType.STRING, null, "The log level for the root logger, case is ignored.(Options: 'INFO', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE', 'ALL', 'OFF'")
 		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance.")
 		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(UnvalueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
@@ -159,8 +163,14 @@ public class Main {
 		// Print Awesomeness
 		printPerformatorAsciiArtTitleOfAwesomeness();
 		
+		//------------------------------------------
+		// Set Log config
 		String logfile = CommandLineArgs.pfr_logfile.getValue().getAsString();
+		String logLevel = CommandLineArgs.pfr_loglevel.getValue().getAsString();
+		
 		HSRConfig.setLogFilePath(logfile);
+		HSRConfig.setLogLevelRoot(logLevel);
+		
 		
 		//------------------------------------------
 		// Validate Arguments

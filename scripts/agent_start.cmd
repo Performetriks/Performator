@@ -1,1 +1,1 @@
-java -Dpfr_mode=agent -Dpfr_port=9876 -jar performator-agent-1.1.6.jar 
+java -Dpfr_mode=agent -Dpfr_port=9876 -Dpfr_loglevel=INFO -jar performator-agent-#.#.#.jar 
