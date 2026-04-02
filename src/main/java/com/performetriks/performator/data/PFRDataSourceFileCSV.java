@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
-import com.xresch.xrutils.data.Unrecord;
+import com.xresch.xrutils.data.XRRecord;
 
 
 /***************************************************************************
@@ -91,9 +91,9 @@ public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 	 * @return list or records.
 	 *****************************************************************/
 	@Override
-	protected ArrayList<Unrecord> load() {
+	protected ArrayList<XRRecord> load() {
 		
-		ArrayList<Unrecord> result = new ArrayList<>();
+		ArrayList<XRRecord> result = new ArrayList<>();
 		
 		//----------------------------
 		// Load the file
@@ -121,7 +121,7 @@ public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 		//----------------------------
 		// Create Result
 		for(JsonObject o : potentialArray) {
-			result.add( new Unrecord(o) );
+			result.add( new XRRecord(o) );
 		}
 		
 		return result;

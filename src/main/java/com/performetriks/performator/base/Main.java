@@ -11,8 +11,8 @@ import com.google.common.base.Strings;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.xresch.hsr.base.HSRConfig;
-import com.xresch.xrutils.data.Unvalue;
-import com.xresch.xrutils.data.Unvalue.UnvalueType;
+import com.xresch.xrutils.data.XRValue;
+import com.xresch.xrutils.data.XRValue.XRValueType;
 
 import ch.qos.logback.classic.Level;
 
@@ -32,15 +32,15 @@ public class Main {
 	
 	public enum CommandLineArgs {
 		
-		  pfr_mode(UnvalueType.STRING, "auto", "The mode to start the process with.")
-		, pfr_test(UnvalueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_target(UnvalueType.STRING, "./target", "The default directory for any outputs like log files and test data.")
-		, pfr_logfile(UnvalueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
-		, pfr_loglevel(UnvalueType.STRING, null, "The log level for the root logger, case is ignored.(Options: 'INFO', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE', 'ALL', 'OFF'")
-		, pfr_port(UnvalueType.NUMBER, "9876", "The port of the started instance.")
-		, pfr_agentIndex(UnvalueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_agentTotal(UnvalueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_agentbornePort(UnvalueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
+		  pfr_mode(XRValueType.STRING, "auto", "The mode to start the process with.")
+		, pfr_test(XRValueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_target(XRValueType.STRING, "./target", "The default directory for any outputs like log files and test data.")
+		, pfr_logfile(XRValueType.STRING, "./target/performator.log", "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
+		, pfr_loglevel(XRValueType.STRING, null, "The log level for the root logger, case is ignored.(Options: 'INFO', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE', 'ALL', 'OFF'")
+		, pfr_port(XRValueType.NUMBER, "9876", "The port of the started instance.")
+		, pfr_agentIndex(XRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_agentTotal(XRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
+		, pfr_agentbornePort(XRValueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();
@@ -48,14 +48,14 @@ public class Main {
 			for(Mode mode : Mode.values()) { names.add(mode.name()); }
 		}
 		
-		private UnvalueType type;
+		private XRValueType type;
 		private String defaultissimo;
 		private String descrizione;
 		
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		private CommandLineArgs(UnvalueType type, String defaultissimo, String descrizione) {
+		private CommandLineArgs(XRValueType type, String defaultissimo, String descrizione) {
 			this.type = type;
 			this.defaultissimo = defaultissimo;
 			this.descrizione = descrizione;
@@ -65,10 +65,10 @@ public class Main {
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		public Unvalue getValue() throws IllegalStateException { 
+		public XRValue getValue() throws IllegalStateException { 
 
 			String property = System.getProperty(this.toString(), defaultissimo);
-			return Unvalue.newFromString(type, property);
+			return XRValue.newFromString(type, property);
 		}
 		
 		/*****************************************************
@@ -177,7 +177,7 @@ public class Main {
 		
 		for(CommandLineArgs arg : CommandLineArgs.values()) {
 			try {
-				Unvalue value = arg.getValue();
+				XRValue value = arg.getValue();
 				System.out.println("-D"+arg+": "+value.getAsString());
 			}catch(Throwable e) {
 				logger.error(arg.toString()+": "+e.getMessage(), e);

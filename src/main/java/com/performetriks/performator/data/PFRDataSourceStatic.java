@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFR;
 import com.xresch.hsr.base.HSR;
-import com.xresch.xrutils.data.Unrecord;
+import com.xresch.xrutils.data.XRRecord;
 
 import ch.qos.logback.classic.Logger;
 
@@ -23,7 +23,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSourceStatic.class.getName());
 	
-	private ArrayList<Unrecord> data = new ArrayList<>();
+	private ArrayList<XRRecord> data = new ArrayList<>();
 	
 	private boolean hasBeenBuilt = false;
 	private int lastIndex = 0;
@@ -35,7 +35,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	 * 
 	 * @return list or records.
 	 *****************************************************************/
-	protected abstract ArrayList<Unrecord> load();
+	protected abstract ArrayList<XRRecord> load();
 	
 	/*****************************************************************
 	 * Constructor
@@ -94,7 +94,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public Unrecord nextInternal() {
+	public XRRecord nextInternal() {
 		
 		if( ! hasBeenBuilt ) { logger.warn("The data source '"+name()+"' has not been built correctly. Make sure to call the build()-method on the instance."); }
 
@@ -123,12 +123,12 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * The internal method that load the data.
 	 *****************************************************************/
-	private Unrecord nextSequential() {
+	private XRRecord nextSequential() {
 		
 		switch(retainMode) {
 			case INFINITE:
 				
-				Unrecord record = data.get(lastIndex);
+				XRRecord record = data.get(lastIndex);
 				
 				lastIndex++;
 				if(lastIndex == data.size()) { lastIndex = 0;}
@@ -149,9 +149,9 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * The internal method that load the data.
 	 *****************************************************************/
-	private Unrecord nextRandom() {
+	private XRRecord nextRandom() {
 		
-		Unrecord record = PFR.Random.fromArray(data);
+		XRRecord record = PFR.Random.fromArray(data);
 		
 		switch(retainMode) {
 			case INFINITE:

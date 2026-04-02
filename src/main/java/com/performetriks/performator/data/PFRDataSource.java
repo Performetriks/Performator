@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRConfig;
-import com.xresch.xrutils.data.Unrecord;
+import com.xresch.xrutils.data.XRRecord;
 
 
 /***************************************************************************
@@ -161,7 +161,7 @@ public abstract class PFRDataSource {
 	 * The method that will be called by the user to load the next
 	 * data record.
 	 *****************************************************************/
-	protected abstract Unrecord nextInternal();
+	protected abstract XRRecord nextInternal();
 	
 	/*****************************************************************
 	 * Returns a clone of the data record. Clones are used to ensure
@@ -170,7 +170,7 @@ public abstract class PFRDataSource {
 	 * This allows you to add additional data to your record while
 	 *  using it.
 	 *****************************************************************/
-	public Unrecord next() {
+	public XRRecord next() {
 		
 		if( ! isBuilt ) { logger.warn("The data source's .build() method was not called and it might not work correctly: "+this.getUniqueName() ); }
 		return nextInternal().clone();

@@ -3,8 +3,8 @@ package com.performetriks.performator.base;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
-import com.xresch.xrutils.data.Unrecord;
-import com.xresch.xrutils.data.Unvalue;
+import com.xresch.xrutils.data.XRRecord;
+import com.xresch.xrutils.data.XRValue;
 
 /***************************************************************************
  * 
@@ -55,8 +55,8 @@ public class PFRContext {
 	 * by logging to add more useful information to analyze failing 
 	 * data constellations.
 	 *****************************************************************/
-	public static void logDetailsAdd(Unrecord record) {
-		for(Entry<String, Unvalue> entry : record.entrySet()) {
+	public static void logDetailsAdd(XRRecord record) {
+		for(Entry<String, XRValue> entry : record.entrySet()) {
 			logDetailsAdd(entry.getKey(), entry.getValue().getAsString());
 		}
 	}

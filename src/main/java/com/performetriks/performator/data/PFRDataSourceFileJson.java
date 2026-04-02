@@ -8,7 +8,7 @@ import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.performetriks.performator.base.PFR;
-import com.xresch.xrutils.data.Unrecord;
+import com.xresch.xrutils.data.XRRecord;
 
 import ch.qos.logback.classic.Logger;
 
@@ -87,9 +87,9 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 	 * @return list or records.
 	 *****************************************************************/
 	@Override
-	protected ArrayList<Unrecord> load() {
+	protected ArrayList<XRRecord> load() {
 		
-		ArrayList<Unrecord> result = new ArrayList<>();
+		ArrayList<XRRecord> result = new ArrayList<>();
 		
 		//----------------------------
 		// Load the file
@@ -116,7 +116,7 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 
 		for(JsonElement e : array) {
 			if(e.isJsonObject()) {
-				result.add( new Unrecord(e.getAsJsonObject()) );
+				result.add( new XRRecord(e.getAsJsonObject()) );
 			}
 		}
 		

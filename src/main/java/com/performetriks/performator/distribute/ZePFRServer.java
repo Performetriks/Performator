@@ -32,7 +32,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
 import com.xresch.xrutils.data.ByteSize;
-import com.xresch.xrutils.data.Unvalue;
+import com.xresch.xrutils.data.XRValue;
 
 import ch.qos.logback.classic.Level;
 
@@ -347,7 +347,7 @@ public class ZePFRServer {
 			return;
 		}
 		
-		agentTotal =  Unvalue.newString( parameters.get(keyAgentTotal) ).getAsInt();
+		agentTotal =  XRValue.newString( parameters.get(keyAgentTotal) ).getAsInt();
 		
 		//-------------------------------
 		// Get AgentIndex
@@ -359,7 +359,7 @@ public class ZePFRServer {
 			return;
 		}
 		
-		agentIndex =  Unvalue.newString( parameters.get(keyAgentIndex) ).getAsInt();
+		agentIndex =  XRValue.newString( parameters.get(keyAgentIndex) ).getAsInt();
 
 
 	}
