@@ -1,6 +1,7 @@
 package com.performetriks.performator.base;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
 
 import com.performetriks.performator.distribute.PFRAgentPool;
@@ -21,8 +22,8 @@ public class PFRConfig {
 	private static Duration timeoutAgentReset = Duration.ofMinutes(5);
 	
 	private static PFRAgentPool agentPool = null;
-	private static int agentAmount = 0;  // 0 or smaller equals is use all agents
-	private static String[] agentTags = null;  // filter agents by these tags
+	private static int agentAmount = 0;  // 0 or smaller is use all agents
+	private static HashSet<String> agentTags = new HashSet<>();  // filter agents by these tags
 	
 	/**********************************************************************************
 	 * Mode Enum
@@ -149,16 +150,72 @@ public class PFRConfig {
 	 * <b>Scope:</b> Global<br>
 	 * 
 	 **********************************************************************************/
-	public static String[] getAgentTags() {
+	public static HashSet<String> getAgentTags() {
 		return agentTags;
 	}
 
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
 	 * 
+	 * @param agentTags
 	 **********************************************************************************/
-	public static void setAgentTags(String[] agentTags) {
-		PFRConfig.agentTags = agentTags;
+	public static void setAgentTags(HashSet<String> agentTags) {
+		PFRConfig.agentTags.clear();
+		
+		PFRConfig.agentTags.addAll(agentTags);
+		
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void setAgentTags(ArrayList<String> agentTags) {
+		PFRConfig.agentTags.clear();
+		PFRConfig.agentTags.addAll(agentTags);
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void setAgentTags(String... agentTags) {
+		PFRConfig.agentTags.clear();
+		
+		for(String tag : agentTags) {
+			PFRConfig.agentTags.add(tag);
+		}
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Adds one or more agent tags to the existing list of tags. 
+	 * An agent must have all tags in the list to be chosen from the agent pool.
+	 * Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void addAgentTags(String... agentTags) {
+		
+		for(String tag : agentTags) {
+			PFRConfig.agentTags.add(tag);
+		}
 	}
 	
 	

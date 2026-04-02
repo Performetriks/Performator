@@ -2,11 +2,13 @@ package com.performetriks.performator.base;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Joiner;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -311,6 +313,7 @@ public class PFRCoordinator {
 		//------------------------------
 		// Get Agents and Amount
 		PFRAgentPool pool = PFRConfig.getAgentPool();
+		HashSet<String> tags = PFRConfig.getAgentTags();
 		
 		int amount = PFRConfig.getAgentAmount();
 		if(amount <= 0) {
@@ -322,10 +325,38 @@ public class PFRCoordinator {
 		logger.info("################################################");
 		logger.info("# Check Agent Availability and Reserve. ");
 		logger.info("################################################");
+		
+		if( ! tags.isEmpty() ) {
+			logger.info("Filter Agents by tags: "+Joiner.on(", ").join(tags));
+		}
 
+		ArrayList<PFRAgent> inactiveAgents = new ArrayList<>();
+		ArrayList<PFRAgent> skippedAgents = new ArrayList<>();
+		amountLoop:
 		for(int i = 0 ; i < amount; i++) {
 			
+			//---------------------------
+			// Filter
 			PFRAgent agent = pool.get(i);
+			
+			if( ! agent.active()) {
+				inactiveAgents.add(agent);
+				continue amountLoop;
+			}
+			
+			for(String filterTag : tags) {
+				if( ! agent.hasTag(filterTag) 
+				&&  ! agent.hostname().equals(filterTag)  
+				&&  ! (agent.port()+"").equals(filterTag)  
+				&&  ! (agent.hostname()+":"+agent.port()).equals(filterTag)  
+				){
+					skippedAgents.add(agent);
+					continue amountLoop;
+				}
+			}
+			
+			//---------------------------
+			// Connect
 			ZePFRClient connection = new ZePFRClient(agent, test);
 			
 			RemoteResponse status = connection.getStatus();
@@ -360,6 +391,28 @@ public class PFRCoordinator {
 			}
 			
 		}
+		
+		//------------------------------
+		// Print Inactive Agents
+		if( ! inactiveAgents.isEmpty() ) {
+			logger.info("Agents inactive: "+ Joiner.on(" | ").join(inactiveAgents) );
+		}
+		
+		//------------------------------
+		// Print Skipped Agents
+		if( ! skippedAgents.isEmpty() ) {
+			logger.info("Agents skipped by tags: "+ Joiner.on(" | ").join(skippedAgents) );
+		}
+		//------------------------------
+		// Check connected
+		if( ! agentConnections.isEmpty() ) {
+			logger.info("Total Agents connected: " + agentConnections.size() );
+		}else {
+			logger.warn("No agents where connected. " 
+					  + (tags.isEmpty() ? "" : "(Tags: "+ Joiner.on(", ").join(tags)+")" ) 
+				);
+		}
+		
 	}
 	
 	/*************************************************************
