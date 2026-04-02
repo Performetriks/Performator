@@ -18,6 +18,9 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<otel.version>1.49.0</otel.version>
 		
+		<folderName>performator-agent</folderName> <!-- making folder without version name, as antrun can't handle regex with folders -->
+		<binariesFolder>${basedir}/target/${folderName}</binariesFolder>
+		
 		<skipJavadoc>false</skipJavadoc>
 		<skipTests>true</skipTests>
 		<skipSigning>false</skipSigning>
@@ -329,6 +332,44 @@
 					</gpgArguments>
 				</configuration>
 			</plugin>
+			
+			<!-- ================= ANTRUN: Create Server Folder ================== -->
+			<plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>install</phase>           
+                        <configuration>
+                        	<skip>${skipMakeFolder}</skip>
+						    <target>
+						        <mkdir dir="${binariesFolder}" />
+						        
+						        <!-- ##### Copy Agent JAR ##### -->
+						        <copy todir="${binariesFolder}" file="${basedir}/target/performator-agent-${project.version}.jar"></copy>
+						        
+						        <!-- ##### Copy Scripts ##### -->
+						        <copy todir="${binariesFolder}">
+						            <fileset dir="${basedir}/scripts/agent" includes="start.sh" />
+						            <fileset dir="${basedir}/scripts/agent" includes="start.bat" />
+						        </copy>
+						        
+						        <!-- ##### Copy License ##### -->
+						        <copy file="${basedir}/LICENSE" tofile="${binariesFolder}/LICENSE"></copy>
+						        
+						        
+						        <!-- ##### Create Zip file with Version ##### -->
+						        <zip destfile="${basedir}/target/performator-agent-${project.version}.zip" basedir="${binariesFolder}"/>
+						        
+						    </target>
+						</configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
 			
 		</plugins>
 
