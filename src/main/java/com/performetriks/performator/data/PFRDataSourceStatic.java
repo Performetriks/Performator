@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFR;
 import com.xresch.hsr.base.HSR;
+import com.xresch.xrutils.data.Unrecord;
 
 import ch.qos.logback.classic.Logger;
 
@@ -22,7 +23,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	
 	Logger logger = (Logger) LoggerFactory.getLogger(PFRDataSourceStatic.class.getName());
 	
-	private ArrayList<PFRDataRecord> data = new ArrayList<>();
+	private ArrayList<Unrecord> data = new ArrayList<>();
 	
 	private boolean hasBeenBuilt = false;
 	private int lastIndex = 0;
@@ -34,7 +35,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	 * 
 	 * @return list or records.
 	 *****************************************************************/
-	protected abstract ArrayList<PFRDataRecord> load();
+	protected abstract ArrayList<Unrecord> load();
 	
 	/*****************************************************************
 	 * Constructor
@@ -93,7 +94,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * 
 	 *****************************************************************/
-	public PFRDataRecord nextInternal() {
+	public Unrecord nextInternal() {
 		
 		if( ! hasBeenBuilt ) { logger.warn("The data source '"+name()+"' has not been built correctly. Make sure to call the build()-method on the instance."); }
 
@@ -122,12 +123,12 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * The internal method that load the data.
 	 *****************************************************************/
-	private PFRDataRecord nextSequential() {
+	private Unrecord nextSequential() {
 		
 		switch(retainMode) {
 			case INFINITE:
 				
-				PFRDataRecord record = data.get(lastIndex);
+				Unrecord record = data.get(lastIndex);
 				
 				lastIndex++;
 				if(lastIndex == data.size()) { lastIndex = 0;}
@@ -148,9 +149,9 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	/*****************************************************************
 	 * The internal method that load the data.
 	 *****************************************************************/
-	private PFRDataRecord nextRandom() {
+	private Unrecord nextRandom() {
 		
-		PFRDataRecord record = PFR.Random.fromArray(data);
+		Unrecord record = PFR.Random.fromArray(data);
 		
 		switch(retainMode) {
 			case INFINITE:

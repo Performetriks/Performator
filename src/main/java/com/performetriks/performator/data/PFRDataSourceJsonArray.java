@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.xresch.xrutils.data.Unrecord;
 
 
 /***************************************************************************
@@ -68,16 +69,16 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 	 * @return list or records.
 	 *****************************************************************/
 	@Override
-	protected ArrayList<PFRDataRecord> load() {
+	protected ArrayList<Unrecord> load() {
 		
 		
-		ArrayList<PFRDataRecord> result = new ArrayList<>();
+		ArrayList<Unrecord> result = new ArrayList<>();
 		
 		if(array == null) { return result; }
 		
 		for(JsonElement e : array) {
 			if(e.isJsonObject()) {
-				result.add( new PFRDataRecord(e.getAsJsonObject()) );
+				result.add( new Unrecord(e.getAsJsonObject()) );
 			}
 		}
 		

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import com.google.common.base.Strings;
+import com.xresch.xrutils.data.Unrecord;
 
 
 /***************************************************************************
@@ -87,15 +88,15 @@ public class PFRDataSourceMap extends PFRDataSourceStatic {
 	 * @return list or records.
 	 *****************************************************************/
 	@Override
-	protected ArrayList<PFRDataRecord> load() {
+	protected ArrayList<Unrecord> load() {
 		
 		
-		ArrayList<PFRDataRecord> result = new ArrayList<>();
+		ArrayList<Unrecord> result = new ArrayList<>();
 		
 		if(mapArray == null) { return result; }
 		
 		for(Map<String,String> map  : mapArray) {
-			result.add( new PFRDataRecord(map, convertTypes) );
+			result.add( new Unrecord(map, convertTypes) );
 		}
 		
 		return result;
