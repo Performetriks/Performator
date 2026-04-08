@@ -173,7 +173,8 @@ public abstract class PFRDataSource {
 	public XRRecord next() {
 		
 		if( ! isBuilt ) { logger.warn("The data source's .build() method was not called and it might not work correctly: "+this.getUniqueName() ); }
-		return nextInternal().clone();
+		XRRecord record = nextInternal();
+		return record != null ? record.clone() : null;
 	}
 	
 	/*****************************************************************
