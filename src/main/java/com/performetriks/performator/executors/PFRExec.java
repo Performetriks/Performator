@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +49,105 @@ public abstract class PFRExec {
 	protected boolean gracefulStopDone = false;  
 	protected boolean isStopNow = false;
 	
-	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
+	private ScheduledExecutorService scheduledUserThreadExecutor;
+	
+    // Optimized reflection cache for Virtual Thread support
+    private static java.lang.reflect.Method ofVirtualMethod = null;
+    private static java.lang.reflect.Method nameMethod = null;
+    private static java.lang.reflect.Method unstartedMethod = null;
+    private static boolean virtualThreadsAttempted = false;
+    
+    // Optimized reflection cache for PFRHttp plugin cleanup
+    private static java.lang.reflect.Method pfrHttpResetMethod = null;
+    private static boolean pfrHttpAttempted = false;
+
+    public static synchronized void initializeVirtualThreadMethods() {
+        if (virtualThreadsAttempted) return;
+        virtualThreadsAttempted = true;
+        try {
+            ofVirtualMethod = Thread.class.getMethod("ofVirtual");
+            Class<?> builderClass = Class.forName("java.lang.Thread$Builder$OfVirtual");
+            
+            nameMethod = builderClass.getMethod("name", String.class);
+            unstartedMethod = builderClass.getMethod("unstarted", Runnable.class);
+            
+            ofVirtualMethod.setAccessible(true);
+            nameMethod.setAccessible(true);
+            unstartedMethod.setAccessible(true);
+            logger.info("Virtual Threads are supported and initialized.");
+        } catch (Exception e) {
+            // Check for newer API or specific distribution signature
+            try {
+                // Secondary check for direct virtual thread start
+                Thread.class.getMethod("startVirtualThread", Runnable.class);
+                logger.info("Virtual Threads supported via startVirtualThread.");
+            } catch (Exception e2) {
+                logger.info("Virtual Threads are NOT supported: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Checks if Virtual Threads are supported by the current JVM.
+     * @return true if supported, false otherwise
+     */
+    public static boolean isVirtualThreadSupported() {
+        initializeVirtualThreadMethods();
+        return (ofVirtualMethod != null);
+    }
+
+    /**
+     * Starts a virtual thread using reflection if supported.
+     * @param r the runnable to execute
+     * @param name prefix for the thread name
+     */
+    public static void startVirtualThread(Runnable r, String name) {
+        initializeVirtualThreadMethods();
+        if (ofVirtualMethod != null) {
+            try {
+                Object builder = ofVirtualMethod.invoke(null);
+                nameMethod.invoke(builder, name);
+                Thread t = (Thread) unstartedMethod.invoke(builder, r);
+                t.start();
+            } catch (Exception e) {
+                // Fallback to platform thread if reflection fails
+                Thread t = new Thread(r);
+                t.setName(name);
+                t.start();
+            }
+        } else {
+            Thread t = new Thread(r);
+            t.setName(name);
+            t.start();
+        }
+    }
+
+    /**
+     * Optimized call to PFRHttp.resetThreadState() using cached reflection lookup.
+     */
+    public static void resetPFRHttpState() {
+        if (!pfrHttpAttempted) {
+            synchronized (PFRExec.class) {
+                if (!pfrHttpAttempted) {
+                    pfrHttpAttempted = true;
+                    try {
+                        Class<?> pfrHttpClass = Class.forName("com.performetriks.performator.http.PFRHttp");
+                        pfrHttpResetMethod = pfrHttpClass.getMethod("resetThreadState");
+                    } catch (Exception e) {
+                        // Plugin not present
+                    }
+                }
+            }
+        }
+        
+        if (pfrHttpResetMethod != null) {
+            try {
+                pfrHttpResetMethod.invoke(null);
+            } catch (Exception e) {
+                // Ignore unexpected invocation errors in cleanup
+            }
+        }
+    }
 			
 	
 	/*****************************************************************
@@ -188,15 +287,18 @@ public abstract class PFRExec {
 	 * Returns the amount of tasks that has not yet finished.
 	 *****************************************************************/
 	protected int getCurrentTaskCount() {
-		return scheduledUserThreadExecutor.getActiveCount()
-		+ scheduledUserThreadExecutor.getQueue().size();
+        if(scheduledUserThreadExecutor instanceof ScheduledThreadPoolExecutor) {
+            ScheduledThreadPoolExecutor executor = (ScheduledThreadPoolExecutor)scheduledUserThreadExecutor;
+            return executor.getActiveCount() + executor.getQueue().size();
+        }
+        return 0;
 	}
 	
 	/*****************************************************************
 	 * Returns the scheduled thread pool executor for this executor
 	 * instance.
 	 *****************************************************************/
-	protected ScheduledThreadPoolExecutor getScheduledUserExecutor(int threadPoolSize) {
+	protected ScheduledExecutorService getScheduledUserExecutor(int threadPoolSize) {
 		
 		if(scheduledUserThreadExecutor == null) {
 			String executorName = this.getClass().getSimpleName();
@@ -205,14 +307,27 @@ public abstract class PFRExec {
 	
 			    @Override
 			    public Thread newThread(Runnable r) {
-			        Thread t = new Thread(r);
-			        t.setName(executorName+"-User-" + count.getAndIncrement());
-			        t.setDaemon(true); // prevent thread from blocking the JVM to stop
-			        return t;
+                    initializeVirtualThreadMethods();
+                    
+                    if (ofVirtualMethod != null) {
+                        try {
+                            Object builder = ofVirtualMethod.invoke(null);
+                            nameMethod.invoke(builder, executorName + "-User-" + count.getAndIncrement());
+                            return (Thread) unstartedMethod.invoke(builder, r);
+                        } catch (Exception e) {
+                            // Fallback on unexpected reflection error
+                        }
+                    }
+
+                    // Fallback to Platform Thread for Java 17 and older
+                    Thread t = new Thread(r);
+                    t.setName(executorName+"-User-" + count.getAndIncrement());
+                    t.setDaemon(true); 
+                    return t;
 			    }
 			};
 			
-			scheduledUserThreadExecutor = (ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(threadPoolSize, factory);
+			scheduledUserThreadExecutor = Executors.newScheduledThreadPool(threadPoolSize, factory);
 			
 			//-------------------------------
 			// Make sure to kill that pest
@@ -279,6 +394,7 @@ public abstract class PFRExec {
 	
 	
 	
+	
 
 	/*****************************************************************
 	 * Creates a self stopping thread in case maxDuration was set.
@@ -298,7 +414,7 @@ public abstract class PFRExec {
 		}
 		, maxDuration.getSeconds() * 1000);
 		
-										
+												
 	}
 	
 	

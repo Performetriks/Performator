@@ -1,7 +1,7 @@
 package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
@@ -159,7 +159,7 @@ public class PFRExecSequential extends PFRExec {
 		
 		//-------------------------
 		// Create Scheduler
-		ScheduledThreadPoolExecutor threadExecutor = getScheduledUserExecutor(1);
+		ScheduledExecutorService threadExecutor = getScheduledUserExecutor(1);
 
 		try {
 						
