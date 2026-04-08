@@ -1,7 +1,7 @@
 package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,7 @@ public class PFRExecIncrease extends PFRExec {
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
-	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
+	private ScheduledExecutorService scheduledUserThreadExecutor;
 	
 	private Class<? extends PFRUsecase> usecaseClass;
 	private String usecaseName;

@@ -1,7 +1,7 @@
 package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,7 @@ public class PFRExecStandard extends PFRExec {
 	
 	private ArrayList<Thread> userThreadList = new ArrayList<>();
 	
-	private ScheduledThreadPoolExecutor scheduledUserThreadExecutor;
+	private ScheduledExecutorService scheduledUserThreadExecutor;
 	
 	private Class<? extends PFRUsecase> usecaseClass;
 	private String usecaseName;
@@ -286,7 +286,12 @@ public class PFRExecStandard extends PFRExec {
 
 		//-------------------------
 		// Create Scheduler
-		scheduledUserThreadExecutor = getScheduledUserExecutor(users);
+		int poolSize = 1; // Single-threaded scheduler for pacing
+		if(!PFRExec.isVirtualThreadSupported()) {
+			poolSize = users; // Fallback to platform threads
+		}
+		
+		scheduledUserThreadExecutor = getScheduledUserExecutor(poolSize);
 
 		try {
 			
@@ -301,19 +306,15 @@ public class PFRExecStandard extends PFRExec {
 			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
 				
 				try {
-					Thread userThread = createUserThread();
-					
-						userThread.setName(this.getExecutedName()+"-User-"+i);
+						Runnable task = createIterationRunnable(i);
 						scheduledUserThreadExecutor.scheduleAtFixedRate(
-								  userThread
+								  task
 								, 0
 								, pacingSeconds
 								, TimeUnit.SECONDS
 							);
 												
-						userThreadList.add(userThread);
-						
-					HSR.increaseUsers(1);
+						HSR.increaseUsers(1); 					
 					
 					//--------------------------
 					// Manage Ramp Up
@@ -407,55 +408,49 @@ public class PFRExecStandard extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * 
+	 * Creates a Runnable for a user iteration.
 	 *****************************************************************/
-	public Thread createUserThread() {
+	public Runnable createIterationRunnable(final int userId) {
 		
 		int pacingMillis = pacingSeconds * 1000;
-		
 		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
 		
+		// Initialize the user once per virtual user instance
 		usecase.initializeUser();
 		
-		return new Thread(new Runnable() {
-			
+		return new Runnable() {
 			@Override
 			public void run() {
-				
-				try {
-					
-					long start = System.currentTimeMillis();
-					
+				Runnable iterationTask = () -> {
 					try {
-						usecase.execute();
-						
-						// make sure everything is closed
-						HSR.endAllOpen(HSRRecordStatus.Aborted);
-						
-					}catch (InterruptedException e) {
-					    Thread.currentThread().interrupt(); // prevent lingering of threads
-					    return;                              
-					}catch (Throwable e) {
-						HSR.addException(e);
-						logger.error("Unhandled Exception occured.", e);
-						HSR.endAllOpen(HSRRecordStatus.Failed);
-					}finally {
-						PFRContext.logDetailsClear();
-					}
-					
-					long duration = System.currentTimeMillis() - start;
-					
-					if(duration > pacingMillis)  {
-						HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
-										 + " This might cause that you get lower execution/hour then expected."
-										 + " Increase the number of users to fix this if you get lots of these messages.");
-					}
-					
-				}catch(Exception e) {
-					logger.info("User Thread interrupted.");
+						long start = System.currentTimeMillis();
+						try {
+							usecase.execute();
+							HSR.endAllOpen(HSRRecordStatus.Aborted);
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						} catch (Throwable e) {
+							HSR.addException(e);
+							HSR.endAllOpen(HSRRecordStatus.Failed);
+						} finally {
+							PFRContext.logDetailsClear();
+							PFRExec.resetPFRHttpState();
+						}
+						long duration = System.currentTimeMillis() - start;
+						if (duration > pacingMillis) {
+							// Too many warnings can cause performance issues
+							// HSR.addWarnMessage("Iteration exceeded pacing.");
+						}
+					} catch (Exception e) {}
+				};
+
+				if (PFRExec.isVirtualThreadSupported()) {
+					PFRExec.startVirtualThread(iterationTask, getExecutedName() + "-VT-" + userId);
+				} else {
+					iterationTask.run();
 				}
 			}
-		});
+		};
 	}
 
 	
