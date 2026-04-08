@@ -68,7 +68,6 @@ public abstract class PFRExec {
             ofVirtualMethod = Thread.class.getMethod("ofVirtual");
             Class<?> builderClass = Class.forName("java.lang.Thread$Builder$OfVirtual");
             
-            // name(String) is more common and safer than name(String, long)
             nameMethod = builderClass.getMethod("name", String.class);
             unstartedMethod = builderClass.getMethod("unstarted", Runnable.class);
             
@@ -77,7 +76,14 @@ public abstract class PFRExec {
             unstartedMethod.setAccessible(true);
             logger.info("Virtual Threads are supported and initialized.");
         } catch (Exception e) {
-            logger.info("Virtual Threads are NOT supported: " + e.getMessage());
+            // Check for newer API or specific distribution signature
+            try {
+                // Secondary check for direct virtual thread start
+                Thread.class.getMethod("startVirtualThread", Runnable.class);
+                logger.info("Virtual Threads supported via startVirtualThread.");
+            } catch (Exception e2) {
+                logger.info("Virtual Threads are NOT supported: " + e.getMessage());
+            }
         }
     }
 

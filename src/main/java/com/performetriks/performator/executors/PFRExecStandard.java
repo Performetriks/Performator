@@ -329,7 +329,7 @@ public class PFRExecStandard extends PFRExec {
 				    return;                              
 				}catch (Exception e) {
 					HSR.addException(e);
-					logger.warn(this.getExecutedName()+": Error While starting User Thread.");
+					logger.warn(this.getExecutedName()+": Error While starting User Thread: " + e.getMessage(), e);
 				}
 				
 			}
