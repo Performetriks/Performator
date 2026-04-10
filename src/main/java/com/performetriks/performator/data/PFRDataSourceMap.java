@@ -76,7 +76,7 @@ public class PFRDataSourceMap extends PFRDataSourceStatic {
 			uniqueName = "Map " + mapArray.hashCode()
 						+ " | accessMode: " + accessMode()
 						+ " | retainMode: " + retainMode()
-						+ " | isLocal:" + isLocal()
+						+ " | isShared:" + isShared()
 						;
 		}
 		

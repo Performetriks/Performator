@@ -57,7 +57,7 @@ public class PFRDataSourceJsonArray extends PFRDataSourceStatic {
 			uniqueName = "JsonArray: " + array.hashCode()
 						+ " | accessMode: " + accessMode()
 						+ " | retainMode: " + retainMode()
-						+ " | isLocal:" + isLocal()
+						+ " | isShared:" + isShared()
 						;
 		}
 		

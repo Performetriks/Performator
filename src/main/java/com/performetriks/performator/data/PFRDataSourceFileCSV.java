@@ -78,7 +78,7 @@ public class PFRDataSourceFileCSV extends PFRDataSourceStatic {
 						+ " | " + separator
 						+ " | accessMode: " + accessMode()
 						+ " | retainMode: " + retainMode()
-						+ " | isLocal:" + isLocal()
+						+ " | isShared:" + isShared()
 						;
 		}
 		

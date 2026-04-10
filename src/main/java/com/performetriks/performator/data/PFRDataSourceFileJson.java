@@ -74,7 +74,7 @@ public class PFRDataSourceFileJson extends PFRDataSourceStatic {
 						+ " | " + filename
 						+ " | accessMode: " + accessMode()
 						+ " | retainMode: " + retainMode()
-						+ " | isLocal:" + isLocal()
+						+ " | isShared:" + isShared()
 						;
 		}
 		

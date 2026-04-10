@@ -25,7 +25,7 @@ public abstract class PFRDataSource {
 	private static HashMap<String, PFRDataSource> registeredDataSources = new HashMap<>();
 	
 	protected String uniqueName; 
-	private boolean isLocal = false;
+	private boolean isShared = false;
 	
 	private boolean isBuilt = false;
 	
@@ -117,7 +117,7 @@ public abstract class PFRDataSource {
 		//------------------------------------
 		// register Data Source
 		if( PFRConfig.hasAgents()
-		&& ! isLocal
+		&& isShared
 		&& registeredDataSources.containsKey(uniqueName)) {
 			logger.warn("Data Source with name '"+uniqueName+"' has been reset for all agents."
 					+ "In case you want to use the source only locally, use the method yourSource.local() to define that it should not be shared between agents.");
@@ -183,22 +183,22 @@ public abstract class PFRDataSource {
 	public abstract int size();
 	
 	/*****************************************************************
-	 * Set the source to be local.
-	 * By default, a source is set to be shared between agents.
-	 * If you set it to local, the data will not be shared between agents.
+	 * Set the source to be shared.
+	 * By default, a source is set not to be shared between agents.
+	 * If you set it to shared, the data will be shared between agents.
 	 * 
 	 *****************************************************************/
-	public PFRDataSource local() {
-		this.isLocal = true;
+	public PFRDataSource shared() {
+		this.isShared = true;
 		return this;
 	}
 	
 	/*****************************************************************
 	 * 
-	 * @return true if local, false otherwise
+	 * @return true if shared, false otherwise
 	 *****************************************************************/
-	public boolean isLocal() {
-		return isLocal;
+	public boolean isShared() {
+		return isShared;
 	}
 	
 	/*****************************************************************
