@@ -12,7 +12,7 @@ import com.google.common.base.Joiner;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.Main.CommandLineArgs;
+import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
 import com.performetriks.performator.distribute.PFRAgent;
@@ -62,7 +62,9 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
-	private static ArrayList<ZePFRClient> agentConnections = new ArrayList<>();
+	private static ArrayList<ZePFRClient> connectionsAgentsLoad = new ArrayList<>();
+	private static ArrayList<ZePFRClient> connectionsAgentsData = new ArrayList<>();
+	private static ArrayList<ZePFRClient> connectionsAgentsAll = new ArrayList<>();
 	
 	private static ZePFRServer server = null;
 	
@@ -91,7 +93,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeAuto() {
 		
-		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		String testClass = CLIArgs.pfr_test.getValue().getAsString();
 		
 		//This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);
@@ -112,7 +114,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeAgentInstance() {
 		
-		int agentPort = CommandLineArgs.pfr_port
+		int agentPort = CLIArgs.pfr_port
 										.getValue()
 										.getAsInteger();
 			
@@ -125,7 +127,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void executeLocal() {
 		
-		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
+		String testClass = CLIArgs.pfr_test.getValue().getAsString();
 		
 		PFRTest test = createTestInstance(testClass);
 		
@@ -155,7 +157,8 @@ public class PFRCoordinator {
 			//------------------------------
 			// Reserve Agents
 			agentsDisconnect();
-			agentsReserve(test);
+			agentsReserve(test, false);
+			agentsReserve(test, true);
 			
 			//------------------------------
 			// Send Jar File
@@ -190,11 +193,13 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static void agentsDisconnect() {
 		
-		for(ZePFRClient connection : agentConnections) {
+		for(ZePFRClient connection : connectionsAgentsAll) {
 			connection.disconnect();
 		}
 		
-		agentConnections.clear();
+		connectionsAgentsLoad.clear();
+		connectionsAgentsData.clear();
+		connectionsAgentsAll.clear();
 		
 	}
 
@@ -207,11 +212,11 @@ public class PFRCoordinator {
 		logger.info("################################################");
 		logger.info("Start Transfer of JAR File: " + ZePFRClient.getJarFileURIForTest(test) );
 		
-		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		CountDownLatch latch = new CountDownLatch(connectionsAgentsAll.size());
 		
-		for(int i = 0 ; i < agentConnections.size(); i++) {
+		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
 			
-			agentConnections.get(i).sendJar(latch);
+			connectionsAgentsAll.get(i).sendJar(latch);
 		}
 
 		//------------------------------
@@ -231,11 +236,11 @@ public class PFRCoordinator {
 			//----------------------------
 			// Ping agents and create Progress Log
 			StringBuilder builder = new StringBuilder();
-			for(int i = 0 ; i < agentConnections.size(); i++) {
+			for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
 				
-				agentConnections.get(i).ping(); // ping agent to not lose connection during longer upload times.
+				connectionsAgentsAll.get(i).ping(); // ping agent to not lose connection during longer upload times.
 				
-				PFRAgent current = agentConnections.get(i).getAgent();
+				PFRAgent current = connectionsAgentsAll.get(i).getAgent();
 
 				builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
 			}
@@ -261,8 +266,8 @@ public class PFRCoordinator {
 				// Fetch data from all agents
 				TreeMap<String, ArrayList<HSRRecordStats>> groupedStats = new TreeMap<>();
 				
-				for(int i = 0 ; i < agentConnections.size(); i++) {
-					ZePFRClient current = agentConnections.get(i);
+				for(int i = 0 ; i < connectionsAgentsLoad.size(); i++) {
+					ZePFRClient current = connectionsAgentsLoad.get(i);
 					
 					RemoteResponse response = current.statsPoll();
 	
@@ -308,39 +313,65 @@ public class PFRCoordinator {
 	 *     <li>PFRConfig.getAgentPool();</li>
 	 *     <li>PFRConfig.getAgentAmount();</li>
 	 * </ul>
+	 * @param isDataAgent TODO
 	 *************************************************************/
-	private static void agentsReserve(PFRTest test) {
+	private static void agentsReserve(PFRTest test, boolean isDataAgent) {
 		//------------------------------
 		// Get Agents and Amount
-		PFRAgentPool pool = PFRConfig.getAgentPool();
-		HashSet<String> tags = PFRConfig.getAgentTags();
 		
-		int amount = PFRConfig.getAgentAmount();
-		if(amount <= 0) {
-			amount = pool.size();
+		String label = null;
+		PFRAgentPool pool;
+		HashSet<String> tags;
+		int amount = 1;
+		ArrayList<ZePFRClient> targetList;
+		
+		if( ! isDataAgent ) {
+			
+			if( ! PFRConfig.hasAgents() ) { return; }
+			
+			label = "Load";
+			pool = PFRConfig.getAgentPool();
+			tags = PFRConfig.getAgentTags();
+			targetList = connectionsAgentsLoad;
+			 amount = PFRConfig.getAgentAmount();
+			if(amount <= 0) {
+				amount = pool.size();
+			}
+		}else {
+			
+			if( ! PFRConfig.hasDataAgent() ) { return; }
+
+			label = "Data";
+			pool = PFRConfig.getDataAgentPool();
+			tags = PFRConfig.getDataAgentTags();
+			targetList = connectionsAgentsData;
+			amount = 1;
 		}
+		
 		
 		//------------------------------
 		// Reserve available agents
-		logger.info("################################################");
-		logger.info("# Check Agent Availability and Reserve. ");
-		logger.info("################################################");
+		logger.info("######################################################");
+		logger.info("# Check " + label + " Agent Availability and Reserve. ");
+		logger.info("######################################################");
 		
 		if( ! tags.isEmpty() ) {
 			logger.info("Filter Agents by tags: "+Joiner.on(", ").join(tags));
 		}
 
-		ArrayList<PFRAgent> inactiveAgents = new ArrayList<>();
-		ArrayList<PFRAgent> skippedAgents = new ArrayList<>();
+		ArrayList<PFRAgent> agentsInactive = new ArrayList<>();
+		ArrayList<PFRAgent> agentsSkipped = new ArrayList<>();
+		ArrayList<PFRAgent> agentsConnected = new ArrayList<>();
+		
 		amountLoop:
-		for(int i = 0 ; i < amount; i++) {
+		for(int i = 0 ; i < pool.size() && targetList.size() < amount ; i++) {
 			
 			//---------------------------
 			// Filter
 			PFRAgent agent = pool.get(i);
 			
 			if( ! agent.active()) {
-				inactiveAgents.add(agent);
+				agentsInactive.add(agent);
 				continue amountLoop;
 			}
 			
@@ -350,7 +381,7 @@ public class PFRCoordinator {
 				&&  ! (agent.port()+"").equals(filterTag)  
 				&&  ! (agent.hostname()+":"+agent.port()).equals(filterTag)  
 				){
-					skippedAgents.add(agent);
+					agentsSkipped.add(agent);
 					continue amountLoop;
 				}
 			}
@@ -384,9 +415,13 @@ public class PFRCoordinator {
 			
 			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
 			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
-				RemoteResponse reserve = connection.reserveAgent(amount, i);
+				
+				RemoteResponse reserve = connection.reserveAgent(amount, i, isDataAgent);
+				
 				if(reserve != null && reserve.success()) {
-					agentConnections.add(connection);
+					agentsConnected.add(agent);
+					targetList.add(connection);
+					connectionsAgentsAll.add(connection);
 				}
 			}
 			
@@ -394,19 +429,21 @@ public class PFRCoordinator {
 		
 		//------------------------------
 		// Print Inactive Agents
-		if( ! inactiveAgents.isEmpty() ) {
-			logger.info("Agents inactive: "+ Joiner.on(" | ").join(inactiveAgents) );
+		if( ! agentsInactive.isEmpty() ) {
+			logger.info("Agents inactive: "+ Joiner.on(" | ").join(agentsInactive) );
 		}
 		
 		//------------------------------
 		// Print Skipped Agents
-		if( ! skippedAgents.isEmpty() ) {
-			logger.info("Agents skipped by tags: "+ Joiner.on(" | ").join(skippedAgents) );
+		if( ! agentsSkipped.isEmpty() ) {
+			logger.info("Agents skipped by tags: "+ Joiner.on(" | ").join(agentsSkipped) );
 		}
+		
 		//------------------------------
 		// Check connected
-		if( ! agentConnections.isEmpty() ) {
-			logger.info("Total Agents connected: " + agentConnections.size() );
+		if( ! targetList.isEmpty() ) {
+			logger.info("Agents connected: "+ Joiner.on(" | ").join(agentsConnected) );
+			logger.info("Agents connected total: " + targetList.size() );
 		}else {
 			logger.warn("No agents where connected. " 
 					  + (tags.isEmpty() ? "" : "(Tags: "+ Joiner.on(", ").join(tags)+")" ) 
@@ -425,8 +462,8 @@ public class PFRCoordinator {
 		
 		StringBuilder builder = new StringBuilder();
 
-		for(int i = 0 ; i < agentConnections.size(); i++) {
-			ZePFRClient current = agentConnections.get(i);
+		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
+			ZePFRClient current = connectionsAgentsAll.get(i);
 			RemoteResponse response = current.ping();
 
 			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
@@ -453,34 +490,14 @@ public class PFRCoordinator {
 	 * 
 	 * @param logStatus 
 	 *************************************************************/
-	private static boolean agentsStopGracefully() {
+	private static void agentsStopGracefully() {
 		
-		boolean isAnyTestRunning = false;
-		
-		StringBuilder builder = new StringBuilder();
-
-		for(int i = 0 ; i < agentConnections.size(); i++) {
-			ZePFRClient current = agentConnections.get(i);
-			RemoteResponse response = current.testStopGracefully();
-
-//			boolean isTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
-//			
-//			isAnyTestRunning |= isTestRunning;
-//			
-//			//----------------------------
-//			// Create Progress Log
-//			PFRAgent agent = current.getAgent();
-//			builder.append(" ["+agent.hostname()+": "+
-//									((isTestRunning) ? "running" : "done") 
-//							 +"] ");
+		for(int i = 0 ; i < connectionsAgentsLoad.size(); i++) {
+			ZePFRClient current = connectionsAgentsLoad.get(i);
+			current.testStopGracefully();
 			
 		}
 		
-//		if(logStatus) {
-//			logger.info("Agent Test State:"+builder.toString());
-//		}
-		
-		return isAnyTestRunning;
 	}
 	
 	/*************************************************************
@@ -492,11 +509,12 @@ public class PFRCoordinator {
 		logger.info("################################################");
 		logger.info("Stop remaining agents." );
 		
-		CountDownLatch latch = new CountDownLatch(agentConnections.size());
+		CountDownLatch latch = new CountDownLatch(connectionsAgentsAll.size());
 		
 		ArrayList<ZePFRClient> agentsToStop = new ArrayList<>();
-		for(int i = 0 ; i < agentConnections.size(); i++) {
-			ZePFRClient current = agentConnections.get(i);
+		
+		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
+			ZePFRClient current = connectionsAgentsLoad.get(i);
 			RemoteResponse response = current.ping();
 
 			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
@@ -562,8 +580,8 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Start all the Tests
-		for(int i = 0 ; i < agentConnections.size(); i++) {
-			agentConnections.get(i).testStart();
+		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
+			connectionsAgentsAll.get(i).testStart();
 		}
 		
 		//-------------------------
@@ -639,10 +657,10 @@ public class PFRCoordinator {
 		
 		//-------------------------------
 		// Variables
-		String testClass = CommandLineArgs.pfr_test.getValue().getAsString();
-		String targetDir = CommandLineArgs.pfr_target.getValue().getAsString();
-		int agentTotal = CommandLineArgs.pfr_agentTotal.getValue().getAsInteger();
-		int agentIndex = CommandLineArgs.pfr_agentIndex.getValue().getAsInteger();
+		String testClass = CLIArgs.pfr_test.getValue().getAsString();
+		String targetDir = CLIArgs.pfr_target.getValue().getAsString();
+		int agentTotal = CLIArgs.pfr_agentTotal.getValue().getAsInteger();
+		int agentIndex = CLIArgs.pfr_agentIndex.getValue().getAsInteger();
 		
 		// This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);

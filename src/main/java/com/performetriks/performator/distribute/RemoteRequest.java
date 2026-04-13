@@ -2,13 +2,13 @@ package com.performetriks.performator.distribute;
 
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Flow;
@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
 
@@ -100,7 +99,7 @@ public class RemoteRequest{
 				try {
 					try {
 
-						HttpRequest.Builder requestBuilder = prepareRequestBuilder();
+						HttpRequest.Builder requestBuilder = prepareRequestBuilder(Duration.ofSeconds(60));
 						
 						CompletableFuture<HttpResponse<Void>> future = 
 								httpClient.sendAsync(requestBuilder.build(),
@@ -131,12 +130,13 @@ public class RemoteRequest{
 
 	/********************************************************
 	 * Send a request and return a response.
+	 * @param requestTimeout TODO
 	 ********************************************************/
-	public RemoteResponse send() {
+	public RemoteResponse send(Duration requestTimeout) {
 		
 		try {
 
-			HttpRequest.Builder requestBuilder = prepareRequestBuilder();
+			HttpRequest.Builder requestBuilder = prepareRequestBuilder(requestTimeout);
 
 			HttpResponse<String> response =
 					httpClient.send(requestBuilder.build(),
@@ -154,7 +154,7 @@ public class RemoteRequest{
 	/********************************************************
 	 * Prepare the request
 	 ********************************************************/
-	private HttpRequest.Builder prepareRequestBuilder() {
+	private HttpRequest.Builder prepareRequestBuilder(Duration timeout) {
 		if(parameters == null) {
 			parameters = new JsonObject();
 		}
@@ -173,7 +173,7 @@ public class RemoteRequest{
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
-				.timeout(java.time.Duration.ofMinutes(3));
+				.timeout(timeout);
 
 
 		if(body != null) {

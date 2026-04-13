@@ -30,7 +30,7 @@ public class Main {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
 	
-	public enum CommandLineArgs {
+	public enum CLIArgs {
 		
 		  pfr_mode(XRValueType.STRING, "auto", "The mode to start the process with.")
 		, pfr_test(XRValueType.STRING, null, "The path of the test to be executed which implements PFRTest, e.g. \"com.example.MyTest\".")
@@ -41,6 +41,7 @@ public class Main {
 		, pfr_agentIndex(XRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(XRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentbornePort(XRValueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
+		, pfr_agentIsData(XRValueType.BOOLEAN, "false", "INTERNAL: Defines if an agentborne process handles only shared data.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();
@@ -55,7 +56,7 @@ public class Main {
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		private CommandLineArgs(XRValueType type, String defaultissimo, String descrizione) {
+		private CLIArgs(XRValueType type, String defaultissimo, String descrizione) {
 			this.type = type;
 			this.defaultissimo = defaultissimo;
 			this.descrizione = descrizione;
@@ -65,10 +66,41 @@ public class Main {
 		/*****************************************************
 		 * 
 		 *****************************************************/
-		public XRValue getValue() throws IllegalStateException { 
+		public XRValue getValue() { 
 
 			String property = System.getProperty(this.toString(), defaultissimo);
 			return XRValue.newFromString(type, property);
+		}
+		
+		/*****************************************************
+		 * Returns a string of a CLI argument with the specified
+		 * value, e.g. " -Dpfr_agentIndex=1"
+		 * 
+		 * @return String CLI argument
+		 *****************************************************/
+		public String makeCLIArg(boolean value) { 
+			return makeCLIArg(""+value);
+		}
+		
+		/*****************************************************
+		 * Returns a string of a CLI argument with the specified
+		 * value, e.g. " -Dpfr_agentIndex=1"
+		 * 
+		 * @return String CLI argument
+		 *****************************************************/
+		public String makeCLIArg(int value) { 
+			return makeCLIArg(""+value);
+		}
+		
+		/*****************************************************
+		 * Returns a string of a CLI argument with the specified
+		 * value, e.g. " -Dpfr_agentIndex=1"
+		 * 
+		 * @return String CLI argument
+		 *****************************************************/
+		public String makeCLIArg(String value) { 
+
+			return " -D" + this.toString()+"="+value+"";
 		}
 		
 		/*****************************************************
@@ -85,7 +117,7 @@ public class Main {
 			System.out.println("PERFORMATOR HELP");
 			System.out.println("================================");
 			System.out.println("Following arguments are supported:");
-			for(CommandLineArgs arg : CommandLineArgs.values()) {
+			for(CLIArgs arg : CLIArgs.values()) {
 				StringBuilder builder = new StringBuilder();
 
 				builder
@@ -98,7 +130,7 @@ public class Main {
 				
 				//--------------------------
 				// Print Modes
-				if(arg == CommandLineArgs.pfr_mode) {
+				if(arg == CLIArgs.pfr_mode) {
 					for(Mode mode : Mode.values()) {
 						builder.append("\r\n\t\t").append(mode.toString())
 									.append(": ")
@@ -165,8 +197,8 @@ public class Main {
 		
 		//------------------------------------------
 		// Set Log config
-		String logfile = CommandLineArgs.pfr_logfile.getValue().getAsString();
-		String logLevel = CommandLineArgs.pfr_loglevel.getValue().getAsString();
+		String logfile = CLIArgs.pfr_logfile.getValue().getAsString();
+		String logLevel = CLIArgs.pfr_loglevel.getValue().getAsString();
 		
 		HSRConfig.setLogFilePath(logfile);
 		HSRConfig.setLogLevelRoot(logLevel);
@@ -175,20 +207,20 @@ public class Main {
 		//------------------------------------------
 		// Validate Arguments
 		
-		for(CommandLineArgs arg : CommandLineArgs.values()) {
+		for(CLIArgs arg : CLIArgs.values()) {
 			try {
 				XRValue value = arg.getValue();
 				System.out.println("-D"+arg+": "+value.getAsString());
 			}catch(Throwable e) {
 				logger.error(arg.toString()+": "+e.getMessage(), e);
-				CommandLineArgs.printUsage();
+				CLIArgs.printUsage();
 				break;
 			}
 		}
 		
 		//------------------------------------------
 		// Get Mode
-		String modeString = CommandLineArgs.pfr_mode
+		String modeString = CLIArgs.pfr_mode
 									.getValue()
 									.getAsString()
 									.trim()
@@ -207,7 +239,7 @@ public class Main {
 		// Check Official Mode
 		if(! Mode.has(modeString)) {
 			logger.error("The provided mode \""+modeString+"\" is not known. ");
-			CommandLineArgs.printUsage();
+			CLIArgs.printUsage();
 			return;
 		}
 		
@@ -216,7 +248,7 @@ public class Main {
 		
 		//------------------------------------------
 		// Set port
-		int port = CommandLineArgs.pfr_port
+		int port = CLIArgs.pfr_port
 						.getValue()
 						.getAsInt();
 		

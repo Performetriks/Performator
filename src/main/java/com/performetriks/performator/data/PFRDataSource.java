@@ -1,6 +1,7 @@
 package com.performetriks.performator.data;
 
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,7 @@ public abstract class PFRDataSource {
 	public static boolean hasSource(String datasourceName) {
 		return registeredDataSources.containsKey(datasourceName);
 	}
-	
+		
 	
 	/*****************************************************************
 	 * Removes all registered data sources.

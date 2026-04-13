@@ -22,8 +22,10 @@ public class PFRConfig {
 	private static Duration timeoutAgentReset = Duration.ofMinutes(5);
 	
 	private static PFRAgentPool agentPool = null;
+	private static PFRAgentPool dataAgentPool = null;
 	private static int agentAmount = 0;  // 0 or smaller is use all agents
 	private static HashSet<String> agentTags = new HashSet<>();  // filter agents by these tags
+	private static HashSet<String> dataAgentTags = new HashSet<>();  // filter agents by these tags
 	
 	/**********************************************************************************
 	 * Mode Enum
@@ -110,10 +112,11 @@ public class PFRConfig {
 	public static boolean hasAgents() {
 		return ( agentPool != null && agentPool.hasAgents() ) ;
 	}
+	
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
 	 * 
-	 * Get the port of this instance.
+	 * Get the agent pool.
 	 * 
 	 **********************************************************************************/
 	public static PFRAgentPool getAgentPool() {
@@ -122,7 +125,7 @@ public class PFRConfig {
 
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
-	 * 
+	 * Set the agent pool that should be used for the load agents.
 	 * 
 	 **********************************************************************************/
 	public static void setAgentPool(PFRAgentPool agentPool) {
@@ -217,6 +220,108 @@ public class PFRConfig {
 			PFRConfig.agentTags.add(tag);
 		}
 	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
+	 * Checks if any data agents have been defined.
+	 * 
+	 **********************************************************************************/
+	public static boolean hasDataAgent() {
+		return ( dataAgentPool != null && dataAgentPool.hasAgents() ) ;
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
+	 * Get the data agent pool.
+	 * 
+	 **********************************************************************************/
+	public static PFRAgentPool getDataAgentPool() {
+		return dataAgentPool;
+	}
+
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
+	 * 
+	 **********************************************************************************/
+	public static void setDataAgentPool(PFRAgentPool dataAgentPool) {
+		PFRConfig.dataAgentPool = dataAgentPool;
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * 
+	 **********************************************************************************/
+	public static HashSet<String> getDataAgentTags() {
+		return dataAgentTags;
+	}
+
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param dataAgentTags
+	 **********************************************************************************/
+	public static void setDataAgentTags(HashSet<String> dataAgentTags) {
+		PFRConfig.dataAgentTags.clear();
+		
+		PFRConfig.dataAgentTags.addAll(dataAgentTags);
+		
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void setDataAgentTags(ArrayList<String> dataAgentTags) {
+		PFRConfig.dataAgentTags.clear();
+		PFRConfig.dataAgentTags.addAll(dataAgentTags);
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Set and override the tags the agents should be filtered by. An agent must have
+	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void setDataAgentTags(String... dataAgentTags) {
+		PFRConfig.dataAgentTags.clear();
+		
+		for(String tag : dataAgentTags) {
+			PFRConfig.dataAgentTags.add(tag);
+		}
+	}
+	
+	/**********************************************************************************
+	 * <b>Scope:</b> Global<br>
+	 * Adds one or more agent tags to the existing list of tags. 
+	 * An agent must have all tags in the list to be chosen from the agent pool.
+	 * Tags are case-sensitive.
+	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
+	 * do not have to be specified seperately.
+	 * 
+	 * @param agentTags
+	 **********************************************************************************/
+	public static void addDataAgentTags(String... dataAgentTags) {
+		
+		for(String tag : dataAgentTags) {
+			PFRConfig.agentTags.add(tag);
+		}
+	}
+	
 	
 	
 

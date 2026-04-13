@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.Main.CommandLineArgs;
+import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRConfig.Mode;
@@ -66,6 +66,7 @@ public class ZePFRServer {
 	PFRCLIExecutor executor;
 	Integer agentTotal = null;
 	Integer agentIndex = null;
+	boolean agentIsData  = false; // set to true if this agent should manage shared data sources
 	
 	
 	//------------------------------------
@@ -100,6 +101,8 @@ public class ZePFRServer {
 		, statspeek
 		/** Returns the current statistics and empties the list of stats. */
 		, statspoll
+		/** Returns a record for a given data source. */
+		, datasourcenext
 	}
 	
 	/**********************************************************************************
@@ -110,7 +113,7 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	public ZePFRServer(){
 		
-		agentbornePort = CommandLineArgs.pfr_agentbornePort.getValue().getAsInt();
+		agentbornePort = CLIArgs.pfr_agentbornePort.getValue().getAsInt();
 		
 		startServer();
 	}
@@ -226,6 +229,8 @@ public class ZePFRServer {
 				case statspeek:			handleCommandStatsPeekPoll(response, Command.statspeek); 	break;
 				case statspoll:			handleCommandStatsPeekPoll(response, Command.statspoll); 	break;
 				
+				case datasourcenext:	handleCommandDatasourceNext(parameters, response);			break;
+				
 				case teststop:			handleCommandTestStop(response, Command.teststop); 			break;
 				case teststopgraceful:	handleCommandTestStop(response, Command.teststopgraceful); 	break;
 				case disconnect:		handleCommandDisconnect(response); 							break;
@@ -325,10 +330,11 @@ public class ZePFRServer {
 	private void handleCommandReserveAgent(Map<String, String> parameters, RemoteResponse response) {
 		
 		//-------------------------------
-		// Get AgentIndex
+		// Check is available
 		if(!isAvailable) {
 			response.setSuccess(false);
 			response.addMessage(Level.WARN, "Agent is already in use.");
+			return;
 		}
 		
 		//-------------------------------
@@ -338,8 +344,13 @@ public class ZePFRServer {
 		startPingTracker();
 		
 		//-------------------------------
+		// Get isDataAgent
+		String isDataAgentString = parameters.getOrDefault(CLIArgs.pfr_agentIsData.toString(), "false");
+		agentIsData = Boolean.parseBoolean(isDataAgentString.trim());
+		
+		//-------------------------------
 		// Get AgentTotal
-		String keyAgentTotal = CommandLineArgs.pfr_agentTotal.toString();
+		String keyAgentTotal = CLIArgs.pfr_agentTotal.toString();
 		if( ! parameters.containsKey(keyAgentTotal) ) {
 			response.setSuccess(false);
 			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
@@ -351,7 +362,7 @@ public class ZePFRServer {
 		
 		//-------------------------------
 		// Get AgentIndex
-		String keyAgentIndex = CommandLineArgs.pfr_agentIndex.toString();
+		String keyAgentIndex = CLIArgs.pfr_agentIndex.toString();
 		if( ! parameters.containsKey(keyAgentIndex) ) {
 			response.setSuccess(false);
 			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
@@ -360,6 +371,27 @@ public class ZePFRServer {
 		}
 		
 		agentIndex =  XRValue.newString( parameters.get(keyAgentIndex) ).getAsInt();
+
+
+
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandDatasourceNext(Map<String, String> parameters, RemoteResponse response) {
+		
+		//-------------------------------
+		// Check 
+		if( PFRConfig.executionMode() == Mode.AGENT && !agentIsData ) {
+			response.setSuccess(false);
+			response.addMessage(Level.WARN, "Agent is not handling shared data.");
+			
+		}
+		
+		//-------------------------------
+		// Get AgentIndex		
+		agentIndex =  XRValue.newString( parameters.get("name") ).getAsInt();
 
 
 	}
@@ -409,11 +441,12 @@ public class ZePFRServer {
 		try {
 			
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
-			String vmargs = " -Dpfr_mode=agentborne"
-						  + " -Dpfr_port=" + agentbornePort
-						  + " -Dpfr_test=" + classname
-						  + " -Dpfr_agentIndex=" + agentIndex
-						  + " -Dpfr_agentTotal=" + agentTotal
+			String vmargs = CLIArgs.pfr_mode.makeCLIArg("agentborne")
+						  + CLIArgs.pfr_port.makeCLIArg(agentbornePort)
+						  + CLIArgs.pfr_test.makeCLIArg(classname)
+						  + CLIArgs.pfr_agentIndex.makeCLIArg(agentIndex)
+						  + CLIArgs.pfr_agentTotal.makeCLIArg(agentTotal)
+						  + CLIArgs.pfr_agentIsData.makeCLIArg(agentIsData)
 						  ;
 			
 			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;

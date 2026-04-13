@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFRTest;
-import com.performetriks.performator.base.Main.CommandLineArgs;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
 
 /**************************************************************************************************************
@@ -107,18 +108,21 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse getStatus(){
 		
-		return new RemoteRequest(this, Command.status, test).send();
+		return new RemoteRequest(this, Command.status, test)
+						.send(Duration.ofSeconds(5));
 	}
 	
-	/**********************************************************************************
+	/**
+	 * @param isDataAgent TODO********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public RemoteResponse reserveAgent(int agentTotal, int agentIndex){
+	public RemoteResponse reserveAgent(int agentTotal, int agentIndex, boolean isDataAgent){
 		
 		return new RemoteRequest(this, Command.reserve, test)
-				.param(CommandLineArgs.pfr_agentTotal.toString(), ""+agentTotal)
-				.param(CommandLineArgs.pfr_agentIndex.toString(), ""+agentIndex)
-				.send();
+				.param(CLIArgs.pfr_agentTotal.toString(), ""+agentTotal)
+				.param(CLIArgs.pfr_agentIndex.toString(), ""+agentIndex)
+				.param(CLIArgs.pfr_agentIsData.toString(), ""+isDataAgent)
+				.send(Duration.ofSeconds(5));
 	}
 	/**********************************************************************************
 	 * Starts the test on the agent.
@@ -133,7 +137,7 @@ public class ZePFRClient {
 	public RemoteResponse testStart(String fullyQualifiedClassName){
 		return new RemoteRequest(this, Command.teststart, test)
 				.param(PARAM_TESTCLASS, fullyQualifiedClassName)
-				.send();
+				.send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************
@@ -141,7 +145,7 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse statsPeek(){
 		return new RemoteRequest(this, Command.statspeek, test)
-				.send();
+				.send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************
@@ -149,28 +153,31 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse statsPoll(){
 		return new RemoteRequest(this, Command.statspoll, test)
-				.send();
+				.send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse ping(){
-		return new RemoteRequest(this, Command.ping, test).send();
+		return new RemoteRequest(this, Command.ping, test)
+						.send(Duration.ofSeconds(5));
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse testStatus(){
-		return new RemoteRequest(this, Command.teststatus, test).send();
+		return new RemoteRequest(this, Command.teststatus, test)
+						.send(Duration.ofSeconds(5));
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse testStop(){
-		return new RemoteRequest(this, Command.teststop, test).send();
+		return new RemoteRequest(this, Command.teststop, test)
+						.send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************
@@ -187,7 +194,7 @@ public class ZePFRClient {
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse testStopGracefully(){
-		return new RemoteRequest(this, Command.teststopgraceful, test).send();
+		return new RemoteRequest(this, Command.teststopgraceful, test).send(Duration.ofSeconds(10));
 	}
 	
 	
@@ -195,14 +202,14 @@ public class ZePFRClient {
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse disconnect(){
-		return new RemoteRequest(this, Command.disconnect, test).send();
+		return new RemoteRequest(this, Command.disconnect, test).send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse kill(){
-		return new RemoteRequest(this, Command.kill, test).send();
+		return new RemoteRequest(this, Command.kill, test).send(Duration.ofSeconds(10));
 	}
 	
 	
