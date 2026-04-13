@@ -21,6 +21,9 @@ import com.performetriks.performator.distribute.RemoteResponse;
 import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.executors.PFRExec;
+import com.performetriks.performator.executors.PFRExecEmpty;
+import com.performetriks.performator.executors.PFRExecRepeat;
+import com.performetriks.performator.executors.PFRExecStandard;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRTestSettings;
@@ -514,7 +517,7 @@ public class PFRCoordinator {
 		ArrayList<ZePFRClient> agentsToStop = new ArrayList<>();
 		
 		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
-			ZePFRClient current = connectionsAgentsLoad.get(i);
+			ZePFRClient current = connectionsAgentsAll.get(i);
 			RemoteResponse response = current.ping();
 
 			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
@@ -661,19 +664,35 @@ public class PFRCoordinator {
 		String targetDir = CLIArgs.pfr_target.getValue().getAsString();
 		int agentTotal = CLIArgs.pfr_agentTotal.getValue().getAsInteger();
 		int agentIndex = CLIArgs.pfr_agentIndex.getValue().getAsInteger();
+		boolean agentIsData = CLIArgs.pfr_agentIsData.getValue().getAsBoolean();
 		
+		//-------------------------------
+		// Initialize Test
+		// ---------------
 		// This also loads all the PFRConfig set in the constructor of the test.
+		// Plus loads the test data.
 		PFRTest test = createTestInstance(testClass);
+		
+		//-------------------------------
+		// Change Executors
+		if(agentIsData) {
+			test.clearExecutors();
+			// keep the data agent running as long as the test is not finished
+			test.add(new PFRExecEmpty());
+		}
 		
 		//-------------------------------
 		// Change Reporters
 		HSRConfig.clearReporters();
-		HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
-		HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
-		HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
 		
-		peekPoll = new HSRReporterPeekPoll();
-		HSRConfig.addReporter(peekPoll);
+		if( ! agentIsData ) {
+			HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
+			HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
+			HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
+			
+			peekPoll = new HSRReporterPeekPoll();
+			HSRConfig.addReporter(peekPoll);
+		}
 		
 		//-------------------------------
 		// Distribute Load

@@ -51,6 +51,12 @@ public abstract class PFRTest {
 		return this;
 	}
 	
+	/***************************************************************************
+	 * Clears the list of executors for this test.
+	 ***************************************************************************/
+	public void clearExecutors(){
+		executorList.clear();
+	}
 	
 	/***************************************************************************
 	 * returns a clone of the executors that have been added to this test.

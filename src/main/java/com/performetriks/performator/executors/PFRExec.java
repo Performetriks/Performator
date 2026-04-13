@@ -13,11 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
-import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
-import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
 
@@ -121,34 +118,6 @@ public abstract class PFRExec {
             t.start();
         }
     }
-
-    /**
-     * Optimized call to PFRHttp.resetThreadState() using cached reflection lookup.
-     */
-    public static void resetPFRHttpState() {
-        if (!pfrHttpAttempted) {
-            synchronized (PFRExec.class) {
-                if (!pfrHttpAttempted) {
-                    pfrHttpAttempted = true;
-                    try {
-                        Class<?> pfrHttpClass = Class.forName("com.performetriks.performator.http.PFRHttp");
-                        pfrHttpResetMethod = pfrHttpClass.getMethod("resetThreadState");
-                    } catch (Exception e) {
-                        // Plugin not present
-                    }
-                }
-            }
-        }
-        
-        if (pfrHttpResetMethod != null) {
-            try {
-                pfrHttpResetMethod.invoke(null);
-            } catch (Exception e) {
-                // Ignore unexpected invocation errors in cleanup
-            }
-        }
-    }
-			
 	
 	/*****************************************************************
 	 * This method will be executed by agents to calculate the amount
@@ -390,10 +359,6 @@ public abstract class PFRExec {
 			}
 		}
 	}
-	
-	
-	
-	
 	
 
 	/*****************************************************************

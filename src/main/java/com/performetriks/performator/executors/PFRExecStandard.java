@@ -418,36 +418,46 @@ public class PFRExecStandard extends PFRExec {
 		// Initialize the user once per virtual user instance
 		usecase.initializeUser();
 		
+		//--------------------------------
+		// Wrapped Task, will be executed
+		// either as virtual or regular
+		// thread
+		Runnable wrappedTask = () -> {
+			
+			long start = System.currentTimeMillis();
+			try {
+				usecase.execute();
+				HSR.endAllOpen(HSRRecordStatus.Aborted);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} catch (Throwable e) {
+				HSR.addException(e);
+				HSR.endAllOpen(HSRRecordStatus.Failed);
+			} finally {
+				PFRContext.logDetailsClear();
+			}
+			
+			long duration = System.currentTimeMillis() - start;
+			if (duration > pacingMillis) {
+				HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
+						 + " This might cause that you get lower execution/hour then expected."
+						 + " Increase the number of users to fix this if you get lots of these messages.");
+			}
+
+		};
+		
+		//---------------------------
+		// Scheduled Task
 		return new Runnable() {
 			@Override
 			public void run() {
-				Runnable iterationTask = () -> {
-					try {
-						long start = System.currentTimeMillis();
-						try {
-							usecase.execute();
-							HSR.endAllOpen(HSRRecordStatus.Aborted);
-						} catch (InterruptedException e) {
-							Thread.currentThread().interrupt();
-						} catch (Throwable e) {
-							HSR.addException(e);
-							HSR.endAllOpen(HSRRecordStatus.Failed);
-						} finally {
-							PFRContext.logDetailsClear();
-							PFRExec.resetPFRHttpState();
-						}
-						long duration = System.currentTimeMillis() - start;
-						if (duration > pacingMillis) {
-							// Too many warnings can cause performance issues
-							// HSR.addWarnMessage("Iteration exceeded pacing.");
-						}
-					} catch (Exception e) {}
-				};
-
+				
+				//---------------------------
+				// Execute Virtual or Regular
 				if (PFRExec.isVirtualThreadSupported()) {
-					PFRExec.startVirtualThread(iterationTask, getExecutedName() + "-VT-" + userId);
+					PFRExec.startVirtualThread(wrappedTask, getExecutedName() + "-User-" + userId);
 				} else {
-					iterationTask.run();
+					wrappedTask.run();
 				}
 			}
 		};
