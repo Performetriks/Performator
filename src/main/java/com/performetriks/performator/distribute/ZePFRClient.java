@@ -167,6 +167,15 @@ public class ZePFRClient {
 				.send(Duration.ofSeconds(10));
 	}
 	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse datasourceHasNext(String datasourceName){
+		return new RemoteRequest(this, Command.datasourcehasnext, test)
+				.param(PARAM_DATASOURCENAME, datasourceName)
+				.send(Duration.ofSeconds(10));
+	}
+	
 	
 	/**********************************************************************************
 	 * 

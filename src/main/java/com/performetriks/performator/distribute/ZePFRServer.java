@@ -116,6 +116,8 @@ public class ZePFRServer {
 		, statspoll
 		/** Returns a record for a given data source. */
 		, datasourcenext
+		/** Returns true if there are more records. */
+		, datasourcehasnext
 	}
 	
 	/**********************************************************************************
@@ -245,13 +247,14 @@ public class ZePFRServer {
 				case transferjar:		handleCommandStoreJar(bodyBytes, test);						break;
 				
 				case processlog:		handleCommandProcesslog(response); 							break;
-				case statspeek:			handleCommandStatsPeekPoll(response, Command.statspeek); 	break;
-				case statspoll:			handleCommandStatsPeekPoll(response, Command.statspoll); 	break;
+				case statspeek:			handleCommandStatsPeekPoll(response, command); 				break;
+				case statspoll:			handleCommandStatsPeekPoll(response, command); 				break;
 				
 				case datasourcenext:	handleCommandDatasource(parameters, response, command);		break;
+				case datasourcehasnext:	handleCommandDatasource(parameters, response, command);		break;
 				
-				case teststop:			handleCommandTestStop(response, Command.teststop); 			break;
-				case teststopgraceful:	handleCommandTestStop(response, Command.teststopgraceful); 	break;
+				case teststop:			handleCommandTestStop(response, command); 					break;
+				case teststopgraceful:	handleCommandTestStop(response, command); 					break;
 				case disconnect:		handleCommandDisconnect(response); 							break;
 				case kill:				handleCommandKill(response, exchange); return;
 				
@@ -463,7 +466,8 @@ public class ZePFRServer {
 				RemoteResponse agentborneResponse = null;
 				
 				if(command == Command.datasourcenext) {		agentborneResponse = agentClient.datasourceNext(datasourceName); }
-				//else if(command == Command.statspoll) {		agentborneResponse = agentClient.statsPoll(); }
+				if(command == Command.datasourcehasnext) {	agentborneResponse = agentClient.datasourceHasNext(datasourceName); }
+				//else if(command == Command.statspoll) {	agentborneResponse = agentClient.statsPoll(); }
 				agentborneResponse.overrideResponse(response);
 				
 			}else {
@@ -488,16 +492,17 @@ public class ZePFRServer {
 			//---------------------------------------------
 			// Execute command
 			JsonObject nextObject = null;
+			PFRDataSource source = PFRDataSource.getSource(datasourceName);
 			if(command == Command.datasourcenext) {	
 				
-				PFRDataSource source = PFRDataSource.getSource(datasourceName);
 				XRRecord record = source.next();
 				if(record != null) {
 					nextObject = record.toJsonObject();
+					response.setPayload(nextObject);
 				}
+			}else if(command == Command.datasourcehasnext) {
+				response.setPayload(source.hasNext());
 			}
-			
-			response.setPayload(nextObject);
 			
 			return;
 		}

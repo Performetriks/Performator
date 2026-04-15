@@ -151,11 +151,25 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	protected abstract PFRDataSource buildSource();
 	
+	
 	/*****************************************************************
 	 * Return true if this data source still has data.
 	 * Useful when using RetainMode.ONCE.
 	 *****************************************************************/
-	public abstract boolean hasNext();
+	public abstract boolean hasNextInternal();
+	
+	/*****************************************************************
+	 * Return true if this data source still has data.
+	 * Useful when using RetainMode.ONCE.
+	 *****************************************************************/
+	public boolean hasNext() {
+		
+		if( ! loadFromAgent() ){
+			return hasNextInternal();
+		}else {
+			return PFRCoordinator.agentDatasourceHasNext(this);
+		}
+	}
 	
 
 	/*****************************************************************
@@ -177,15 +191,24 @@ public abstract class PFRDataSource {
 		if( ! isBuilt ) { logger.warn("The data source's .build() method was not called and it might not work correctly: "+this.getUniqueName() ); }
 		
 		XRRecord record;
-		if(! isShared() 
-		|| ! PFRCoordinator.isDataAgentConnected()
-		){
+		if( ! loadFromAgent() ){
 			record = nextInternal();
 		}else {
-			record = PFRCoordinator.nextFromAgent(this);
+			record = PFRCoordinator.agentDatasourceNext(this);
 		}
 		
 		return record != null ? record.clone() : null;
+	}
+	
+	/*****************************************************************
+	 * Returns true if this data source is set to shared and when
+	 * a Data Agent is connected.
+	 * 
+	 * @return true if data should be loaded from agent, false otherwise
+	 *****************************************************************/
+	public boolean loadFromAgent() {
+		return isShared
+			&& PFRCoordinator.isDataAgentConnected();
 	}
 	
 	/*****************************************************************

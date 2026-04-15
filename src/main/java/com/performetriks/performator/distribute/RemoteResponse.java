@@ -6,7 +6,10 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.performetriks.performator.base.PFR;
+import com.xresch.xrutils.data.XRRecord;
+import com.xresch.xrutils.data.XRValue;
 
 import ch.qos.logback.classic.Level;
 
@@ -81,6 +84,17 @@ public class RemoteResponse {
 	/********************************************************
 	 * 
 	 ********************************************************/
+	public boolean payloadAsBoolean() {
+		
+		XRValue value = XRValue.newFromJsonElement(response.get(FIELD_PAYLOAD));
+		
+		return value.getAsBoolean();
+
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
 	public JsonObject payloadAsObject() {
 		return response.get(FIELD_PAYLOAD).getAsJsonObject();
 	}
@@ -138,6 +152,13 @@ public class RemoteResponse {
 	 ********************************************************/
 	public void setPayload(JsonElement element) {
 		response.add(FIELD_PAYLOAD, element);
+	}
+	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public void setPayload(boolean bool) {
+		response.add(FIELD_PAYLOAD, new JsonPrimitive(bool));
 	}
 	
 	/********************************************************

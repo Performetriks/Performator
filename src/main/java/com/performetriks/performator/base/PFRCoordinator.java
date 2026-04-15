@@ -1034,15 +1034,16 @@ public class PFRCoordinator {
 
 	}
 	/*****************************************************************
-	 * Returns a record for the given source. It is mandatory to 
-	 * call the method isDataAgentConnected() before using this method.
+	 * Returns a record for the given source. 
+	 * It is mandatory to call the method isDataAgentConnected() 
+	 * before using this method.
 	 * The check is not done in this method to reduce performance
 	 * overhead, as in other places in the framework the call to
 	 * isDataAgentConnected() is done beforehand.
 	 * 
 	 * @return XRRecord from data agent or null if failed.
 	 *****************************************************************/
-	public static XRRecord nextFromAgent(PFRDataSource source) {
+	public static XRRecord agentDatasourceNext(PFRDataSource source) {
 		
 		RemoteResponse response = connectionsAgentsData
 										.get(0)
@@ -1053,6 +1054,29 @@ public class PFRCoordinator {
 		}
 
 		return null;
+	}
+	
+	/*****************************************************************
+	 * Returns true if it has more records, false otherwise. 
+	 * It is mandatory to call the method isDataAgentConnected() 
+	 * before using this method.
+	 * The check is not done in this method to reduce performance
+	 * overhead, as in other places in the framework the call to
+	 * isDataAgentConnected() is done beforehand.
+	 * 
+	 * @return true if has next record, false otherwise
+	 *****************************************************************/
+	public static boolean agentDatasourceHasNext(PFRDataSource source) {
+		
+		RemoteResponse response = connectionsAgentsData
+									.get(0)
+									.datasourceHasNext(source.getUniqueName());
+		if(response != null
+		&& response.payloadAsBoolean()) {
+			return true;
+		}
+
+		return false;
 	}
 	
 	

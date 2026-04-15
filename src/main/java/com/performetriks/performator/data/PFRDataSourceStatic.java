@@ -80,7 +80,7 @@ public abstract class PFRDataSourceStatic extends PFRDataSource {
 	 * Return true if this data source still has data.
 	 * Useful when using RetainMode.ONCE.
 	 *****************************************************************/
-	public boolean hasNext() {
+	public boolean hasNextInternal() {
 		return data.size() > 0;
 	}
 	
