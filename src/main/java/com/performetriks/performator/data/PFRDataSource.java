@@ -1,12 +1,12 @@
 package com.performetriks.performator.data;
 
 import java.util.HashMap;
-import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.performetriks.performator.base.PFRConfig;
+import com.performetriks.performator.base.PFRCoordinator;
 import com.xresch.xrutils.data.XRRecord;
 
 
@@ -164,6 +164,7 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	protected abstract XRRecord nextInternal();
 	
+	
 	/*****************************************************************
 	 * Returns a clone of the data record. Clones are used to ensure
 	 * data is not overwritten by multiple users using the same 
@@ -174,7 +175,16 @@ public abstract class PFRDataSource {
 	public XRRecord next() {
 		
 		if( ! isBuilt ) { logger.warn("The data source's .build() method was not called and it might not work correctly: "+this.getUniqueName() ); }
-		XRRecord record = nextInternal();
+		
+		XRRecord record;
+		if(! isShared() 
+		|| ! PFRCoordinator.isDataAgentConnected()
+		){
+			record = nextInternal();
+		}else {
+			record = PFRCoordinator.nextFromAgent(this);
+		}
+		
 		return record != null ? record.clone() : null;
 	}
 	

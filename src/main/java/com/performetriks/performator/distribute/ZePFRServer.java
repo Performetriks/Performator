@@ -18,7 +18,9 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFR;
@@ -27,11 +29,13 @@ import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.base.PFRCoordinator;
 import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.performetriks.performator.cli.PFRReadableOutputStream;
+import com.performetriks.performator.data.PFRDataSource;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.xresch.hsr.base.HSR;
 import com.xresch.xrutils.data.ByteSize;
+import com.xresch.xrutils.data.XRRecord;
 import com.xresch.xrutils.data.XRValue;
 
 import ch.qos.logback.classic.Level;
@@ -62,12 +66,21 @@ public class ZePFRServer {
 	
 	//------------------------------------
 	// Test Execution Variables
-	Path jarFilePath = null;
-	PFRCLIExecutor executor;
-	Integer agentTotal = null;
-	Integer agentIndex = null;
-	boolean agentIsData  = false; // set to true if this agent should manage shared data sources
+	private Path jarFilePath = null;
+	private PFRCLIExecutor executor;
+	private Integer agentTotal = null;
+	private Integer agentIndex = null;
+	private boolean isDataAgent  = false; // set to true if this agent should manage shared data sources
 	
+	private Thread threadPingTracker;
+	
+	private String machineReserving = null;
+	private String reservedTestclass = null;
+	
+	//------------------------------------
+	// Synch Locks
+	private Object SYNC_LOCK_PINGTRACKER = new Object();
+	private Object SYNC_LOCK_RESERVE = new Object();
 	
 	//------------------------------------
 	// 
@@ -163,13 +176,19 @@ public class ZePFRServer {
 	 * Resets this server and all its related values and makes it available again.
 	 **********************************************************************************/
 	private void reset() {
+		
 		lastPingTime = 0;
+		threadPingTracker = null;
+		
 		jarFilePath 	= null;
 		executor 		= null;
 		agentTotal 		= null;
 		agentIndex 		= null;
+		reservedTestclass= null;
+		
 		isAvailable		= true;
 	}
+	
 	/**********************************************************************************
 	 * Protocol:
 	 *  - 1st Line: Command
@@ -229,7 +248,7 @@ public class ZePFRServer {
 				case statspeek:			handleCommandStatsPeekPoll(response, Command.statspeek); 	break;
 				case statspoll:			handleCommandStatsPeekPoll(response, Command.statspoll); 	break;
 				
-				case datasourcenext:	handleCommandDatasourceNext(parameters, response);			break;
+				case datasourcenext:	handleCommandDatasource(parameters, response, command);		break;
 				
 				case teststop:			handleCommandTestStop(response, Command.teststop); 			break;
 				case teststopgraceful:	handleCommandTestStop(response, Command.teststopgraceful); 	break;
@@ -329,70 +348,165 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void handleCommandReserveAgent(Map<String, String> parameters, RemoteResponse response) {
 		
-		//-------------------------------
-		// Check is available
-		if(!isAvailable) {
-			response.setSuccess(false);
-			response.addMessage(Level.WARN, "Agent is already in use.");
-			return;
-		}
-		
-		//-------------------------------
-		// Reset
-		reset();
-		isAvailable = false; 
-		startPingTracker();
-		
-		//-------------------------------
-		// Get isDataAgent
-		String isDataAgentString = parameters.getOrDefault(CLIArgs.pfr_agentIsData.toString(), "false");
-		agentIsData = Boolean.parseBoolean(isDataAgentString.trim());
-		
-		//-------------------------------
-		// Get AgentTotal
-		String keyAgentTotal = CLIArgs.pfr_agentTotal.toString();
-		if( ! parameters.containsKey(keyAgentTotal) ) {
-			response.setSuccess(false);
-			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
-			isAvailable = true;
-			return;
-		}
-		
-		agentTotal =  XRValue.newString( parameters.get(keyAgentTotal) ).getAsInt();
-		
-		//-------------------------------
-		// Get AgentIndex
-		String keyAgentIndex = CLIArgs.pfr_agentIndex.toString();
-		if( ! parameters.containsKey(keyAgentIndex) ) {
-			response.setSuccess(false);
-			response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
-			isAvailable = true;
-			return;
-		}
-		
-		agentIndex =  XRValue.newString( parameters.get(keyAgentIndex) ).getAsInt();
+		synchronized (SYNC_LOCK_RESERVE) {
 
+			//-------------------------------
+			// Get isDataAgent
+			String isDataAgentString = parameters.getOrDefault(CLIArgs.pfr_agentIsData.toString(), "false");
+			isDataAgent = Boolean.parseBoolean(isDataAgentString.trim());
+			
+			//##########################################################
+			// Reserve Load or Data Agent
+			//##########################################################
+			if( ! isDataAgent ) {
+				
+				//======================================================
+				// LOAD AGENT
+				// Check is available
+				if(!isAvailable) {
+					response.setSuccess(false);
+					response.addMessage(Level.WARN, "Agent is already in use.");
+					return;
+				}
+			
+				reset();
+	
+			} else {
+				//======================================================
+				// DATA AGENT
+				// Check is same test
+				String testclass = parameters.get(ZePFRClient.PARAM_TESTCLASS);
+				
+				//-------------------------------
+				// Check is Null
+				if(Strings.isNullOrEmpty(testclass)) {
+					response.setSuccess(false);
+					response.addMessage(Level.ERROR, "Testname was not provided.");
+					return;
+				}
+				
+				//-------------------------------
+				// Reserve or Connect
+				if(reservedTestclass == null) {
+					reset();
+					reservedTestclass = testclass.trim();
+				}else if( ! reservedTestclass.equals(testclass.trim()) ) {
+					response.setSuccess(false);
+					response.addMessage(Level.ERROR, "Cannot connect to data agent as testname is not the same: '"
+																+reservedTestclass+"' != '"+testclass.trim()+"'");
+					return;
+				}
+			}
+	
+			//======================================================
+			// FOR BOTH LOAD AND DATA AGENT
+			// values not used by data agent, but makes other code
+			// simpler.
+			
+			//-------------------------------
+			// Get AgentTotal
+			String keyAgentTotal = CLIArgs.pfr_agentTotal.toString();
+			if( ! parameters.containsKey(keyAgentTotal) ) {
+				response.setSuccess(false);
+				response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentTotal+"' was not defined. ");
+				isAvailable = true;
+				return;
+			}
+			
+			agentTotal =  XRValue.newString( parameters.get(keyAgentTotal) ).getAsInt();
+			
+			//-------------------------------
+			// Get AgentIndex
+			String keyAgentIndex = CLIArgs.pfr_agentIndex.toString();
+			if( ! parameters.containsKey(keyAgentIndex) ) {
+				response.setSuccess(false);
+				response.addMessage(Level.ERROR, "Cannot start test as parameter '"+keyAgentIndex+"' was not defined. ");
+				isAvailable = true;
+				return;
+			}
+			
+			agentIndex =  XRValue.newString( parameters.get(keyAgentIndex) ).getAsInt();
+			
+			//-------------------------------
+			// Reset
+			isAvailable = false; 
+			startPingTracker();
 
+		}
 
 	}
 	
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	private void handleCommandDatasourceNext(Map<String, String> parameters, RemoteResponse response) {
+	private void handleCommandDatasource(Map<String, String> parameters, RemoteResponse response, Command command) {
 		
 		//-------------------------------
 		// Check 
-		if( PFRConfig.executionMode() == Mode.AGENT && !agentIsData ) {
+		if( PFRConfig.executionMode() == Mode.AGENT && ! isDataAgent ) {
 			response.setSuccess(false);
 			response.addMessage(Level.WARN, "Agent is not handling shared data.");
-			
 		}
 		
-		//-------------------------------
-		// Get AgentIndex		
-		agentIndex =  XRValue.newString( parameters.get("name") ).getAsInt();
-
+		//---------------------------------------------
+		// Get Parameters
+		String datasourceName = parameters.get(ZePFRClient.PARAM_DATASOURCENAME);
+		
+		//---------------------------------------------
+		// If agent, forward request to Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENT) {
+			
+			if(executor != null && executor.checkKeepExecuting()) {
+				
+				ZePFRClient agentClient = getAgenborneClient();
+				
+				RemoteResponse agentborneResponse = null;
+				
+				if(command == Command.datasourcenext) {		agentborneResponse = agentClient.datasourceNext(datasourceName); }
+				//else if(command == Command.statspoll) {		agentborneResponse = agentClient.statsPoll(); }
+				agentborneResponse.overrideResponse(response);
+				
+			}else {
+				response.setSuccess(false);
+				response.addMessage(Level.INFO, "Test already finished, no data to retrieve.");
+			}
+			return;
+		}
+		
+		//---------------------------------------------
+		// Get Data if Agentborne
+		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
+			
+			//---------------------------------------------
+			// Check does data source exist
+			if( ! PFRDataSource.hasSource(datasourceName) ) {
+				response.setSuccess(false);
+				response.addMessage(Level.WARN, "Data source could not be found: " + datasourceName);
+				return;
+			}
+			
+			//---------------------------------------------
+			// Execute command
+			JsonObject nextObject = null;
+			if(command == Command.datasourcenext) {	
+				
+				PFRDataSource source = PFRDataSource.getSource(datasourceName);
+				XRRecord record = source.next();
+				if(record != null) {
+					nextObject = record.toJsonObject();
+				}
+			}
+			
+			response.setPayload(nextObject);
+			
+			return;
+		}
+		
+		//---------------------------------------------
+		// All other Modes
+		response.setSuccess(false);
+		response.addMessage(Level.INFO, "Command" + Command.statspeek + " not available for execution mode:" + PFRConfig.executionMode());
+				
 
 	}
 	
@@ -446,7 +560,7 @@ public class ZePFRServer {
 						  + CLIArgs.pfr_test.makeCLIArg(classname)
 						  + CLIArgs.pfr_agentIndex.makeCLIArg(agentIndex)
 						  + CLIArgs.pfr_agentTotal.makeCLIArg(agentTotal)
-						  + CLIArgs.pfr_agentIsData.makeCLIArg(agentIsData)
+						  + CLIArgs.pfr_agentIsData.makeCLIArg(isDataAgent)
 						  ;
 			
 			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
@@ -693,7 +807,7 @@ public class ZePFRServer {
 			executor = null;
 		} 
 		
-		isAvailable = true;
+		reset();
 	}
 
 	/**********************************************************************************
@@ -786,41 +900,52 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	private void startPingTracker() {
-		//----------------------------------
-		// Setup Ping Tracker
-		long PING_TIMEOUT =  90_000;
-		ZePFRServer instance = this;
 		
-		Thread threadPingTracker = new Thread(new Runnable() {
-	
-			@Override
-			public void run() {
-				
-				//------------------------------
-				// Track Pings
-				setPingNow();
-				logger.info("Start Tracking Pings");
-				while( (System.currentTimeMillis() - lastPingTime) < PING_TIMEOUT) {
-					try {
-						Thread.sleep(5000);
-						logger.trace("ping tracker tracking: "+(System.currentTimeMillis() - lastPingTime) );
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt(); // restore interrupt flag
+		synchronized (SYNC_LOCK_PINGTRACKER) {
+			
+			//----------------------------------
+			// Check is already Setup
+			if(threadPingTracker != null) {
+				return;
+			}
+			
+			//----------------------------------
+			// Setup Ping Tracker
+			long PING_TIMEOUT =  90_000;
+			ZePFRServer instance = this;
+			
+			threadPingTracker = new Thread(new Runnable() {
+		
+				@Override
+				public void run() {
+					
+					//------------------------------
+					// Track Pings
+					setPingNow();
+					logger.info("Start Tracking Pings");
+					while( (System.currentTimeMillis() - lastPingTime) < PING_TIMEOUT) {
+						try {
+							Thread.sleep(5000);
+							logger.trace("ping tracker tracking: "+(System.currentTimeMillis() - lastPingTime) );
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt(); // restore interrupt flag
+						}
+					}
+					
+					//------------------------------
+					// Stop if not already stopped
+					// Make Agent available again
+					if(!isAvailable) {
+						logger.info("End Tracking Pings");
+						instance.handleCommandTestStop(null, Command.teststop);
+						instance.handleCommandDisconnect(null);
 					}
 				}
 				
-				//------------------------------
-				// Stop if not already stopped
-				// Make Agent available again
-				if(!isAvailable) {
-					logger.info("End Tracking Pings");
-					instance.handleCommandTestStop(null, Command.teststop);
-					instance.handleCommandDisconnect(null);
-				}
-			}
-			
-		});
-		threadPingTracker.setName("Ping Tracker");
-		threadPingTracker.start();
+			});
+			threadPingTracker.setName("Ping Tracker");
+			threadPingTracker.start();
+		}
 	}
+	
 }

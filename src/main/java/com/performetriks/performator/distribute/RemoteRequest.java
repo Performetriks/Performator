@@ -34,7 +34,9 @@ public class RemoteRequest{
 	//------------------------------------
 	// Data Fields
 	private Command command = null;
-	private PFRTest test = null;
+
+	private String testname = null;
+	
 	private JsonObject parameters = new JsonObject();
 	private byte[] body = null;
 	
@@ -54,10 +56,20 @@ public class RemoteRequest{
 	public RemoteRequest(ZePFRClient client, Command command, PFRTest test) {
 		this.client = client;
 		this.command = command;
-		this.test = test;
+		if(test != null) {
+			this.testname = test.getName();
+		}
 		
 	}
 	
+	/********************************************************
+	 * Adds a parameter to the request.
+	 * 
+	 ********************************************************/
+	public RemoteRequest testname(String testname) {
+		this.testname = testname;
+		return this;
+	}
 	/********************************************************
 	 * Adds a parameter to the request.
 	 * 
@@ -159,8 +171,8 @@ public class RemoteRequest{
 			parameters = new JsonObject();
 		}
 
-		if(test != null) {
-			parameters.addProperty(ZePFRClient.PARAM_TESTNAME, test.getName());
+		if(testname != null) {
+			parameters.addProperty(ZePFRClient.PARAM_TESTNAME, testname);
 		}
 
 		parameters.addProperty(ZePFRClient.PARAM_HOST, ZePFRServer.getLocalhost());

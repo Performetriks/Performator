@@ -268,7 +268,7 @@ public abstract class PFRExec {
 	 * instance.
 	 *****************************************************************/
 	protected ScheduledExecutorService getScheduledUserExecutor(int threadPoolSize) {
-		
+
 		if(scheduledUserThreadExecutor == null) {
 			String executorName = this.getClass().getSimpleName();
 			ThreadFactory factory =  new ThreadFactory() {

@@ -33,6 +33,7 @@ public class ZePFRClient {
 	static final String PARAM_PORT = "port";
 	static final String PARAM_TESTCLASS = "test";
 	static final String PARAM_TESTNAME = "testname";
+	static final String PARAM_DATASOURCENAME = "datasourceName";
 	
 	private PFRAgent agent;
 	private String remoteHost;
@@ -112,8 +113,8 @@ public class ZePFRClient {
 						.send(Duration.ofSeconds(5));
 	}
 	
-	/**
-	 * @param isDataAgent TODO********************************************************************************
+
+	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse reserveAgent(int agentTotal, int agentIndex, boolean isDataAgent){
@@ -122,6 +123,7 @@ public class ZePFRClient {
 				.param(CLIArgs.pfr_agentTotal.toString(), ""+agentTotal)
 				.param(CLIArgs.pfr_agentIndex.toString(), ""+agentIndex)
 				.param(CLIArgs.pfr_agentIsData.toString(), ""+isDataAgent)
+				.param(PARAM_TESTCLASS, test.getClass().getName())
 				.send(Duration.ofSeconds(5));
 	}
 	/**********************************************************************************
@@ -155,6 +157,16 @@ public class ZePFRClient {
 		return new RemoteRequest(this, Command.statspoll, test)
 				.send(Duration.ofSeconds(10));
 	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse datasourceNext(String datasourceName){
+		return new RemoteRequest(this, Command.datasourcenext, test)
+				.param(PARAM_DATASOURCENAME, datasourceName)
+				.send(Duration.ofSeconds(10));
+	}
+	
 	
 	/**********************************************************************************
 	 * 

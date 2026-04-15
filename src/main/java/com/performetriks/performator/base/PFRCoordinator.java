@@ -22,8 +22,6 @@ import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.executors.PFRExec;
 import com.performetriks.performator.executors.PFRExecEmpty;
-import com.performetriks.performator.executors.PFRExecRepeat;
-import com.performetriks.performator.executors.PFRExecStandard;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRTestSettings;
@@ -35,6 +33,7 @@ import com.xresch.hsr.stats.HSRRecordStats;
 import com.xresch.hsr.stats.HSRStatsEngine;
 import com.xresch.hsr.stats.HSRStatsEngine.SummarizedStats;
 import com.xresch.hsr.stats.HSRStatsEngineHooks;
+import com.xresch.xrutils.data.XRRecord;
 
 import ch.qos.logback.classic.Logger;
 
@@ -65,9 +64,11 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
-	private static ArrayList<ZePFRClient> connectionsAgentsLoad = new ArrayList<>();
-	private static ArrayList<ZePFRClient> connectionsAgentsData = new ArrayList<>();
 	private static ArrayList<ZePFRClient> connectionsAgentsAll = new ArrayList<>();
+	private static ArrayList<ZePFRClient> connectionsAgentsLoad = new ArrayList<>();
+	
+	// Note: This will at most contain a single entry, done like this for less code redundancy
+	private static ArrayList<ZePFRClient> connectionsAgentsData = new ArrayList<>();
 	
 	private static ZePFRServer server = null;
 	
@@ -416,8 +417,13 @@ public class PFRCoordinator {
 			JsonObject payload = status.payload().getAsJsonObject();
 			logger.info(PFR.JSON.toJSON(payload));
 			
-			if(payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
-			&& payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true) {
+			if(
+			   isDataAgent // ignore available status as multiple processes need to connect to data agents
+			   ||
+			   (  payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
+			   && payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true
+			   )
+			){
 				
 				RemoteResponse reserve = connection.reserveAgent(amount, i, isDataAgent);
 				
@@ -664,7 +670,7 @@ public class PFRCoordinator {
 		String targetDir = CLIArgs.pfr_target.getValue().getAsString();
 		int agentTotal = CLIArgs.pfr_agentTotal.getValue().getAsInteger();
 		int agentIndex = CLIArgs.pfr_agentIndex.getValue().getAsInteger();
-		boolean agentIsData = CLIArgs.pfr_agentIsData.getValue().getAsBoolean();
+		boolean isDataAgent = CLIArgs.pfr_agentIsData.getValue().getAsBoolean();
 		
 		//-------------------------------
 		// Initialize Test
@@ -675,7 +681,7 @@ public class PFRCoordinator {
 		
 		//-------------------------------
 		// Change Executors
-		if(agentIsData) {
+		if(isDataAgent) {
 			test.clearExecutors();
 			// keep the data agent running as long as the test is not finished
 			test.add(new PFRExecEmpty());
@@ -685,7 +691,7 @@ public class PFRCoordinator {
 		// Change Reporters
 		HSRConfig.clearReporters();
 		
-		if( ! agentIsData ) {
+		if( ! isDataAgent ) {
 			HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
 			HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
 			HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
@@ -707,7 +713,21 @@ public class PFRCoordinator {
 		//-------------------------
 		// Prepare and Execute
 		if(test != null && prepareTestExecution(test)) {
+			
+			//------------------------------
+			// Reserve Data Agents
+			if( ! isDataAgent ) {
+				agentsDisconnect();
+				agentsReserve(test, true);
+			}
+			
+			//------------------------------
+			// Execute Test
 			startTestLocally(test);
+			
+			//------------------------------
+			// Disconnect Data Agents
+			if( ! isDataAgent ) { agentsDisconnect(); }
 		}
 
 	}
@@ -888,8 +908,9 @@ public class PFRCoordinator {
 		// Latch
 		latch = new CountDownLatch(executorList.size());
 		try {
-			
+
 			isTestRunning = true;
+						
 			//-------------------------
 			// Start Executor Threads
 			int i = 0;
@@ -953,6 +974,7 @@ public class PFRCoordinator {
 		}catch(Exception e) {
 			logger.info("Error during Executor Thread execution.");
 		}finally {
+			
 			//-------------------------------
 			// Kill remaining Threads
 			if(latch.getCount() > 0) {
@@ -1000,6 +1022,37 @@ public class PFRCoordinator {
 	 *****************************************************************/
 	public static HSRReporterPeekPoll getPeekPoll() {
 		return peekPoll;
+	}
+	
+	/*****************************************************************
+	 * Returns a record from the .
+	 *****************************************************************/
+	public static boolean isDataAgentConnected() {
+		
+		return connectionsAgentsData != null
+		  && ! connectionsAgentsData.isEmpty();
+
+	}
+	/*****************************************************************
+	 * Returns a record for the given source. It is mandatory to 
+	 * call the method isDataAgentConnected() before using this method.
+	 * The check is not done in this method to reduce performance
+	 * overhead, as in other places in the framework the call to
+	 * isDataAgentConnected() is done beforehand.
+	 * 
+	 * @return XRRecord from data agent or null if failed.
+	 *****************************************************************/
+	public static XRRecord nextFromAgent(PFRDataSource source) {
+		
+		RemoteResponse response = connectionsAgentsData
+										.get(0)
+										.datasourceNext(source.getUniqueName());
+		if(response != null
+		&& response.success()) {
+			return new XRRecord(response.payloadAsObject());
+		}
+
+		return null;
 	}
 	
 	
