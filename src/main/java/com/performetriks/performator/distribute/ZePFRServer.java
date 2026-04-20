@@ -1,5 +1,7 @@
 package com.performetriks.performator.distribute;
 import java.io.IOException;
+import java.io.InputStream;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -9,18 +11,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyStore;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFR;
@@ -32,7 +37,8 @@ import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.performetriks.performator.data.PFRDataSource;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsServer;
 import com.xresch.hsr.base.HSR;
 import com.xresch.xrutils.data.ByteSize;
 import com.xresch.xrutils.data.XRRecord;
@@ -62,7 +68,7 @@ public class ZePFRServer {
 	Properties props = System.getProperties();
 	Runtime runtime = Runtime.getRuntime();
 	
-	HttpServer server = null;
+	HttpsServer server = null;
 	
 	//------------------------------------
 	// Test Execution Variables
@@ -136,24 +142,73 @@ public class ZePFRServer {
 	/**********************************************************************************
 	 * Start HTTP Server
 	  **********************************************************************************/
+//	private void startServer() {
+//		try {
+//			server = HttpsServer.create( new java.net.InetSocketAddress(PFRConfig.port()) , 0);
+//
+//			server.createContext("/api", new HttpHandler() {
+//				@Override
+//				public void handle(HttpExchange exchange) throws IOException {
+//					handleRequest(exchange);
+//				}
+//			});
+//
+//			server.setExecutor(Executors.newFixedThreadPool(10));
+//			server.start();
+//
+//			logger.info("HTTP Server listening on port " + PFRConfig.port());
+//
+//		} catch (IOException e) {
+//			logger.error("Server error: " + e.getMessage());
+//		}
+//	}
+	
+	/**********************************************************************************
+	 * Start HTTP Server
+	  **********************************************************************************/
 	private void startServer() {
 		try {
-			server = HttpServer.create( new java.net.InetSocketAddress(PFRConfig.port()) , 0);
+			server = HttpsServer.create(
+				new InetSocketAddress(PFRConfig.port()), 0
+			);
 
+			//---------------------------------
+			// Load Keystore
+			char[] password = "pass1234".toCharArray();
+			KeyStore ks = KeyStore.getInstance("JKS");
+			
+			try (InputStream fis = PFR.Files.getPackageResourceAsInputStream("com.performetriks.performator.distribute.resources", "keystore.jks");) {
+				ks.load(fis, password);
+			}
+			
+			//---------------------------------
+			// Set up key manager
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			kmf.init(ks, password);
+
+			//---------------------------------
+			// Init SSL context
+			SSLContext sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(kmf.getKeyManagers(), null, null);
+
+			server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
+
+			//---------------------------------
+			// Setup Server and start
 			server.createContext("/api", new HttpHandler() {
 				@Override
 				public void handle(HttpExchange exchange) throws IOException {
 					handleRequest(exchange);
 				}
 			});
-
+			
 			server.setExecutor(Executors.newFixedThreadPool(10));
 			server.start();
 
-			logger.info("HTTP Server listening on port " + PFRConfig.port());
+			logger.info("HTTPS Server listening on port " + PFRConfig.port());
 
-		} catch (IOException e) {
-			logger.error("Server error: " + e.getMessage());
+		} catch (Exception e) {
+			logger.error("Server error", e);
 		}
 	}
 	
@@ -520,15 +575,15 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void handleCommandStoreJar(byte[] jarBytes, String test) throws IOException {
 
-	    final int MAX_FOLDERS = 10;
-	    
-	    //byte[] jarBytes = socket.getInputStream().readAllBytes();
+		final int MAX_FOLDERS = 10;
+		
+		//byte[] jarBytes = socket.getInputStream().readAllBytes();
 
-	    Path runDir = Paths.get(System.getProperty("user.dir"));
+		Path runDir = Paths.get(System.getProperty("user.dir"));
 
-	    Path executionDir = HSR.Files.createTimestampedFolder(runDir.toString(), test, MAX_FOLDERS);
+		Path executionDir = HSR.Files.createTimestampedFolder(runDir.toString(), test, MAX_FOLDERS);
 
-	    jarFilePath = executionDir.resolve(JAR_FILE_NAME);
+		jarFilePath = executionDir.resolve(JAR_FILE_NAME);
 		Files.write(jarFilePath, jarBytes);
 		
 		logger.info("JAR saved to: " + jarFilePath.toAbsolutePath());
@@ -819,31 +874,31 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	public Map<String, String> queryToMap(String query) {
-	    
+		
 		if (query == null) {
-	        return null;
-	    }
+			return null;
+		}
 	
-	    Map<String, String> result = new HashMap<>();
-	    for (String param : query.split("&")) {
-	        String[] entry = param.split("=");
-	        if (entry.length > 1) {
-	            
+		Map<String, String> result = new HashMap<>();
+		for (String param : query.split("&")) {
+			String[] entry = param.split("=");
+			if (entry.length > 1) {
+				
 					result.put(
-					    URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
-					    URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
+						URLDecoder.decode(entry[0], StandardCharsets.UTF_8), 
+						URLDecoder.decode(entry[1], StandardCharsets.UTF_8)
 					);
 	
-	        	
-	        } else {
-	            result.put(
-	                URLDecoder.decode(entry[0], StandardCharsets.UTF_8),
-	                ""
-	            );
-	        }
-	    }
-	    return result;
-	    
+				
+			} else {
+				result.put(
+					URLDecoder.decode(entry[0], StandardCharsets.UTF_8),
+					""
+				);
+			}
+		}
+		return result;
+		
 	}
 
 	/**********************************************************************************
@@ -851,15 +906,15 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private static void deleteDirectoryRecursively(Path path) throws IOException {
 	
-	    Files.walk(path)
-	            .sorted(Comparator.reverseOrder()) // delete children first
-	            .forEach(p -> {
-	                try {
-	                    Files.delete(p);
-	                } catch (IOException e) {
-	                    throw new RuntimeException("Failed to delete: " + p, e);
-	                }
-	            });
+		Files.walk(path)
+				.sorted(Comparator.reverseOrder()) // delete children first
+				.forEach(p -> {
+					try {
+						Files.delete(p);
+					} catch (IOException e) {
+						throw new RuntimeException("Failed to delete: " + p, e);
+					}
+				});
 	}
 
 
@@ -878,14 +933,14 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	public static boolean isPortInUse(int port) {
 		
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress("localhost", port), 500);
-            return true;   // something is listening on the port
-        } catch (Exception e) {
-            return false;  // nothing listening
-        }
-        
-    }
+		try (Socket socket = new Socket()) {
+			socket.connect(new InetSocketAddress("localhost", port), 500);
+			return true;   // something is listening on the port
+		} catch (Exception e) {
+			return false;  // nothing listening
+		}
+		
+	}
 	
 	
 	/**********************************************************************************

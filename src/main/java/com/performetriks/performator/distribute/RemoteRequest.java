@@ -3,17 +3,27 @@ package com.performetriks.performator.distribute;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpClient.Builder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +52,10 @@ public class RemoteRequest{
 	
 	// doing it like this because the integration with the framework is just shit.
 	MonitoredBodyPublisher monitoredPublisher = null;
+
 	//------------------------------------
 	// HTTP Client 
-	private final HttpClient httpClient = HttpClient.newBuilder()
-			.connectTimeout(java.time.Duration.ofSeconds(5))
-			.build();
+	private HttpClient httpClient = null;
 	
 	
 	
@@ -99,6 +108,59 @@ public class RemoteRequest{
 	
 	
 	/********************************************************
+	 * 
+	 * @return HttpClient or initializes it if not done yet.
+	 ********************************************************/
+	public HttpClient getHttpClient() {
+		
+
+		if(httpClient == null) {
+			
+			// MUST be set BEFORE builder/build
+	        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
+	        
+			//-------------------------
+			// Create Builder
+			Builder builder = HttpClient.newBuilder()
+					.connectTimeout(java.time.Duration.ofSeconds(5))
+					;
+			
+			//-------------------------
+			// Create Context
+			try {
+				SSLContext sslTrustAllContext = SSLContext.getInstance("TLS");
+				
+				sslTrustAllContext.init(null, new TrustManager[]{
+					    new X509TrustManager() {
+					        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+					        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+					        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+					    }
+					}, new SecureRandom());
+				
+				builder.sslContext(sslTrustAllContext)
+					.sslParameters(new SSLParameters() {{
+			            setEndpointIdentificationAlgorithm(""); // disables hostname verification
+			        }});
+				
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}catch (KeyManagementException e) {
+				e.printStackTrace();
+			}
+			
+			//-------------------------
+			// Create Client
+			httpClient = builder.build();
+
+		}
+		
+		return httpClient;
+		
+	}
+	
+	/********************************************************
 	 * Send a request and return a response.
 	 * @return response or null on error
 	 ********************************************************/
@@ -114,7 +176,7 @@ public class RemoteRequest{
 						HttpRequest.Builder requestBuilder = prepareRequestBuilder(Duration.ofSeconds(60));
 						
 						CompletableFuture<HttpResponse<Void>> future = 
-								httpClient.sendAsync(requestBuilder.build(),
+								getHttpClient().sendAsync(requestBuilder.build(),
 										HttpResponse.BodyHandlers.discarding());
 						
 						while(!future.isDone()) {
@@ -151,7 +213,7 @@ public class RemoteRequest{
 			HttpRequest.Builder requestBuilder = prepareRequestBuilder(requestTimeout);
 
 			HttpResponse<String> response =
-					httpClient.send(requestBuilder.build(),
+					getHttpClient().send(requestBuilder.build(),
 							HttpResponse.BodyHandlers.ofString());
 			//client.sendAsync(request, HttpResponse.BodyHandlers.discarding());
 			
@@ -180,7 +242,7 @@ public class RemoteRequest{
 
 		String query = buildQuery(parameters);
 
-		String url = "http://" + client.getHost() + ":" + client.getPort()
+		String url = "https://" + client.getHost() + ":" + client.getPort()
 						+ "/api?command=" + command.name() + "&" + query;
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
