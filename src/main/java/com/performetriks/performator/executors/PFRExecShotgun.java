@@ -49,9 +49,9 @@ public class PFRExecShotgun extends PFRExecStandard {
 		super(
 				usecase,
 				users,
-				(int) TimeUnit.SECONDS.toMillis(pacingSeconds),
+				3600 / pacingSeconds,
 				0,
-				-1
+				users
 		);
 
 		this.originalUsers = users;
@@ -77,6 +77,35 @@ public class PFRExecShotgun extends PFRExecStandard {
 
 
 
+	/*****************************************************************
+	 * Set the number of users.
+	 *****************************************************************/
+
+	@Override
+	public PFRExecShotgun users(int users) {
+		super.users(users);
+		super.rampUp(users);
+		return this;
+	}
+
+
+	/*****************************************************************
+	 * Set the executions per hour.
+	 *****************************************************************/
+	@Override
+	public PFRExecShotgun execsHour(int execsHour) {
+		throw new UnsupportedOperationException(
+				"This method cannot be used on Shotgun executors.");
+	}
+
+	/*****************************************************************
+	 * Method not supported
+	 *****************************************************************/
+	@Override
+	public PFRExecShotgun rampUp(int rampUp) {
+		throw new UnsupportedOperationException(
+				"This method cannot be used on Shotgun executors.");
+	}
 
 
 }
