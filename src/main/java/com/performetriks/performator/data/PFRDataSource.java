@@ -100,7 +100,6 @@ public abstract class PFRDataSource {
 	/*****************************************************************
 	 * Removes all registered data sources.
 	 * 
-	 * @return the removed source 
 	 *****************************************************************/
 	public static void clearSources() {
 		registeredDataSources.clear();

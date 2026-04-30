@@ -42,7 +42,6 @@ public class PFRExecOnce extends PFRExec {
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public PFRExecOnce(Class<? extends PFRUsecase> usecaseClass) {
 		this.usecaseClass = usecaseClass;
@@ -129,9 +128,8 @@ public class PFRExecOnce extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Executes the threads of this executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public void executeThreads() {
 

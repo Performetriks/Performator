@@ -55,14 +55,12 @@ public class PFRExecEmpty extends PFRExec {
 	 * Return the name of the usecase or other thing that is 
 	 * executed by this executor. 
 	 * 
-	 * @return the name of the usecase or null
 	 *****************************************************************/
 	public String getExecutedName() { return "Empty"; }
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Executes the threads of this executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public void executeThreads() {
 		

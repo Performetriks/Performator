@@ -44,7 +44,8 @@ public class PFRExecRepeat extends PFRExec {
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
-	 * @return instance for chaining
+	 * @param usecaseClass
+	 * @param repetitions
 	 *****************************************************************/
 	public PFRExecRepeat(Class<? extends PFRUsecase> usecaseClass, int repetitions ) {
 		this.usecaseClass = usecaseClass;
@@ -133,9 +134,8 @@ public class PFRExecRepeat extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Executes the threads of this executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public void executeThreads() {
 

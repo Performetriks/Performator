@@ -65,7 +65,6 @@ public class PFRExecIncrease extends PFRExec {
 	/*****************************************************************
 	 * Clones this instance of the executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public PFRExecIncrease(Class<? extends PFRUsecase> usecaseClass) {
 		this.usecaseClass = usecaseClass;
@@ -95,7 +94,7 @@ public class PFRExecIncrease extends PFRExec {
 	 * @param rampUpUsers    number of users to increase per ramp up
 	 * @param rampUpInterval the interval of the ramp up in seconds
 	 * @param maxUsers     	number of maximum user as a safety limit
-	 * @param execsHour 	targeted number of executions per hour
+	 * @param pacingSeconds the pacing between executions of the usecase
 	 * 
 	 ***************************************************************************/
 	public PFRExecIncrease(
@@ -115,21 +114,11 @@ public class PFRExecIncrease extends PFRExec {
 	 * <li>Adds pacing to the use cases.</li>
 	 * </ul>
 	 *
-	 * This method will calculate the pacing and ramp up interval based on the input
-	 * values. 
-	 * 
-	 * <pre>
-	 * <code>
-	 * int pacingSeconds = 3600 / (execsHour / users);
-	 * int rampUpInterval = pacingSeconds / users * rampUp;
-	 * </code>
-	 * </pre>
-	 *
 	 * @param usecase 		the usecase to be executed with this executor
 	 * @param rampUpUsers    number of users to increase per ramp up
 	 * @param rampUpInterval the interval of the ramp up in seconds
 	 * @param maxUsers     	number of maximum user as a safety limit
-	 * @param execsHour 	targeted number of executions per hour
+	 * @param pacingSeconds the pacing between executions of the usecase
 	 * @param offset    	in seconds from the test start
 	 * 
 	 ***************************************************************************/
@@ -313,9 +302,8 @@ public class PFRExecIncrease extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
+	 * Executes the threads of this executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public void executeThreads() {
 		

@@ -127,9 +127,7 @@ public class PFRData {
 	 * If this is not the case, the data source will be empty on
 	 * load.
 	 * 
-	 * @param packagePath the path of the package that contains the
-	 * testdata file
-	 * @param filename the name of the file
+	 * @param array containing a list of JsonObjects
 	 ****************************************************************************/
 	public static PFRDataSourceJsonArray newSourceJsonArray(JsonArray array) {
 		return new PFRDataSourceJsonArray(array);
@@ -142,9 +140,7 @@ public class PFRData {
 	 * If this is not the case, the data source will be empty on
 	 * load.
 	 * @param datasourceName uniqueName for this data source.
-	 * @param packagePath the path of the package that contains the
-	 * testdata file
-	 * @param filename the name of the file
+	 * @param array containing a list of JsonObjects
 	 ****************************************************************************/
 	public static PFRDataSourceJsonArray newSourceJsonArray(String datasourceName, JsonArray array) {
 		return new PFRDataSourceJsonArray(datasourceName, array);

@@ -281,7 +281,7 @@ public class PFRConfig {
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
 	 * do not have to be specified seperately.
 	 * 
-	 * @param agentTags
+	 * @param dataAgentTags
 	 **********************************************************************************/
 	public static void setDataAgentTags(ArrayList<String> dataAgentTags) {
 		PFRConfig.dataAgentTags.clear();
@@ -295,7 +295,7 @@ public class PFRConfig {
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
 	 * do not have to be specified seperately.
 	 * 
-	 * @param agentTags
+	 * @param dataAgentTags
 	 **********************************************************************************/
 	public static void setDataAgentTags(String... dataAgentTags) {
 		PFRConfig.dataAgentTags.clear();
@@ -313,7 +313,7 @@ public class PFRConfig {
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
 	 * do not have to be specified seperately.
 	 * 
-	 * @param agentTags
+	 * @param dataAgentTags
 	 **********************************************************************************/
 	public static void addDataAgentTags(String... dataAgentTags) {
 		

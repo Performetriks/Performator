@@ -298,7 +298,6 @@ public class PFRDBSQLBuilder {
 	/********************************************************************************************
 	 * Returns the result or null if there was any issue.
 	 * 
-	 * @param isSilent write errors to log but do not propagate to client
 	 * @param sql string with placeholders
 	 * @param values the values to be placed in the prepared statement
 	 * @return 
@@ -392,7 +391,6 @@ public class PFRDBSQLBuilder {
 	/********************************************************************************************
 	 * Returns the result or null if there was any issue.
 	 * 
-	 * @param isSilent write errors to log but do not propagate to client
 	 * @param sql string with placeholders
 	 * @param values the values to be placed in the prepared statement
 	 * @throws SQLException 
@@ -526,7 +524,6 @@ public class PFRDBSQLBuilder {
 	 * Converts a ResultSet into a map of Keys and XRRecords.
 	 * This method closes the result set.
 	 * 
-	 * @param result set
 	 * @param keyColumnName name of the column that should be used as the key
 	 * @return map of object, empty if results set is null or an error occurs.
 	 ********************************************************************************************/
@@ -538,7 +535,6 @@ public class PFRDBSQLBuilder {
 	 * Converts a ResultSet into a map of IDs and XRRecords.
 	 * This method closes the result set.
 	 * 
-	 * @param result set
 	 * @param idColumnName name of the column that should be used as the id
 	 * @return map of object, empty if results set is null or an error occurs.
 	 ********************************************************************************************/
@@ -548,6 +544,9 @@ public class PFRDBSQLBuilder {
 	
 	/********************************************************************************************
 	 * Converts a ResultSet into a map with the key/values of the selected columns.
+	 * 
+	 * @param idColumnName
+	 * @param valueColumnName
 	 * @return list of object, empty if results set is null or an error occurs.
 	 ********************************************************************************************/
 	public LinkedHashMap<Integer, Object> toIDValueMap(Object idColumnName, Object valueColumnName) {
@@ -556,6 +555,9 @@ public class PFRDBSQLBuilder {
 	
 	/********************************************************************************************
 	 * Converts a ResultSet into a map with the key/values of the selected columns.
+	 * 
+	 * @param keyColumnName
+	 * @param valueColumnName
 	 * @return list of object, empty if results set is null or an error occurs.
 	 ********************************************************************************************/
 	public HashMap<Object, Object> toKeyValueMap(String keyColumnName, String valueColumnName) {
@@ -565,6 +567,9 @@ public class PFRDBSQLBuilder {
 	/********************************************************************************************
 	 * Converts a ResultSet into a map with the key/values of the selected columns.
 	 * This method closes the result set.
+	 * 
+	 * @param keyColumnName
+	 * @param valueColumnName
 	 * @return map of objects, empty if results set is null or an error occurs.
 	 ********************************************************************************************/
 	public LinkedHashMap<String, String> toKeyValueMapString(String keyColumnName, String valueColumnName) {
@@ -612,7 +617,6 @@ public class PFRDBSQLBuilder {
 	 * column as an ArrayList of integers.
 	 * This method closes the results set.
 	 * 
-	 * @param result
 	 * @param columnName
 	 * @return ArrayList of integers
 	 ********************************************************************************************/

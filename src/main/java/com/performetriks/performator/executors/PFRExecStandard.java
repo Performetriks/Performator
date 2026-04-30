@@ -63,9 +63,7 @@ public class PFRExecStandard extends PFRExec {
 	private boolean isCalculated = false;
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
 	 * 
-	 * @return instance for chaining
 	 *****************************************************************/
 	public PFRExecStandard(Class<? extends PFRUsecase> usecaseClass) {
 		this.usecaseClass = usecaseClass;
@@ -272,9 +270,7 @@ public class PFRExecStandard extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Clones this instance of the executor.
-	 * 
-	 * @return instance for chaining
+	 * Executes the threads of this executor.
 	 *****************************************************************/
 	public void executeThreads() {
 		

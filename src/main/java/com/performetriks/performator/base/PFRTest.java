@@ -22,9 +22,6 @@ public abstract class PFRTest {
 	
 	/***************************************************************************
 	 * 
-	 * @param usecase
-	 * @param executor
-	 * @return instance for chaining
 	 ***************************************************************************/
 	public PFRTest() {
 		PFRContext.test(this);
@@ -41,7 +38,6 @@ public abstract class PFRTest {
 	
 	/***************************************************************************
 	 * 
-	 * @param usecase
 	 * @param executor
 	 * @return instance for chaining
 	 ***************************************************************************/
@@ -91,7 +87,7 @@ public abstract class PFRTest {
 	 * Duration for gracefully stopping the test. Default is 1 minute.
 	 * This time is added after max duration has been reached.
 	 * 
-	 * @param maxDuration
+	 * @param gracefulStop
 	 * @return instance for chaining
 	 ***************************************************************************/
 	public PFRTest gracefulStop(Duration gracefulStop){

@@ -127,7 +127,7 @@ public abstract class PFRExec {
 	 * The agentNumber is 1 for the first 2 for the second etc... and
 	 * can be used to calculate the load a specific agent will hold.
 	 * 
-	 * @param totalAgent agent count
+	 * @param totalAgents agent count
 	 * @param agentIndex the number of the agent
 	 * @param recursionIndex can be used to call this method recursively first
 	 * call from the framework will always be 0.
@@ -184,7 +184,7 @@ public abstract class PFRExec {
 	 * If do any calculations in initialize() for the load, it is 
 	 * recommended to do these calculations in a separate method.
 	 * 
-	 * @param JsonObject object to add settings to
+	 * @param object where add the additional settings to
 	 *****************************************************************/
 	public abstract void getSettings(JsonObject object);	
 	
@@ -218,7 +218,7 @@ public abstract class PFRExec {
 	 * Duration for gracefully stopping the test. Default is 1 minute.
 	 * This time is added after max duration has been reached.
 	 * 
-	 * @param maxDuration
+	 * @param gracefulStop
 	 * @return instance for chaining
 	 ***************************************************************************/
 	public PFRExec gracefulStop(Duration gracefulStop){

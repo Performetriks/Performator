@@ -151,9 +151,7 @@ public class PFRExecSequential extends PFRExec {
 	}
 	
 	/*****************************************************************
-	 * Execute the threads
-	 * 
-	 * @return instance for chaining
+	 * Executes the threads of this executor.
 	 *****************************************************************/
 	public void executeThreads() {
 		

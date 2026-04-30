@@ -810,7 +810,7 @@ public class PFRCoordinator {
 	/*************************************************************
 	 * Start the test with the given class name.
 	 * 
-	 * @param className 
+	 * @param test 
 	 *************************************************************/
 	public static void startTest(PFRTest test) {
 		

@@ -161,8 +161,9 @@ public class RemoteRequest{
 	}
 	
 	/********************************************************
-	 * Send a request and return a response.
-	 * @return response or null on error
+	 * Send a request asynchronously.
+	 * Counts down the latch when completed.
+	 * 
 	 ********************************************************/
 	public void sendAsync(CountDownLatch latch) {
 	
