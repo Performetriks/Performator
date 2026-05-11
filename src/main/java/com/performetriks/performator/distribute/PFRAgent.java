@@ -2,7 +2,10 @@ package com.performetriks.performator.distribute;
 
 import java.util.HashSet;
 
-import com.performetriks.performator.base.PFRConfig;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.performetriks.performator.base.PFR;
 
 /**************************************************************************************************************
  * This class is used to define agent connections to run tests remotely.
@@ -25,8 +28,7 @@ public class PFRAgent {
 	
 	
 	/*************************************************************
-	 * Start the instance and run the test either locally or remote
-	 * on agents if agents are defined.
+	 * Create a new agent with hostname and port.
 	 * 
 	 * @param hostname the name of the host, fully qualified name is recommended, e.g. winabc123.acme.com
 	 * @param port the port the agent was started with. 
@@ -37,8 +39,7 @@ public class PFRAgent {
 	}
 	
 	/*************************************************************
-	 * Start the instance and run the test either locally or remote
-	 * on agents if agents are defined.
+	 * Create a new agent with hostname, port and the given tags.
 	 * 
 	 * @param hostname the name of the host, fully qualified name is recommended, e.g. winabc123.acme.com
 	 * @param port the port the agent was started with. 
@@ -52,6 +53,36 @@ public class PFRAgent {
 			this.tags.add(tag);
 		}
 
+	}
+	
+	/*************************************************************
+	 * Create an agent from the Json Object. 
+	 * 
+	 * JSON Structure:
+	 * <pre><code>{
+    "host": "winserver123",
+    "port": 1234,
+    "active": true,
+    "tags": ["cloud","windows"]
+}</code></pre>
+	 * 
+	 * @param object
+	 *************************************************************/
+	public PFRAgent(JsonObject object) {
+		
+		if(object == null) { throw new IllegalArgumentException("Object cannot be null."); }
+		
+		if(object.has("host")) { hostname = object.get("host").getAsString(); }
+		if(object.has("port")) { port = object.get("port").getAsInt(); }
+		if(object.has("active")) { isActive = object.get("active").getAsBoolean(); }
+		
+		if(object.has("tags")) { 
+			JsonArray tagsArray = object.get("tags").getAsJsonArray();	
+			for(JsonElement e : tagsArray) {
+				tags.add(e.getAsString());
+			}
+		}
+			
 	}
 	
 	/*************************************************************
@@ -112,9 +143,35 @@ public class PFRAgent {
 	}
 	
 	/*************************************************************
-	 * Returns the upload progress of the JAR file upload.
+	 * Returns the config of this agent as a JsonObject.
+	 * JSON Structure:
+	 * <pre><code>{
+    "host": "winserver123",
+    "port": 1234,
+    "active": true,
+    "tags": ["cloud","windows"]
+}</code></pre>
 	 * 
-	 * @return uploadProgressPercent
+	 * @return object
+	 *************************************************************/
+	public JsonObject toJson() {
+		
+		JsonObject object = new JsonObject();
+		
+		object.addProperty("host", hostname);
+		object.addProperty("port", port);
+		object.addProperty("active", isActive);
+		
+		object.add("tags", PFR.JSON.collectionToJsonArray(tags));
+		
+		return object;
+		
+	}
+	
+	/*************************************************************
+	 * Returns a string that contains hostname and port of this agent.
+	 * 
+	 * @return string
 	 *************************************************************/
 	@Override
 	public String toString() {

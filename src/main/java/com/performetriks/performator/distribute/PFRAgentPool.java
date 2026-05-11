@@ -1,7 +1,10 @@
 package com.performetriks.performator.distribute;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.performetriks.performator.base.PFR;
 
 /**************************************************************************************************************
  * This class is used to define agent connections to run tests remotely.
@@ -17,8 +20,7 @@ public class PFRAgentPool {
 	public ArrayList<PFRAgent> agentList = new ArrayList<>();
 
 	/*************************************************************
-	 * Start the instance and run the test either locally or remote
-	 * on agents if agents are defined.
+	 * Creates an agent pool containing the given agents.
 	 * 
 	 * @param agents the agents to add to this pool
 	 *************************************************************/
@@ -30,7 +32,96 @@ public class PFRAgentPool {
 		
 	}
 	
-
+	/*************************************************************
+	 * Creates an agent pool by loading them from the specified
+	 * json file.
+	 * 
+	 * JSON Structure:
+	 * <pre><code>[
+  {
+    "host": "deactivatedAgent",
+    "port": 1234,
+    "active": false,
+    "tags": ["cloud","windows"]
+  },
+  {
+    "host": "winserver123",
+    "port": 1234,
+    "active": true,
+    "tags": ["cloud","windows"]
+  }, ... </code></pre>
+	 * 
+	 * @param packageName the name of the java package like "com.mycompany.data"
+	 * @param jsonFilename the file to be loaded
+	 *************************************************************/
+	public PFRAgentPool(String packageName, String jsonFilename) {
+		
+		String json = PFR.Files.readPackageResource(packageName, jsonFilename);
+		
+		if( json != null && json.trim().startsWith("")) {
+			JsonArray array = PFR.JSON.fromJson(json).getAsJsonArray();
+			loadAgentsFromJson(array);
+		}
+		
+	}
+	
+	/*************************************************************
+	 * Creates an agent pool by loading them from the specified
+	 * json file.
+	 * 
+	 * JSON Structure:
+	 * <pre><code>[
+  {
+    "host": "deactivatedAgent",
+    "port": 1234,
+    "active": false,
+    "tags": ["cloud","windows"]
+  },
+  {
+    "host": "winserver123",
+    "port": 1234,
+    "active": true,
+    "tags": ["cloud","windows"]
+  }, ... </code></pre>
+	 * 
+	 * @param array that should be loaded
+	 *************************************************************/
+	public PFRAgentPool(JsonArray array) {
+		loadAgentsFromJson(array);
+	}
+	
+	/*************************************************************
+	 * Loads the agents from the given Json array.
+	 * 
+	 * JSON Structure:
+	 * <pre><code>[
+  {
+    "host": "deactivatedAgent",
+    "port": 1234,
+    "active": false,
+    "tags": ["cloud","windows"]
+  },
+  {
+    "host": "winserver123",
+    "port": 1234,
+    "active": true,
+    "tags": ["cloud","windows"]
+  }, ... </code></pre>
+     * 
+     * @param array that should be loaded
+	 *************************************************************/
+	public void loadAgentsFromJson(JsonArray array){
+		
+		for(JsonElement e : array) {
+			if(e.isJsonObject()) {
+				this.add(
+					new PFRAgent(e.getAsJsonObject())
+				);
+			}
+		}
+		
+	}
+	
 	/*************************************************************
 	 * Add an agent to the pool.
 	 *************************************************************/
@@ -59,6 +150,22 @@ public class PFRAgentPool {
 	 *************************************************************/
 	public PFRAgent get(int i){
 		return agentList.get(i);
+	}
+	
+	
+	/*************************************************************
+	 * Returns a JsonArray represenation of this pool.
+	 * 
+	 * @return array
+	 *************************************************************/
+	public JsonArray toJson(){
+		JsonArray array = new JsonArray();
+		
+		for(PFRAgent agent : agentList) {
+			array.add(agent.toJson());
+		}
+		
+		return array;
 	}
 	
 	
