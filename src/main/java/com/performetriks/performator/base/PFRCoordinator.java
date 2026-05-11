@@ -126,7 +126,8 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * Start the instance and run the test locally.
+	 * Start the instance and run the test locally. Use the test
+	 * class defined with the CLI argument -Dprf_test={testClass}
 	 * 
 	 *************************************************************/
 	public static void executeLocal() {
@@ -141,7 +142,7 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * Start the instance and run the test locally.
+	 * Start the instance and run the given test locally.
 	 * 
 	 *************************************************************/
 	public static void executeLocal(PFRTest test) {
@@ -462,7 +463,8 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * 
+	 * Ping the agents that the agents know the Coordinator is 
+	 * still running.
 	 * @param logStatus 
 	 *************************************************************/
 	private static boolean agentsPingIsTestRunning(boolean logStatus) {
@@ -496,6 +498,8 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
+	 * Tell the agents to stop their running test instances
+	 * gracefully.
 	 * 
 	 * @param logStatus 
 	 *************************************************************/
@@ -510,7 +514,7 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * Transfers the JAR file to the connected agents.
+	 * Tell the agents to stop their tests now.
 	 *************************************************************/
 	private static void agentsStopNow(PFRTest test) {
 		logger.info("################################################");
@@ -575,7 +579,7 @@ public class PFRCoordinator {
 	}
 		
 	/*************************************************************
-	 * Start the test with the given class name.
+	 * Start the test on the connected agents.
 	 * 
 	 * @param className 
 	 *************************************************************/
@@ -659,8 +663,9 @@ public class PFRCoordinator {
 	
 	/*************************************************************
 	 * Start the instance and run a test that has been received
-	 * from an agent. This mode is used by agents to run tests.
-	 * 	 * 
+	 * from an agent. This mode is used by agents to start instances
+	 * and run tests.
+	 * 
 	 *************************************************************/
 	public static void executeAgentborne() {
 		
@@ -783,17 +788,17 @@ public class PFRCoordinator {
 	 * -Dtest=com.example.PFRTestYourImplementation.
 	 * 
 	 *************************************************************/
-	public static void startTest() {
-		
-		String className = System.getProperty("test", null);
-		
-		if(className == null) {
-			logger.info("please specify the test class using -Dtest=-Dtest=com.example.PFRTestYourImplementation.");
-			return;
-		}
-		
-		startTest(className);
-	}
+//	public static void startTest() {
+//		
+//		String className = System.getProperty("test", null);
+//		
+//		if(className == null) {
+//			logger.info("please specify the test class using -Dtest=com.example.PFRTestYourImplementation.");
+//			return;
+//		}
+//		
+//		startTest(className);
+//	}
 	
 	/*************************************************************
 	 * Start the test with the given class name.
@@ -808,7 +813,7 @@ public class PFRCoordinator {
 	}
 	
 	/*************************************************************
-	 * Start the test with the given class name.
+	 * Start the test with the given PFRTest instance.
 	 * 
 	 * @param test 
 	 *************************************************************/
@@ -897,13 +902,14 @@ public class PFRCoordinator {
 	
 	
 	/*************************************************************
-	 * Start the test with the given class name.
+	 * Start the test with the given class name. Executes all 
+	 * the executors that have been added to the test. This method
+	 * will return once the test has finished. 
 	 * 
 	 * @param className 
 	 *************************************************************/
 	private static void startTestLocally(PFRTest test) {
 
-		
 		//-------------------------
 		// Latch
 		latch = new CountDownLatch(executorList.size());
@@ -989,7 +995,8 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
-	 * 
+	 * Register the list of executors as test settings to the
+	 * HSR reporting engine.
 	 *****************************************************************/
 	private static void registerExecutorSettings() {
 		
@@ -1025,7 +1032,7 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
-	 * Returns a record from the .
+	 * Returns true if this instance has a connection to a data agent.
 	 *****************************************************************/
 	public static boolean isDataAgentConnected() {
 		
@@ -1057,7 +1064,8 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
-	 * Returns true if it has more records, false otherwise. 
+	 * Returns true if the data source has more records on the data 
+	 * agent, false otherwise. 
 	 * It is mandatory to call the method isDataAgentConnected() 
 	 * before using this method.
 	 * The check is not done in this method to reduce performance
@@ -1114,7 +1122,8 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
-	 * 
+	 * Terminate all the Executor Threads and interrupt them if 
+	 * required.
 	 *****************************************************************/
 	private static void killExecutorThreads() {
 		
@@ -1144,13 +1153,14 @@ public class PFRCoordinator {
 	
 	
 	/*****************************************************************
-	 * 
+	 * Returns true if a test is running.
 	 *****************************************************************/
 	public static boolean isTestRunning() {
 		return isTestRunning;
 	}
 	
 	/*****************************************************************
+	 * Terminates the HSR engine and sets isTestRunning to false.
 	 * 
 	 *****************************************************************/
 	private static void terminateTest() {
@@ -1160,7 +1170,8 @@ public class PFRCoordinator {
 	}
 	
 	/*****************************************************************
-	 * 
+	 * Creates an executor thread that counts down the latch when
+	 * the executor finished.
 	 *****************************************************************/
 	public static Thread createExecutorThread(PFRTest test, PFRExec executor, CountDownLatch latch) {
 		

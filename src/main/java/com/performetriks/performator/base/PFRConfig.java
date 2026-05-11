@@ -7,7 +7,7 @@ import java.util.HashSet;
 import com.performetriks.performator.distribute.PFRAgentPool;
 
 /**************************************************************************************************************
- * The configuration class for the performator framework.
+ * The configuration class for the Performator framework.
  * 
  * @author Reto Scheiwiller, (c) Copyright 2025
  * @license EPL-License
@@ -19,7 +19,7 @@ public class PFRConfig {
 	private static Mode executionMode = Mode.AUTO;
 	
 	private static int instancePort = 9876;
-	private static Duration timeoutAgentReset = Duration.ofMinutes(5);
+	//private static Duration timeoutAgentReset = Duration.ofMinutes(5);
 	
 	private static PFRAgentPool agentPool = null;
 	private static PFRAgentPool dataAgentPool = null;
@@ -28,7 +28,8 @@ public class PFRConfig {
 	private static HashSet<String> dataAgentTags = new HashSet<>();  // filter agents by these tags
 	
 	/**********************************************************************************
-	 * Mode Enum
+	 * Mode Enumeration
+	 * Modes define how a Performator jar-file is executed and what it should do.
 	 **********************************************************************************/
 	public enum Mode {
 		  AUTO("Executes either locally, or on agents if agents are defined.")
@@ -68,6 +69,7 @@ public class PFRConfig {
 	
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
+	 * Returns the execution mode.
 	 **********************************************************************************/
 	public static Mode executionMode() {
 		return executionMode;
@@ -99,9 +101,10 @@ public class PFRConfig {
 	 * the controller until it considers the controller terminated.
 	 * This is useful to reset agents and not let them be blocked for a long time.
 	 **********************************************************************************/
-	public static void timeoutAgentReset(Duration timeout) {
-		timeoutAgentReset = timeout;
-	}
+	// TODO
+//	public static void timeoutAgentReset(Duration timeout) {
+//		timeoutAgentReset = timeout;
+//	}
 
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
@@ -135,7 +138,7 @@ public class PFRConfig {
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
 	 * 
-	 * 
+	 * Returns  the amount of agents that should be retrieved from the agent pool.
 	 **********************************************************************************/
 	public static int getAgentAmount() {
 		return agentAmount;
@@ -143,7 +146,7 @@ public class PFRConfig {
 
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
-	 *  
+	 * Set the amount of agents that should be retrieved from the agent pool.
 	 **********************************************************************************/
 	public static void setAgentAmount(int agentAmount) {
 		PFRConfig.agentAmount = agentAmount;
@@ -151,7 +154,7 @@ public class PFRConfig {
 
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
-	 * 
+	 * Returns the tags the agents should be filtered by.
 	 **********************************************************************************/
 	public static HashSet<String> getAgentTags() {
 		return agentTags;
@@ -244,7 +247,8 @@ public class PFRConfig {
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
 	 * 
-	 * 
+	 * Set the data agent pool. Can be the same pool used for the load agents.
+	 * Can be done by using tags to filter the data agents.
 	 **********************************************************************************/
 	public static void setDataAgentPool(PFRAgentPool dataAgentPool) {
 		PFRConfig.dataAgentPool = dataAgentPool;
@@ -252,7 +256,7 @@ public class PFRConfig {
 	
 	/**********************************************************************************
 	 * <b>Scope:</b> Global<br>
-	 * 
+	 * Get the tags for filtering the data agent.
 	 **********************************************************************************/
 	public static HashSet<String> getDataAgentTags() {
 		return dataAgentTags;
@@ -263,7 +267,7 @@ public class PFRConfig {
 	 * Set and override the tags the agents should be filtered by. An agent must have
 	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
-	 * do not have to be specified seperately.
+	 * do not have to be specified separately.
 	 * 
 	 * @param dataAgentTags
 	 **********************************************************************************/
@@ -279,7 +283,7 @@ public class PFRConfig {
 	 * Set and override the tags the agents should be filtered by. An agent must have
 	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
-	 * do not have to be specified seperately.
+	 * do not have to be specified separately.
 	 * 
 	 * @param dataAgentTags
 	 **********************************************************************************/
@@ -293,7 +297,7 @@ public class PFRConfig {
 	 * Set and override the tags the agents should be filtered by. An agent must have
 	 * all tags in the list to be chosen from the agent pool. Tags are case-sensitive.
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
-	 * do not have to be specified seperately.
+	 * do not have to be specified separately.
 	 * 
 	 * @param dataAgentTags
 	 **********************************************************************************/
@@ -311,7 +315,7 @@ public class PFRConfig {
 	 * An agent must have all tags in the list to be chosen from the agent pool.
 	 * Tags are case-sensitive.
 	 * The agent's hostname, port and "hostname:port" are automatically used as tags and 
-	 * do not have to be specified seperately.
+	 * do not have to be specified separately.
 	 * 
 	 * @param dataAgentTags
 	 **********************************************************************************/

@@ -4,7 +4,8 @@ import com.performetriks.performator.data.PFRData;
 import com.xresch.hsr.base.HSR;
 
 /***************************************************************************
- * Main Performator class used for configuration and controlling the framework.
+ * Main PErformator Utility class.
+ * Shorthand collection to various utility classes.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0

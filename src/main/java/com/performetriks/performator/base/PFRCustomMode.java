@@ -1,7 +1,7 @@
 package com.performetriks.performator.base;
 
 /***************************************************************************
- * Interface to register custom execution modes.
+ * Interface to register custom execution modes with the Performator Framework.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0

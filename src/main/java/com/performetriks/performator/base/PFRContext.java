@@ -7,6 +7,7 @@ import com.xresch.xrutils.data.XRRecord;
 import com.xresch.xrutils.data.XRValue;
 
 /***************************************************************************
+ * Used as a context for PFRUsecase.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0

@@ -104,12 +104,12 @@ public class Main {
 		}
 		
 		/*****************************************************
-		 * 
+		 * Returns true if there is an enum with the given name.
 		 *****************************************************/
 		public static boolean has(String value) { return names.contains(value); }
 	
 		/*****************************************************
-		 * 
+		 * Print usage information on the console.
 		 *****************************************************/
 		public static void printUsage() { 
 			
@@ -141,9 +141,10 @@ public class Main {
 			}
 		}
 	}
+	
+	
 	/***********************************************************************
-	 * Searches all classes annotated with @CFWExtentionFeature and adds 
-	 * them to the registry.
+	 * Loads custom modes and returns a list of the custom modes.
 	 * 
 	 ***********************************************************************/
 	@SuppressWarnings("unchecked")
@@ -160,7 +161,8 @@ public class Main {
 	}
 	
 	/*****************************************************************************************
-	 * 
+	 * Prints an awesome title with celtic know border. Has lots of escape characters, looks
+	 * much better when printed onto console than in code.
 	 *****************************************************************************************/
 	public static void printPerformatorAsciiArtTitleOfAwesomeness() {
 		
@@ -186,7 +188,7 @@ public class Main {
 	}
 	
 	/*****************************************************************************************
-	 * 
+	 * The main method.
 	 *****************************************************************************************/
 	public static void main(String[] args) {
 		

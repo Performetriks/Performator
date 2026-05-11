@@ -50,7 +50,7 @@ public class PFRCLIExecutor extends Thread {
 	private PFRMonitor monitor = null;
 	private ArrayList<ArrayList<ProcessBuilder>> pipelines = new ArrayList<>();
 	
-	PFRReadableOutputStream out = new PFRReadableOutputStream(10000);
+	private PFRReadableOutputStream outStream = new PFRReadableOutputStream(10000);
 	
 	private boolean isInterrupted = false;
 	private boolean isCompleted = false;
@@ -62,6 +62,7 @@ public class PFRCLIExecutor extends Thread {
 	
 	
 	/***************************************************************************
+	 * Constructor 
 	 * 
 	 * @param workingDir the working directory, if null or empty will use the working directory of the current process.
 	 * @param cliCommands see class documentation for details.
@@ -72,6 +73,7 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
+	 * Constructor 
 	 * 
 	 * @param workingDir the working directory, if null or empty will use the working directory of the current process.
 	 * @param cliCommands see class documentation for details.
@@ -102,7 +104,7 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Set a monitor to that checks if the execution should still continue.
 	 * 
 	 ***************************************************************************/
 	public PFRCLIExecutor setMonitor(PFRMonitor monitor) {
@@ -111,7 +113,8 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * Returns true if the process has not finished and is not interrupted.
+	 * Returns true if the process has not finished and is not interrupted
+	 * and the monitor, if defined, is returning true.
 	 * 
 	 ***************************************************************************/
 	public boolean checkKeepExecuting() {
@@ -125,15 +128,18 @@ public class PFRCLIExecutor extends Thread {
 	
 	
 	/***************************************************************************
-	 * 
+	 * Returns the output stream of this executor.
 	 * 
 	 ***************************************************************************/
 	public PFRReadableOutputStream getOutputStream() {
-		return out;
+		return outStream;
 	}
 	
 	/***************************************************************************
+	 * Parses the commands and creates the pipelines that should be executed.
 	 * 
+	 * @param cliCommands the commands to be executed
+	 * @param directory the working directory
 	 * 
 	 ***************************************************************************/
 	private void parseCommandsCreatePipelines(String cliCommands, File directory) {
@@ -185,7 +191,8 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Waits for the execution to complete or until the timeout has been 
+	 * reached.
 	 * 
 	 ***************************************************************************/
 	public void waitForCompletionOrTimeout(long timeoutSeconds) throws Exception {
@@ -216,7 +223,14 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
+	 * Reads the output of the command line until the execution finishes or 
+	 * the timeout is reached.
 	 * 
+	 * @param timeoutSeconds
+	 * @param head amount of lines to read from the head, -1 if all should be read
+	 * @param tail amount of lines to read from the tail, -1 if all should be read.
+	 * 
+	 * @param addSkippedCount true if amount of skipped lines shoud be added, false otherwise
 	 * 
 	 ***************************************************************************/
 	public String readOutputOrTimeout(long timeoutSeconds, int head,int tail, boolean addSkippedCount) throws Exception {
@@ -244,8 +258,8 @@ public class PFRCLIExecutor extends Thread {
 				
 				//----------------------------------
 				// Read Head
-				while(out.hasLine() && (isReadAll || linesReadHead < head ) ) {
-					result.append(out.readLine()).append("\n");
+				while(outStream.hasLine() && (isReadAll || linesReadHead < head ) ) {
+					result.append(outStream.readLine()).append("\n");
 					linesReadHead++;
 				}
 								
@@ -253,8 +267,8 @@ public class PFRCLIExecutor extends Thread {
 				// Read Tail
 				if(isReadAll || linesReadHead >= head) {
 					
-					while(out.hasLine() ) {
-						tailedLines.add(out.readLine());
+					while(outStream.hasLine() ) {
+						tailedLines.add(outStream.readLine());
 						if(tailedLines.size() >= tail) {
 							skippedCount++;
 						}
@@ -294,37 +308,37 @@ public class PFRCLIExecutor extends Thread {
 	 * 
 	 * 
 	 ***************************************************************************/
-	public String waitForCompletionAndReadOutput(long timeoutSeconds, int headLines, int tailLines) throws Exception {
-		
-		StringBuilder result = new StringBuilder();
-		
-		long timeoutMillis = timeoutSeconds * 1000;
-		try {
-			long starttime = System.currentTimeMillis();
-			
-			while(checkKeepExecuting()) {
-				Thread.sleep(20);
-				
-				if( (System.currentTimeMillis() - starttime) >= timeoutMillis ) {
-					this.interrupt();
-					break;
-				}
-			}
-						
-			if(exceptionDuringRun != null) { throw exceptionDuringRun; }
-			
-			if(Thread.interrupted()) { this.interrupt(); }
-			
-		} catch (InterruptedException e) {
-			this.interrupt();
-		}
-		
-		return result.toString();
-
-	}
+//	public String waitForCompletionAndReadOutput(long timeoutSeconds, int headLines, int tailLines) throws Exception {
+//		
+//		StringBuilder result = new StringBuilder();
+//		
+//		long timeoutMillis = timeoutSeconds * 1000;
+//		try {
+//			long starttime = System.currentTimeMillis();
+//			
+//			while(checkKeepExecuting()) {
+//				Thread.sleep(20);
+//				
+//				if( (System.currentTimeMillis() - starttime) >= timeoutMillis ) {
+//					this.interrupt();
+//					break;
+//				}
+//			}
+//						
+//			if(exceptionDuringRun != null) { throw exceptionDuringRun; }
+//			
+//			if(Thread.interrupted()) { this.interrupt(); }
+//			
+//		} catch (InterruptedException e) {
+//			this.interrupt();
+//		}
+//		
+//		return result.toString();
+//
+//	}
 	
 	/***************************************************************************
-	 * 
+	 * Overridden method to get isInterrupted state.
 	 * 
 	 ***************************************************************************/
 	@Override
@@ -334,7 +348,7 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Executes this CLI Executor.
 	 * 
 	 ***************************************************************************/
 	@Override
@@ -373,7 +387,7 @@ public class PFRCLIExecutor extends Thread {
 				    // Read the Output
 				    String line;
 				    while((line = reader.readLine()) != null && checkKeepExecuting()) {
-				    	out.write((line+"\n").getBytes());
+				    	outStream.write((line+"\n").getBytes());
 				    }
 				    
 				}finally {
@@ -390,7 +404,7 @@ public class PFRCLIExecutor extends Thread {
 	}
 
 	/***************************************************************************
-	 * 
+	 * Kills this CLI executors and all it's child processes.
 	 * 
 	 ***************************************************************************/
 	public void kill() {
@@ -411,7 +425,7 @@ public class PFRCLIExecutor extends Thread {
 	}
 	
 	/***************************************************************************
-	 * 
+	 * Kills this CLI executors child process by the given handle.
 	 * 
 	 ***************************************************************************/
 	private void killProcessTree(ProcessHandle p) {

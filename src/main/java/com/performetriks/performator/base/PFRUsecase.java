@@ -2,11 +2,12 @@ package com.performetriks.performator.base;
 
 import org.slf4j.LoggerFactory;
 
-import com.performetriks.performator.executors.PFRExec;
-
 import ch.qos.logback.classic.Logger;
 
 /***************************************************************************
+ * The abstract class used to implement use cases for the Performator Framework.
+ * A use case implements the steps that should be tested. Use cases are combined
+ * with executors(PFFRExec*) in tests(PFRTest) to create load tests.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0
@@ -37,7 +38,9 @@ public abstract class PFRUsecase {
 	public abstract void terminate();
 	
 	/*****************************************************************
-	 * This method will return the name of the usecase.
+	 * This method will return the name of the usecase. By default
+	 * returns the class name, can be overridden if you want to
+	 * change the name.
 	 * 
 	 *****************************************************************/
 	public String getName() {
@@ -45,7 +48,7 @@ public abstract class PFRUsecase {
 	}
 	
 	/*****************************************************************
-	 * 
+	 * Create a new instance for the given use case class.
 	 * @return usecase
 	 *****************************************************************/
 	public static PFRUsecase getUsecaseInstance(Class<? extends PFRUsecase> usecaseClass){
