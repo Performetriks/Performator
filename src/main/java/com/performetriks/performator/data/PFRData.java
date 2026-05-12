@@ -12,6 +12,7 @@ import com.performetriks.performator.base.PFR;
 import com.xresch.hsr.base.HSR;
 
 /***************************************************************************
+ * Utility and shorthand class to load data sources.
  * 
  * Copyright Owner: Performetriks GmbH, Switzerland
  * License: Eclipse Public License v2.0
