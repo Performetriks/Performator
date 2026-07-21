@@ -13,8 +13,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
+import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRTest;
+import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
 
@@ -311,6 +314,70 @@ public abstract class PFRExec {
 		
 		return scheduledUserThreadExecutor;
 	
+	}
+	
+	/*****************************************************************
+	 * Creates a runnable that can either run as a standard or virtual 
+	 * thread.
+	 * Runs one execution of a user iteration (PFRUsecase.execute()).
+	 * 
+	 * @param usecaseClass the use case to be executed
+	 * @param userId the index of the user
+	 * @param pacingSeconds the amount of seconds to wait before two 
+	 * iterations.
+	 * 
+	 *****************************************************************/
+	public Runnable createDefaultUserRunnable(Class<? extends PFRUsecase> usecaseClass, int userId, int pacingSeconds) {
+		
+		int pacingMillis = pacingSeconds * 1000;
+		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
+		
+		// Initialize the user once per virtual user instance
+		usecase.initializeUser();
+		
+		//--------------------------------
+		// Wrapped Task, will be executed
+		// either as virtual or regular
+		// thread
+		Runnable wrappedTask = () -> {
+			
+			long start = System.currentTimeMillis();
+			try {
+				usecase.execute();
+				HSR.endAllOpen(HSRRecordStatus.Aborted);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} catch (Throwable e) {
+				HSR.addException(e);
+				HSR.endAllOpen(HSRRecordStatus.Failed);
+			} finally {
+				PFRContext.logDetailsClear();
+			}
+			
+			long duration = System.currentTimeMillis() - start;
+			if (duration > pacingMillis) {
+				HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
+						 + " This might cause that you get lower execution/hour then expected."
+						 + " Increase the number of users to fix this if you get lots of these messages.");
+			}
+
+		};
+		
+		//---------------------------
+		// Scheduled Task
+		return new Runnable() {
+			@Override
+			public void run() {
+				
+				//---------------------------
+				// Execute Virtual or Regular
+				if (PFRExec.isVirtualThreadSupported()) {
+					PFRExec.startVirtualThread(wrappedTask, getExecutedName() + "-User-" + userId);
+				} else {
+					wrappedTask.run();
+				}
+			}
+		};
 	}
 	
 	/*****************************************************************

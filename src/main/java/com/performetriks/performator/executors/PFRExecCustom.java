@@ -49,7 +49,7 @@ public class PFRExecCustom extends PFRExec {
 
 	private static final String FIELD_PACING_SECONDS = "pacingSeconds";
 
-	private static final String FIELD_RAMP_UP_INTERVAL = "rampUpInterval";
+	private static final String FIELD_RAMP_INTERVAL = "rampInterval";
 
 	private static final String FIELD_USER_PER_INTERVAL = "userPerInterval";
 
@@ -138,7 +138,7 @@ public class PFRExecCustom extends PFRExec {
         
         settings.add(FIELD_NUM_USERS, numUsers);
         settings.add(FIELD_USER_PER_INTERVAL, userPerInterval);
-        settings.add(FIELD_RAMP_UP_INTERVAL, rampUpInterval);
+        settings.add(FIELD_RAMP_INTERVAL, rampUpInterval);
         settings.add(FIELD_PACING_SECONDS, 0); // No pacing
         
         this.addModification(ModificationType.RAMPUP, settings);
@@ -178,7 +178,7 @@ public class PFRExecCustom extends PFRExec {
         settings.add(FIELD_NUM_USERS, numUsers);
         settings.add(FIELD_USER_PER_INTERVAL, userPerInterval);
         settings.add(FIELD_PACING_SECONDS, pacingSeconds);
-        settings.add(FIELD_RAMP_UP_INTERVAL, rampUpInterval);
+        settings.add(FIELD_RAMP_INTERVAL, rampUpInterval);
         
         this.addModification(ModificationType.RAMPUP, settings);
         return this;
@@ -219,7 +219,7 @@ public class PFRExecCustom extends PFRExec {
         settings.add(FIELD_USER_PER_INTERVAL, userPerInterval);
         settings.add(FIELD_EXECS_PER_HOUR, execsPerHour);
         settings.add(FIELD_PACING_SECONDS, pacingSeconds);
-        settings.add(FIELD_RAMP_UP_INTERVAL, rampUpInterval);
+        settings.add(FIELD_RAMP_INTERVAL, rampUpInterval);
         
         this.addModification(ModificationType.RAMPUP, settings);
         return this;
@@ -357,10 +357,11 @@ public class PFRExecCustom extends PFRExec {
      *
      * @param numUsers total users to stop.
      * @param userPerInterval users to stop per interval.
-     * @return
+     * @param rampDownInterval  interval in seconds.
+     * 
      * @return PFRExecCustom
      *****************************************************************/
-    public PFRExecCustom rampDown(int numUsers, int userPerInterval) {
+    public PFRExecCustom rampDown(int numUsers, int userPerInterval, int rampDownInterval) {
     	
     	//---------------------------
 		// Ensure Reasonable Inputs
@@ -372,6 +373,7 @@ public class PFRExecCustom extends PFRExec {
         XRRecord settings = new XRRecord();
         settings.add(FIELD_NUM_USERS, numUsers);
         settings.add(FIELD_USER_PER_INTERVAL, userPerInterval);
+        settings.add(FIELD_RAMP_INTERVAL, rampDownInterval);
         
         this.addModification(ModificationType.RAMPDOWN, settings);
         
@@ -514,22 +516,24 @@ public class PFRExecCustom extends PFRExec {
         // Get Settings
 	    int numUsers = settings.getInteger(FIELD_NUM_USERS);
 	    int userPerInterval = settings.getInteger(FIELD_USER_PER_INTERVAL);
-	    int rampUpInterval = settings.getInteger(FIELD_RAMP_UP_INTERVAL);
+	    int rampUpInterval = settings.getInteger(FIELD_RAMP_INTERVAL);
 	    int pacingSeconds = settings.containsKey(FIELD_PACING_SECONDS) ? settings.getInteger(FIELD_PACING_SECONDS) : 0;
+	    
+	    int finalPacingMillis = (pacingSeconds > 0) ? pacingSeconds * 1000 : 1;
 	    
 	    //--------------------------------
         // Do Ramp Up
 	    for(int i = 0; i < numUsers && !gracefulStopRequested ; i++) {
 	        try {
-	            Thread userThread = createUserThread(pacingSeconds);
-	            userThread.setName(this.getExecutedName() + "-User-" + getCurrentUserCount());
+	            Runnable userThread = createDefaultUserRunnable(usecaseClass, getCurrentUserCount(), pacingSeconds);
+	            //userThread.setName(this.getExecutedName() + "-User-" + getCurrentUserCount());
 	            
 	            // Submit to executor and track future
 	            ScheduledFuture<?> future = (ScheduledFuture<?>) scheduledUserThreadExecutor.scheduleAtFixedRate(
 	            		  userThread
 						, 0
-						, pacingSeconds
-						, TimeUnit.SECONDS
+						, finalPacingMillis
+						, TimeUnit.MILLISECONDS
 					);
 	            futureList.add(future);
 	            
@@ -545,8 +549,8 @@ public class PFRExecCustom extends PFRExec {
 	            Thread.currentThread().interrupt();
 	            return;                              
 	        }catch (Exception e) {
-	            HSR.addException(e);
-	            logger.warn(this.getExecutedName()+": Error While starting User Thread.");
+	            //HSR.addException(e);
+	            logger.warn(this.getExecutedName()+": Error While starting User Thread.", e);
 	        }
 	    }
 	}
@@ -569,18 +573,20 @@ public class PFRExecCustom extends PFRExec {
 	    	pacingSeconds = settings.getInteger(FIELD_PACING_SECONDS);
 	    }
 	    
+	    int finalPacingMillis = (pacingSeconds > 0) ? pacingSeconds * 1000 : 1;
+	    
 		//--------------------------------
         // Start Users
 	    for (int i = 0; i < numUsers && !gracefulStopRequested; i++) {
 	        try {
-	            Thread userThread = createUserThread(pacingSeconds); 
-	            userThread.setName(this.getExecutedName() + "-User-" + getCurrentUserCount());
+	        	Runnable userThread = createDefaultUserRunnable(usecaseClass, getCurrentUserCount(), pacingSeconds); 
+	            //userThread.setName(this.getExecutedName() + "-User-" + getCurrentUserCount());
 	            
 	            ScheduledFuture<?> future = scheduledUserThreadExecutor.scheduleAtFixedRate(
 	            		  userThread
 						, 0
-						, pacingSeconds
-						, TimeUnit.SECONDS
+						, finalPacingMillis // can't be zero, therefore using milliseconds
+						, TimeUnit.MILLISECONDS
 					);
 	            
 	            futureList.add(future);
@@ -626,6 +632,7 @@ public class PFRExecCustom extends PFRExec {
         // Get Settings
         int numUsers = settings.getInteger(FIELD_NUM_USERS);
         int userPerInterval = settings.getInteger(FIELD_USER_PER_INTERVAL);
+        int rampDownInterval = settings.getInteger(FIELD_RAMP_INTERVAL);
         long gracefulMillis = settings.containsKey(FIELD_GRACEFUL_SEC) ? settings.getLong(FIELD_GRACEFUL_SEC) * 1000L : 0;
         
         //--------------------------------
@@ -655,9 +662,9 @@ public class PFRExecCustom extends PFRExec {
             }
             
             // Wait between batches if we haven't stopped enough users yet
-            if (stopped < numUsers && userPerInterval > 0) {
+            if (stopped < numUsers && rampDownInterval > 0) {
                 try {
-                    Thread.sleep(1000); 
+                    Thread.sleep(rampDownInterval * 1000); 
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -874,50 +881,7 @@ public class PFRExecCustom extends PFRExec {
             }
         }
     }
-	/*****************************************************************
-	 * 
-	 *****************************************************************/
-    private Thread createUserThread(long pacingSec) {
-        long pacingMillis = pacingSec * 1000L;
-        PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
-        usecase.initializeUser();
-        
-        return new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted() && !isTerminated) {
-                long start = System.currentTimeMillis();
-                try {
-                    usecase.execute();
-                    HSR.endAllOpen(HSRRecordStatus.Success);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Throwable e) {
-                    HSR.addException(e);
-                    logger.error("Unhandled exception in use case execution", e);
-                    HSR.endAllOpen(HSRRecordStatus.Failed);
-                } finally {
-                    PFRContext.logDetailsClear();
-                }
-
-                long duration = System.currentTimeMillis() - start;
-                if (pacingMillis > 0 && duration > pacingMillis) {
-                    HSR.addWarnMessage("Iteration duration (" + duration + "ms) exceeded pacing (" + pacingMillis + "ms).");
-                }
-
-                if (pacingMillis > 0) {
-                    long sleepTime = pacingMillis - duration;
-                    if (sleepTime > 0) {
-                        try {
-                            Thread.sleep(sleepTime);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-    }
+	
 
 	/*****************************************************************
 	 * 

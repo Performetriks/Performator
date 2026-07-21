@@ -302,7 +302,7 @@ public class PFRExecStandard extends PFRExec {
 			for(int i = 0; i < users && !gracefulStopRequested ; i++) {
 				
 				try {
-						Runnable task = createIterationRunnable(i);
+						Runnable task = createDefaultUserRunnable(usecaseClass, i, pacingSeconds);
 						scheduledUserThreadExecutor.scheduleAtFixedRate(
 								  task
 								, 0
@@ -403,62 +403,6 @@ public class PFRExecStandard extends PFRExec {
 		
 	}
 	
-	/*****************************************************************
-	 * Creates a Runnable for a user iteration.
-	 *****************************************************************/
-	public Runnable createIterationRunnable(final int userId) {
-		
-		int pacingMillis = pacingSeconds * 1000;
-		PFRUsecase usecase = PFRUsecase.getUsecaseInstance(usecaseClass);
-		
-		// Initialize the user once per virtual user instance
-		usecase.initializeUser();
-		
-		//--------------------------------
-		// Wrapped Task, will be executed
-		// either as virtual or regular
-		// thread
-		Runnable wrappedTask = () -> {
-			
-			long start = System.currentTimeMillis();
-			try {
-				usecase.execute();
-				HSR.endAllOpen(HSRRecordStatus.Aborted);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			} catch (Throwable e) {
-				HSR.addException(e);
-				HSR.endAllOpen(HSRRecordStatus.Failed);
-			} finally {
-				PFRContext.logDetailsClear();
-			}
-			
-			long duration = System.currentTimeMillis() - start;
-			if (duration > pacingMillis) {
-				HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
-						 + " This might cause that you get lower execution/hour then expected."
-						 + " Increase the number of users to fix this if you get lots of these messages.");
-			}
-
-		};
-		
-		//---------------------------
-		// Scheduled Task
-		return new Runnable() {
-			@Override
-			public void run() {
-				
-				//---------------------------
-				// Execute Virtual or Regular
-				if (PFRExec.isVirtualThreadSupported()) {
-					PFRExec.startVirtualThread(wrappedTask, getExecutedName() + "-User-" + userId);
-				} else {
-					wrappedTask.run();
-				}
-			}
-		};
-	}
-
 	
 	/*****************************************************************
 	 * 
