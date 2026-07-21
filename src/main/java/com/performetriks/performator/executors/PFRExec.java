@@ -355,7 +355,7 @@ public abstract class PFRExec {
 			}
 			
 			long duration = System.currentTimeMillis() - start;
-			if (duration > pacingMillis) {
+			if (pacingMillis > 0 && duration > pacingMillis) {
 				HSR.addWarnMessage("Duration of the iteration exceeded the pacing("+pacingSeconds+"s)."
 						 + " This might cause that you get lower execution/hour then expected."
 						 + " Increase the number of users to fix this if you get lots of these messages.");
