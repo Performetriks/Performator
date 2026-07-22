@@ -296,8 +296,8 @@ public class PFRCLIExecutor extends Thread {
 				result.append(tailedLines.poll()).append("\n");
 			}
 
-		} catch (InterruptedException e) {
-			this.interrupt();
+		} catch(InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
 		}
 		
 		return result.toString();

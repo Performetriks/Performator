@@ -190,6 +190,8 @@ public class RemoteRequest{
 							Thread.sleep(100);
 						}
 						
+					} catch(InterruptedException e) {
+						Thread.currentThread().interrupt(); // restore interrupt flag
 					} catch (Exception e) {
 						logger.error("Error on remote request.", e);
 					}

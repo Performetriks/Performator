@@ -644,6 +644,8 @@ public class PFRCoordinator {
 				}
 			}
 			
+		}catch(InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
 		}catch(Exception e) {
 			logger.info("Error during Executor Thread execution.");
 		}finally {
@@ -977,6 +979,8 @@ public class PFRCoordinator {
 				}
 			}
 			
+		}catch(InterruptedException e){
+			Thread.currentThread().interrupt(); // restore interrupt flag
 		}catch(Exception e) {
 			logger.info("Error during Executor Thread execution.");
 		}finally {

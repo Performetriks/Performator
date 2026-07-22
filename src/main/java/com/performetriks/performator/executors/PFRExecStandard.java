@@ -321,6 +321,8 @@ public class PFRExecStandard extends PFRExec {
 					}
 					
 				}catch (InterruptedException e) {
+					logger.info("User Thread interrupted.");
+					HSR.decreaseUsers(1);
 				    Thread.currentThread().interrupt();
 				    return;                              
 				}catch (Exception e) {
@@ -341,10 +343,7 @@ public class PFRExecStandard extends PFRExec {
 			doGracefulStop(this.test().gracefulStop());
 			
 		}catch(InterruptedException e) {
-			logger.info("User Thread interrupted.");
-			HSR.decreaseUsers(1);
 			Thread.currentThread().interrupt();
-		    return; 
 		}finally {
 			
 		}	

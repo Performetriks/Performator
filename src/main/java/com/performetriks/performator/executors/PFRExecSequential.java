@@ -190,11 +190,9 @@ public class PFRExecSequential extends PFRExec {
 			// Initialize Graceful stop
 			doGracefulStop(this.test().gracefulStop());
 			
-		}catch(InterruptedException e) {
-			logger.info("Executor Thread interrupted.");
-		}finally {
-			
-		}	
+		} catch(InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
+		}
 		
 	}
 

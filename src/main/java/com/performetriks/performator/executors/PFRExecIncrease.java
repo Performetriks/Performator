@@ -360,6 +360,7 @@ public class PFRExecIncrease extends PFRExec {
 					}
 					
 				}catch (InterruptedException e) {
+					HSR.decreaseUsers(1);
 				    Thread.currentThread().interrupt();
 				    return;                              
 				}catch (Exception e) {
@@ -380,8 +381,6 @@ public class PFRExecIncrease extends PFRExec {
 			doGracefulStop(this.test().gracefulStop());
 			
 		}catch(InterruptedException e) {
-			logger.info("User Thread interrupted.");
-			HSR.decreaseUsers(1);
 			Thread.currentThread().interrupt();
 		    return; 
 		}finally {
