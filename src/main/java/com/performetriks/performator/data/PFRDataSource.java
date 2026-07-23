@@ -1,10 +1,13 @@
 package com.performetriks.performator.data;
 
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRCoordinator;
 import com.xresch.xrutils.data.XRRecord;
@@ -74,6 +77,33 @@ public abstract class PFRDataSource {
 	 *****************************************************************/
 	public static PFRDataSource unregisterSource(String datasourceName) {
 		return registeredDataSources.remove(datasourceName);
+	}
+	
+	/*****************************************************************
+	 * Removes a registered data source.
+	 * 
+	 * @param datasourceName the unique name of the source
+	 * @return the removed source 
+	 *****************************************************************/
+	public static JsonArray getRegisteredSourcesInfo() {
+		
+		JsonArray array = new JsonArray();
+		for(Entry<String, PFRDataSource> entry : registeredDataSources.entrySet()) {
+			
+			JsonObject sourceInfo = new JsonObject();
+			
+			
+			PFRDataSource source = entry.getValue();
+			sourceInfo.addProperty("class", source.getClass().getName().replace("/", ".") );
+			sourceInfo.addProperty("uniqueName", source.getUniqueName());
+			sourceInfo.addProperty("accessMode", source.accessMode().toString());
+			sourceInfo.addProperty("retainMode", source.retainMode().toString());
+			sourceInfo.addProperty("size", source.size());
+						
+			array.add(sourceInfo);
+		}
+		
+		return array;
 	}
 	
 	/*****************************************************************

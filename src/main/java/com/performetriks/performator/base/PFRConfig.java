@@ -36,6 +36,7 @@ public class PFRConfig {
 		, LOCAL("Execute test locally, does not execute anything on agents. Useful for development.")
 		, AGENT("Start the performator.jar as an agent.")
 		, AGENTBORNE("Mode used by agents to execute a jar file. Remote will remove all HSRReporters and reports data to the controller instead.")
+		, INFO("Mode that prints information as JSON regarding the test jar file.")
 		;
 		
 		private static HashSet<String> names = new HashSet<>();

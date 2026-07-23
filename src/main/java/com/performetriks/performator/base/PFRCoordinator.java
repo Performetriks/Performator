@@ -1,10 +1,15 @@
 package com.performetriks.performator.base;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.jar.Manifest;
 
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +38,7 @@ import com.xresch.hsr.stats.HSRRecordStats;
 import com.xresch.hsr.stats.HSRStatsEngine;
 import com.xresch.hsr.stats.HSRStatsEngine.SummarizedStats;
 import com.xresch.hsr.stats.HSRStatsEngineHooks;
+import com.xresch.xrutils.annotation.XRAnnotations;
 import com.xresch.xrutils.data.XRRecord;
 
 import ch.qos.logback.classic.Logger;
@@ -87,9 +93,93 @@ public class PFRCoordinator {
 			case LOCAL 	-> executeLocal();
 			case AGENT 	-> executeAgentInstance();
 			case AGENTBORNE -> executeAgentborne();
+			case INFO -> executeInfo();
 		}
 	}
 	
+	/*************************************************************
+	 * Start the instance and run the test either locally or remote
+	 * on agents if agents are defined.
+	 * 
+	 *************************************************************/
+	public static void executeInfo() {
+		
+		JsonObject infoObject = getInfo();
+		
+		System.out.println(PFR.JSON.toJSONPretty(infoObject));
+		
+	}
+	
+	/*************************************************************
+	 * Returns information about tests marked with @XRDiscoverable
+	 * and other maybe useful information.
+	 * 
+	 *************************************************************/
+	public static JsonObject getInfo() {
+		
+		//---------------------------
+		// Test Classes
+		ArrayList<Class<PFRTest>> testClasses = XRAnnotations.discover(PFRTest.class);
+		JsonArray testArray = new JsonArray();
+		
+		for(Class<PFRTest> clazz : testClasses) {
+			
+			JsonObject test = new JsonObject(); 
+			
+			//-------------------------
+			// Classname
+			String classname = clazz.getName().replace("/", ".");
+			test.addProperty("class", classname);
+			
+			//-------------------------
+			// Other Info
+			PFRTest instance = createTestInstance(classname);
+			test.addProperty("name", instance.getName());
+			test.addProperty("gracefulStopMillis", instance.gracefulStop().toMillis());
+			
+			//-------------------------
+			// Executors
+			JsonArray executorArray = new JsonArray();
+			for(PFRExec exec : instance.getExecutors()) {
+				JsonObject executor = new JsonObject(); 
+				executor.addProperty("class", exec.getClass().getName().replace("/", ".") );
+				executor.addProperty("executedName", exec.getExecutedName() );
+				test.addProperty("gracefulStopMillis", exec.gracefulStop().toMillis());
+				
+				Duration max = exec.maxDuration();
+				test.addProperty("maxDurationMillis", (max == null) ? null : exec.maxDuration().toMillis());
+				
+				JsonObject executorSettings = new JsonObject(); 
+				exec.getSettings(executorSettings);
+				executor.add("settings", executorSettings);
+				
+				executorArray.add(executor);
+			}
+			test.add("executors", executorArray);
+			
+			//-------------------------
+			// Add to array
+			testArray.add(test);	
+		}
+		
+		//---------------------------
+		// Environment Info
+		JsonObject environment = new JsonObject(); 
+		
+		for(Entry<String, String> entry : System.getenv().entrySet()) {
+			environment.addProperty(entry.getKey(), entry.getValue());
+		}
+		
+		
+		//---------------------------
+		// Create Info Object
+		JsonObject infoObject = new JsonObject();
+		infoObject.add("tests", testArray);
+		infoObject.add("datasources", PFRDataSource.getRegisteredSourcesInfo());
+		infoObject.add("environment", environment);
+		
+		return infoObject;
+	}
 	/*************************************************************
 	 * Start the instance and run the test either locally or remote
 	 * on agents if agents are defined.
