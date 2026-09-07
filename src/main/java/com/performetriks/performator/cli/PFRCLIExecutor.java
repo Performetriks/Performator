@@ -244,7 +244,8 @@ public class PFRCLIExecutor extends Thread {
 			
 			int linesReadHead = 0;
 			int skippedCount = 0;
-			EvictingQueue<String> tailedLines = EvictingQueue.create(tail);
+			
+			EvictingQueue<String> tailedLines = EvictingQueue.create( (tail >= 0) ? tail : 0);
 
 			while(checkKeepExecuting()) {
 				Thread.sleep(20);

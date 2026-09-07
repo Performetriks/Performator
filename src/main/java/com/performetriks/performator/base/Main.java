@@ -193,10 +193,7 @@ public class Main {
 	public static void main(String[] args) {
 		
 		Thread.currentThread().setName("main");
-		//------------------------------------------
-		// Print Awesomeness
-		printPerformatorAsciiArtTitleOfAwesomeness();
-		
+
 		//------------------------------------------
 		// Set Log config
 		String logfile = CLIArgs.pfr_logfile.getValue().getAsString();
@@ -205,21 +202,6 @@ public class Main {
 		HSRConfig.setLogFilePath(logfile);
 		HSRConfig.setLogLevelRoot(logLevel);
 		
-		
-		//------------------------------------------
-		// Validate Arguments
-		
-		for(CLIArgs arg : CLIArgs.values()) {
-			try {
-				XRValue value = arg.getValue();
-				System.out.println("-D"+arg+": "+value.getAsString());
-			}catch(Throwable e) {
-				logger.error(arg.toString()+": "+e.getMessage(), e);
-				CLIArgs.printUsage();
-				break;
-			}
-		}
-		
 		//------------------------------------------
 		// Get Mode
 		String modeString = CLIArgs.pfr_mode
@@ -227,15 +209,8 @@ public class Main {
 									.getAsString()
 									.trim()
 									.toUpperCase();
-		//------------------------------------------
-		// Execute Custom Mode
-		HashMap<String, PFRCustomMode> customModes = loadCustomModes();
-		if(customModes.containsKey(modeString)) {
-			PFRCustomMode custom = customModes.get(modeString);
-			logger.info("Execute Custom Mode: -Dpfr_mode="+custom.getUniqueName());
-			custom.execute();
-			return;
-		}
+		
+
 		
 		//------------------------------------------
 		// Check Official Mode
@@ -248,6 +223,45 @@ public class Main {
 		Mode mode = Mode.valueOf(modeString);
 		PFRConfig.executionMode(mode);
 		
+		if(mode == Mode.INFO) {
+			HSRConfig.disableConsoleLogging();
+		}
+		
+		//------------------------------------------
+		// Print Awesomeness
+		if(mode != Mode.INFO) {
+			printPerformatorAsciiArtTitleOfAwesomeness();
+		}
+		
+		//------------------------------------------
+		// Validate Arguments
+		
+		for(CLIArgs arg : CLIArgs.values()) {
+			try {
+				XRValue value = arg.getValue();
+				if(mode != Mode.INFO) {
+					System.out.println("-D"+arg+": "+value.getAsString());
+				}
+			}catch(Throwable e) {
+				if(mode != Mode.INFO) {	
+					logger.error(arg.toString()+": "+e.getMessage(), e);
+					CLIArgs.printUsage();
+				}
+				break;
+			}
+		}
+		
+
+		//------------------------------------------
+		// Execute Custom Mode
+		HashMap<String, PFRCustomMode> customModes = loadCustomModes();
+		if(customModes.containsKey(modeString)) {
+			PFRCustomMode custom = customModes.get(modeString);
+			logger.info("Execute Custom Mode: -Dpfr_mode="+custom.getUniqueName());
+			custom.execute();
+			return;
+		}
+				
 		//------------------------------------------
 		// Set port
 		int port = CLIArgs.pfr_port

@@ -1,7 +1,6 @@
 package com.performetriks.performator.distribute;
 import java.io.IOException;
 import java.io.InputStream;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -26,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFR;
@@ -40,6 +40,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
 import com.xresch.hsr.base.HSR;
+import com.xresch.xrutils.base.XR;
 import com.xresch.xrutils.data.ByteSize;
 import com.xresch.xrutils.data.XRRecord;
 import com.xresch.xrutils.data.XRValue;
@@ -108,6 +109,8 @@ public class ZePFRServer {
 		, teststopgraceful
 		/** STEP 7: Stop the test process. */
 		, teststop
+		/** Returns information about the tests contained in the jar file and other information. */
+		, info
 		/** Makes the agent available again. */
 		, disconnect
 		/** Ask an agentborne process to kill itself. If the process is an agent, forwards the command. */
@@ -304,6 +307,8 @@ public class ZePFRServer {
 				case processlog:		handleCommandProcesslog(response); 							break;
 				case statspeek:			handleCommandStatsPeekPoll(response, command); 				break;
 				case statspoll:			handleCommandStatsPeekPoll(response, command); 				break;
+				
+				case info:				handleCommandInfo(response);								break;
 				
 				case datasourcenext:	handleCommandDatasource(parameters, response, command);		break;
 				case datasourcehasnext:	handleCommandDatasource(parameters, response, command);		break;
@@ -631,6 +636,47 @@ public class ZePFRServer {
 			executor.execute();
 			
 		} catch (Exception e) {
+			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
+		}
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	private void handleCommandInfo(RemoteResponse response) {
+		
+	
+		//----------------------------------
+		// Kill Orphans
+		killOrphanedAgentborne(response);
+		
+
+		try {
+			//----------------------------------
+			// Start Process
+			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
+			String vmargs = CLIArgs.pfr_mode.makeCLIArg("info")
+						  + CLIArgs.pfr_port.makeCLIArg(agentbornePort)
+						  + CLIArgs.pfr_agentIndex.makeCLIArg(agentIndex)
+						  + CLIArgs.pfr_agentTotal.makeCLIArg(agentTotal)
+						  + CLIArgs.pfr_agentIsData.makeCLIArg(isDataAgent)
+						  ;
+			
+			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
+			
+			logger.info("Start agentborne: "+startCommand);
+			
+			executor = new PFRCLIExecutor(executionDirectory, startCommand);
+			executor.execute();
+
+			String info = executor.readOutputOrTimeout(60, -1, -1, false);
+			
+			System.out.println("info: "+info);
+			JsonElement element = XR.JSON.fromJson(info);
+			
+			response.setPayload(element);
+		} catch (Exception e) {
+			logger.error("Error while starting process: "+e.getMessage(), e);
 			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
 		}
 	}

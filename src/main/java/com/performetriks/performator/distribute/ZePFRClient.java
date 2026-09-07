@@ -79,12 +79,32 @@ public class ZePFRClient {
 	}
 
 	/**********************************************************************************
-	 * Sends 
+	 * Sends the bytes of the JAR file to the server.
+	 **********************************************************************************/
+	public void sendJar(byte[] jarBytes) {
+
+		ZePFRClient instance = this;
+
+	    try {
+	    	
+			new RemoteRequest(instance, Command.transferjar, test)
+				.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
+				.body(jarBytes)
+				.send(Duration.ofSeconds(300))
+			;
+			
+		}catch (Exception e) {
+	        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
+	    }
+
+	}
+	/**********************************************************************************
+	 * Sends the JAR file asynchronously.
 	 **********************************************************************************/
 	public void sendJar(CountDownLatch latch) {
 
 		ZePFRClient instance = this;
-
+		
 	    try {
 	    	File jarFile = new File(
 	    			getJarFileURIForTest(test)
@@ -101,7 +121,6 @@ public class ZePFRClient {
 		}catch (Exception e) {
 	        logger.error("Issue while loading and transferring jar-file to remote agent.", e);
 	    }
-			
 
 	}
 
@@ -114,17 +133,30 @@ public class ZePFRClient {
 						.send(Duration.ofSeconds(5));
 	}
 	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse getInfo(){
+		
+		return new RemoteRequest(this, Command.info, test)
+						.send(Duration.ofSeconds(60));
+	}
+	
 
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse reserveAgent(int agentTotal, int agentIndex, boolean isDataAgent){
 		
+		String testClass = "";
+		if(test != null) {
+			testClass = test.getClass().getName();
+		}
 		return new RemoteRequest(this, Command.reserve, test)
 				.param(CLIArgs.pfr_agentTotal.toString(), ""+agentTotal)
 				.param(CLIArgs.pfr_agentIndex.toString(), ""+agentIndex)
 				.param(CLIArgs.pfr_agentIsData.toString(), ""+isDataAgent)
-				.param(PARAM_TESTCLASS, test.getClass().getName())
+				.param(PARAM_TESTCLASS, testClass)
 				.send(Duration.ofSeconds(5));
 	}
 	/**********************************************************************************
