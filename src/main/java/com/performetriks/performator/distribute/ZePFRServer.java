@@ -671,7 +671,6 @@ public class ZePFRServer {
 
 			String info = executor.readOutputOrTimeout(60, -1, -1, false);
 			
-			System.out.println("info: "+info);
 			JsonElement element = XR.JSON.fromJson(info);
 			
 			response.setPayload(element);

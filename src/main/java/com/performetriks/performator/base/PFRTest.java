@@ -1,9 +1,13 @@
 package com.performetriks.performator.base;
 
+import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.util.ArrayList;
 
+import org.slf4j.Logger;
+
 import com.performetriks.performator.executors.PFRExec;
+import org.slf4j.LoggerFactory;
 
 /***************************************************************************
  * The abstract class used to implement Tests for the Performator Framework.
@@ -18,6 +22,8 @@ import com.performetriks.performator.executors.PFRExec;
  * 
  ***************************************************************************/
 public abstract class PFRTest {
+	
+	private static Logger logger = LoggerFactory.getLogger(PFRTest.class.getName());
 	
 	private ArrayList<PFRExec> executorList = new ArrayList<>();
 	
@@ -111,6 +117,65 @@ public abstract class PFRTest {
 	 ***************************************************************************/
 	public Duration gracefulStop(){
 		return gracefulStop;
+	}
+	
+	
+	/*************************************************************
+	 * Get an instance of a PFRTest class by name.
+	 * 
+	 * @param className 
+	 * @return instance or null on error.
+	 *************************************************************/
+	public static PFRTest createTestInstance(String className) {
+			
+		//----------------------------------
+		// Check Null
+		if(className == null) {
+			logger.info("Please specify the class name of the test");
+			return null;
+		}
+		
+		try {
+
+			//----------------------------------
+			// Get Class
+			Class<?> clazz = Class.forName(className);
+		    
+			if(! PFRTest.class.isAssignableFrom(clazz) ){
+		    	logger.info("The specified test class "+className+" must be a subclass of "+PFRTest.class.getName()+".");
+				return null;
+		    }
+			
+			//----------------------------------
+			// Create Instance
+			return createTestInstance((Class<PFRTest>)clazz);
+
+		    
+		} catch (Exception e) {
+			logger.error("Error while creating instance for class "+className, e);
+		}
+		
+		return null;
+
+	}
+	
+	/*************************************************************
+	 * Get an instance of a PFRTest class by name.
+	 * 
+	 * @param className 
+	 * @return instance or null on error.
+	 *************************************************************/
+	public static PFRTest createTestInstance(Class<PFRTest> clazz) {
+		
+		try {
+			PFRTest instance = clazz.getDeclaredConstructor().newInstance();
+			return instance;
+		} catch (Exception e) {
+			logger.error("Error while creating instance for class: "+clazz.getName(), e);
+		}
+		
+	    return null;
+		
 	}
 	
 	

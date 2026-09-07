@@ -117,68 +117,7 @@ public class PFRCoordinator {
 	 *************************************************************/
 	public static JsonObject getInfo() {
 		
-		//---------------------------
-		// Test Classes
-		ArrayList<Class<PFRTest>> testClasses = XRAnnotations.discover(PFRTest.class);
-		JsonArray testArray = new JsonArray();
-		
-		for(Class<PFRTest> clazz : testClasses) {
-			
-			JsonObject test = new JsonObject(); 
-			
-			//-------------------------
-			// Classname
-			String classname = clazz.getName().replace("/", ".");
-			test.addProperty("class", classname);
-			
-			//-------------------------
-			// Other Info
-			PFRTest instance = createTestInstance(classname);
-			test.addProperty("name", instance.getName());
-			test.addProperty("gracefulStopMillis", instance.gracefulStop().toMillis());
-			
-			//-------------------------
-			// Executors
-			JsonArray executorArray = new JsonArray();
-			for(PFRExec exec : instance.getExecutors()) {
-				JsonObject executor = new JsonObject(); 
-				executor.addProperty("class", exec.getClass().getName().replace("/", ".") );
-				executor.addProperty("executedName", exec.getExecutedName() );
-				test.addProperty("gracefulStopMillis", exec.gracefulStop().toMillis());
-				
-				Duration max = exec.maxDuration();
-				test.addProperty("maxDurationMillis", (max == null) ? null : exec.maxDuration().toMillis());
-				
-				JsonObject executorSettings = new JsonObject(); 
-				exec.getSettings(executorSettings);
-				executor.add("settings", executorSettings);
-				
-				executorArray.add(executor);
-			}
-			test.add("executors", executorArray);
-			
-			//-------------------------
-			// Add to array
-			testArray.add(test);	
-		}
-		
-		//---------------------------
-		// Environment Info
-		JsonObject environment = new JsonObject(); 
-		
-		for(Entry<String, String> entry : System.getenv().entrySet()) {
-			environment.addProperty(entry.getKey(), entry.getValue());
-		}
-		
-		
-		//---------------------------
-		// Create Info Object
-		JsonObject infoObject = new JsonObject();
-		infoObject.add("tests", testArray);
-		infoObject.add("datasources", PFRDataSource.getRegisteredSourcesInfo());
-		infoObject.add("environment", environment);
-		
-		return infoObject;
+		return new PFRJARInfo().toJson();
 	}
 	/*************************************************************
 	 * Start the instance and run the test either locally or remote
@@ -835,43 +774,11 @@ public class PFRCoordinator {
 	 * @param className 
 	 * @return instance or null on error.
 	 *************************************************************/
-	private static PFRTest createTestInstance(String className) {
+	public static PFRTest createTestInstance(String className) {
 			
-		//----------------------------------
-		// Check Null
-		if(className == null) {
-			logger.info("Please specify the class name of the test");
-			return null;
-		}
-		
-		try {
-
-			//----------------------------------
-			// Get Class
-			Class<?> clazz = Class.forName(className);
-		    
-			if(! PFRTest.class.isAssignableFrom(clazz) ){
-		    	logger.info("The specified test class "+className+" must be a subclass of "+PFRTest.class.getName()+".");
-				return null;
-		    }
-			
-			//----------------------------------
-			// Reset the test execution before
-			// Creating new Instance
-			resetTestExecution();
-			
-			//----------------------------------
-			// Create Instance
-			Object instance = clazz.getDeclaredConstructor().newInstance();
-			
-		    return (PFRTest)instance;
-
-		    
-		} catch (Exception e) {
-			logger.error("Error while creating instance for class "+className, e);
-		}
-		
-		return null;
+		resetTestExecution();
+					
+		return PFRTest.createTestInstance(className);
 
 	}
 	
