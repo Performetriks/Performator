@@ -75,6 +75,13 @@ public class PFRJARInfo {
 	/**************************************************************************************
 	 * @return JsonArray with datasources, or empty object if not found.
 	 **************************************************************************************/
+	public JsonArray getTestsAsJSON() {
+		return infoObject.get(FIELDNAME_TESTS).getAsJsonArray();
+	}
+	
+	/**************************************************************************************
+	 * @return JsonArray with datasources, or empty object if not found.
+	 **************************************************************************************/
 	public ArrayList<PFRJARInfoTest> getTests() {
 		
 		ArrayList<PFRJARInfoTest> result = new ArrayList<>();
@@ -257,18 +264,18 @@ public class PFRJARInfo {
 		 **************************************************************************************/
 		public PFRJARInfoExecutor(PFRExec exec) {
 			
-			JsonObject executor = new JsonObject(); 
-			executor.addProperty(FIELDNAME_CLASS, exec.getClass().getName().replace("/", ".") );
-			executor.addProperty(FIELDNAME_EXECUTED_NAME, exec.getExecutedName() );
-			executor.addProperty(FIELDNAME_GRACEFUL_STOP, exec.gracefulStop().toMillis());
+			executorObject = new JsonObject(); 
+			executorObject.addProperty(FIELDNAME_CLASS, exec.getClass().getName().replace("/", ".") );
+			executorObject.addProperty(FIELDNAME_EXECUTED_NAME, exec.getExecutedName() );
+			executorObject.addProperty(FIELDNAME_GRACEFUL_STOP, exec.gracefulStop().toMillis());
 			
 			Duration execMax = exec.maxDuration();
-			executor.addProperty(FIELDNAME_MAX_DURATION, (execMax == null) ? null : execMax.toMillis());
+			executorObject.addProperty(FIELDNAME_MAX_DURATION, (execMax == null) ? null : execMax.toMillis());
 			
 			JsonObject executorSettings = new JsonObject(); 
 			exec.getSettings(executorSettings);
-			executor.add(FIELDNAME_SETTINGS, executorSettings);
-
+			executorObject.add(FIELDNAME_SETTINGS, executorSettings);
+			
 		}
 		
 		/**************************************************************************************
