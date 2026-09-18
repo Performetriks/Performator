@@ -279,6 +279,9 @@ public class ZePFRServer {
 			String test = "TestnameUnknown";
 			if(parameters.containsKey(ZePFRClient.PARAM_TESTNAME) ) {
 				test = parameters.get(ZePFRClient.PARAM_TESTNAME);
+			}else if (parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)){
+				String testclass = parameters.get(ZePFRClient.PARAM_TESTCLASS);
+				test = testclass.substring(testclass.lastIndexOf(".")+1);
 			}
 			
 			//------------------------

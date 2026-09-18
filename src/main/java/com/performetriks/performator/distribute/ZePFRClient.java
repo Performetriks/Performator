@@ -39,6 +39,7 @@ public class ZePFRClient {
 	private String remoteHost;
 	private int remotePort;
 	private PFRTest test;
+	private String testClass = "";
 	
 	/**********************************************************************************
 	 * Connects this instance to a agent or collector.
@@ -51,6 +52,10 @@ public class ZePFRClient {
 		this.remoteHost = agent.hostname();
 		this.remotePort = agent.port();
 		this.test = test;
+		
+		if(test != null) {
+			this.testClass = test.getClass().getName();
+		}
 	}
 	
 	
@@ -63,6 +68,18 @@ public class ZePFRClient {
 	public ZePFRClient(String remoteHost, int remotePort) {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
+	}
+	
+	/**********************************************************************************
+	 * Connects this instance to a agent or collector.
+	 * 
+	 * @throws IOException 
+	 * 
+	 **********************************************************************************/
+	public ZePFRClient(String remoteHost, int remotePort, String testClass) {
+		this.remoteHost = remoteHost;
+		this.remotePort = remotePort;
+		this.testClass = testClass;
 	}
 	
 	/**********************************************************************************
@@ -82,7 +99,18 @@ public class ZePFRClient {
 	 * Sends the bytes of the JAR file to the server.
 	 **********************************************************************************/
 	public void sendJar(byte[] jarBytes) {
+		sendJar(jarBytes, testClass);
+	}
+	
+	/**********************************************************************************
+	 * Sends the bytes of the JAR file to the server.
+	 **********************************************************************************/
+	public void sendJar(byte[] jarBytes, String testClass) {
 
+		if(testClass == null) {
+			testClass = "";
+		}
+		
 		ZePFRClient instance = this;
 
 	    try {
@@ -90,6 +118,7 @@ public class ZePFRClient {
 			new RemoteRequest(instance, Command.transferjar, test)
 				.param(PARAM_BODY_LENGTH, ""+jarBytes.length)
 				.body(jarBytes)
+				.param(PARAM_TESTCLASS, testClass)
 				.send(Duration.ofSeconds(300))
 			;
 			
@@ -148,10 +177,6 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse reserveAgent(int agentTotal, int agentIndex, boolean isDataAgent){
 		
-		String testClass = "";
-		if(test != null) {
-			testClass = test.getClass().getName();
-		}
 		return new RemoteRequest(this, Command.reserve, test)
 				.param(CLIArgs.pfr_agentTotal.toString(), ""+agentTotal)
 				.param(CLIArgs.pfr_agentIndex.toString(), ""+agentIndex)
