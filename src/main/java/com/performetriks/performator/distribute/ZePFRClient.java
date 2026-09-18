@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
+import com.xresch.xrutils.base.XR;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
@@ -34,6 +35,7 @@ public class ZePFRClient {
 	static final String PARAM_TESTCLASS = "test";
 	static final String PARAM_TESTNAME = "testname";
 	static final String PARAM_DATASOURCENAME = "datasourceName";
+	static final String PARAM_AGENT_SETTINGS = "agentborneSettings";
 	
 	private PFRAgent agent;
 	private String remoteHost;
@@ -49,8 +51,8 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public ZePFRClient(PFRAgent agent, PFRTest test){
 		this.agent = agent;
-		this.remoteHost = agent.hostname();
-		this.remotePort = agent.port();
+		this.remoteHost = agent.getHostname();
+		this.remotePort = agent.getPort();
 		this.test = test;
 		
 		if(test != null) {
@@ -195,8 +197,16 @@ public class ZePFRClient {
 	 * 
 	 **********************************************************************************/
 	public RemoteResponse testStart(String fullyQualifiedClassName){
+		return testStart(fullyQualifiedClassName, null);
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse testStart(String fullyQualifiedClassName, PFRAgentborneSettings agentSettings){
 		return new RemoteRequest(this, Command.teststart, test)
 				.param(PARAM_TESTCLASS, fullyQualifiedClassName)
+				.param(PARAM_AGENT_SETTINGS, agentSettings.toJsonString() )
 				.send(Duration.ofSeconds(10));
 	}
 	

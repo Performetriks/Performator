@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -615,13 +616,27 @@ public class ZePFRServer {
 		String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
 		
 		//----------------------------------
+		// Get Agentborne Settings
+		String settingsString = null;
+		if( parameters.containsKey(ZePFRClient.PARAM_AGENT_SETTINGS)) {
+			settingsString = parameters.get(ZePFRClient.PARAM_AGENT_SETTINGS);
+		}
+		
+		PFRAgentborneSettings agentborneSettings = null;
+		if( ! Strings.isNullOrEmpty(settingsString)) {
+			agentborneSettings = XR.JSON.getGsonInstance().fromJson(settingsString,PFRAgentborneSettings.class);
+		}
+		
+		//----------------------------------
 		// Kill Orphans
 		killOrphanedAgentborne(response);
 		
 		//----------------------------------
-		// Start Test
+		// Execute Test
 		try {
 			
+			//----------------------------------
+			// Prepare Command Line Execution
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
 			String vmargs = CLIArgs.pfr_mode.makeCLIArg("agentborne")
 						  + CLIArgs.pfr_port.makeCLIArg(agentbornePort)
@@ -631,11 +646,31 @@ public class ZePFRServer {
 						  + CLIArgs.pfr_agentIsData.makeCLIArg(isDataAgent)
 						  ;
 			
-			String startCommand = "java "+vmargs+" -jar "+JAR_FILE_NAME;
+			LinkedHashMap<String,String> envVariables = new LinkedHashMap<>();
+			
+			//----------------------------------
+			// Prepare Agentborne Settings
+			if( agentborneSettings != null) {
+				
+				vmargs += CLIArgs.pfr_agentborneSettings.makeCLIArgEncoded(settingsString);
+				
+				//-------------------------------
+				// Add EnvVars and JVM Args
+				if(! agentborneSettings.isCoordinator() ) {
+					
+					envVariables = agentborneSettings.getEnvVariables();
+					
+					for(String jvmArg : agentborneSettings.getJvmArgs()) {
+						vmargs += " " + jvmArg;
+					}
+				}
+			}
+			
+			String startCommand = "java " + vmargs + " -jar " + JAR_FILE_NAME;
 			
 			logger.info("Start agentborne: "+startCommand);
 			
-			executor = new PFRCLIExecutor(executionDirectory, startCommand);
+			executor = new PFRCLIExecutor(executionDirectory, startCommand, envVariables);
 			executor.execute();
 			
 		} catch (Exception e) {

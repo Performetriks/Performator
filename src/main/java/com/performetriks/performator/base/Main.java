@@ -1,5 +1,6 @@
 package com.performetriks.performator.base;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.ServiceLoader;
@@ -11,6 +12,7 @@ import com.google.common.base.Strings;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.xresch.hsr.base.HSRConfig;
+import com.xresch.xrutils.base.XR;
 import com.xresch.xrutils.data.XRValue;
 import com.xresch.xrutils.data.XRValue.XRValueType;
 
@@ -40,10 +42,12 @@ public class Main {
 		, pfr_port(XRValueType.NUMBER, "9876", "The port of the started instance.")
 		, pfr_agentIndex(XRValueType.NUMBER, null, "INTERNAL: Index of an agent. This is set by a controller or agent, used to calculate the amount of load on an agent.")
 		, pfr_agentTotal(XRValueType.NUMBER, null, "INTERNAL: Total number of agents. This is set by a controller or agent, used to calculate the amount of load on an agent.")
-		, pfr_agentbornePort(XRValueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
 		, pfr_agentIsData(XRValueType.BOOLEAN, "false", "INTERNAL: Defines if an agentborne process handles only shared data.")
+		, pfr_agentbornePort(XRValueType.NUMBER, "9877", "INTERNAL: The port used by an agent to start child processes with.")
+		, pfr_agentborneSettings(XRValueType.STRING, null, "INTERNAL: Defines settings for the agentborne process.")
 		;
 		
+		private static final String BASE64_PREFIX = "base64:";
 		private static HashSet<String> names = new HashSet<>();
 		static {
 			for(Mode mode : Mode.values()) { names.add(mode.name()); }
@@ -62,6 +66,12 @@ public class Main {
 			this.descrizione = descrizione;
 		}
 	
+		/*****************************************************
+		 * 
+		 *****************************************************/
+		private static String encodeValue(String value) {
+			return BASE64_PREFIX + Base64.getEncoder().encodeToString(value.getBytes());
+		}
 		
 		/*****************************************************
 		 * 
@@ -69,6 +79,11 @@ public class Main {
 		public XRValue getValue() { 
 
 			String property = System.getProperty(this.toString(), defaultissimo);
+			if(property != null && property.startsWith(BASE64_PREFIX)) {
+				property = property.replaceFirst(BASE64_PREFIX, "");
+				property = new String( Base64.getDecoder().decode(property) );
+			}
+			
 			return XRValue.newFromString(type, property);
 		}
 		
@@ -98,9 +113,17 @@ public class Main {
 		 * 
 		 * @return String CLI argument
 		 *****************************************************/
+		public String makeCLIArgEncoded(String value) { 
+			return makeCLIArg( encodeValue(value) );
+		}
+		/*****************************************************
+		 * Returns a string of a CLI argument with the specified
+		 * value, e.g. " -Dpfr_agentIndex=1"
+		 * 
+		 * @return String CLI argument
+		 *****************************************************/
 		public String makeCLIArg(String value) { 
-
-			return " -D" + this.toString()+"="+value+"";
+			return " -D" + this.toString()+"=\""+value.replace("\"", "\\\"")+"\"";
 		}
 		
 		/*****************************************************

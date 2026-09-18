@@ -1,11 +1,13 @@
 package com.performetriks.performator.distribute;
 
+import java.util.Collection;
 import java.util.HashSet;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.performetriks.performator.base.PFR;
+import com.xresch.xrutils.base.XR;
 
 /**************************************************************************************************************
  * This class is used to define agent connections to run tests remotely.
@@ -86,39 +88,65 @@ public class PFRAgent {
 	}
 	
 	/*************************************************************
+	 * @return instance for chaining
+	 *************************************************************/
+	public PFRAgent setHostname(String hostname) {
+		this.hostname = hostname;
+		return this;
+	}
+	
+	/*************************************************************
 	 * @return hostname
 	 *************************************************************/
-	public String hostname() {
+	public String getHostname() {
 		return hostname;
+	}
+	
+	/*************************************************************
+	 * @return instance for chaining
+	 *************************************************************/
+	public PFRAgent setPort(int port) {
+		this.port = port;
+		return this;
 	}
 	
 	/*************************************************************
 	 * @return port
 	 *************************************************************/
-	public int port() {
+	public int getPort() {
 		return port;
+	}
+	
+	/*************************************************************
+	 * @return instance for chaining
+	 *************************************************************/
+	public PFRAgent setActive(boolean isActive) {
+		this.isActive = isActive;
+		return this;
 	}
 	
 	/*************************************************************
 	 * @return active
 	 *************************************************************/
-	public boolean active() {
+	public boolean isActive() {
 		return isActive;
 	}
 	
 	/*************************************************************
-	 * Define if the agent is active or not. Easy way to
-	 * disable an agent.
-	 * 
 	 * @return instance for chaining
 	 *************************************************************/
-	public PFRAgent active(boolean active) {
-		
-		this.isActive = active;
-		
+	public PFRAgent setTags(HashSet<String> tags) {
+		this.tags = tags;
 		return this;
 	}
 	
+	/*************************************************************
+	 * @return hostname
+	 *************************************************************/
+	public HashSet<String> getTags() {
+		return tags;
+	}
+		
 	/*************************************************************
 	 * Returns true if the agent has the specified tag.
 	 * 
@@ -134,7 +162,9 @@ public class PFRAgent {
 	 * 
 	 * @return instance for chaining
 	 *************************************************************/
-	public PFRAgent tag(String... agentTags) {
+	public PFRAgent addTags(String... agentTags) {
+		
+		if(agentTags == null) { return this; }
 		
 		for(String tag : agentTags) {
 			this.tags.add(tag);
@@ -143,29 +173,39 @@ public class PFRAgent {
 	}
 	
 	/*************************************************************
-	 * Returns the config of this agent as a JsonObject.
-	 * JSON Structure:
-	 * <pre><code>{
-    "host": "winserver123",
-    "port": 1234,
-    "active": true,
-    "tags": ["cloud","windows"]
-}</code></pre>
+	 * Adds one or more tags to this agent definition.
 	 * 
-	 * @return object
+	 * @return instance for chaining
 	 *************************************************************/
-	public JsonObject toJson() {
+	public PFRAgent addTags(Collection<String> agentTags) {
 		
-		JsonObject object = new JsonObject();
+		if(agentTags == null) { return this; }
 		
-		object.addProperty("host", hostname);
-		object.addProperty("port", port);
-		object.addProperty("active", isActive);
-		
-		object.add("tags", PFR.JSON.collectionToJsonArray(tags));
-		
-		return object;
-		
+		for(String tag : agentTags) {
+			this.tags.add(tag);
+		}
+		return this;
+	}
+	
+	/*************************************************************
+	 * 
+	 *************************************************************/
+	public String toJsonString() {
+		return XR.JSON.getGsonInstance().toJson(this);
+	}
+	
+	/*************************************************************
+	 * 
+	 *************************************************************/
+	public JsonElement toJson() {
+		return XR.JSON.getGsonInstance().toJsonTree(this);
+	}
+	
+	/*************************************************************
+	 * 
+	 *************************************************************/
+	public static PFRAgent fromJson(String json) {
+		return XR.JSON.getGsonInstance().fromJson(json, PFRAgent.class);
 	}
 	
 	/*************************************************************

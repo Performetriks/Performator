@@ -1,15 +1,10 @@
 package com.performetriks.performator.base;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.jar.Manifest;
 
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +17,7 @@ import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.data.PFRDataSource;
 import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
+import com.performetriks.performator.distribute.PFRAgentborneSettings;
 import com.performetriks.performator.distribute.RemoteResponse;
 import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
@@ -38,8 +34,9 @@ import com.xresch.hsr.stats.HSRRecordStats;
 import com.xresch.hsr.stats.HSRStatsEngine;
 import com.xresch.hsr.stats.HSRStatsEngine.SummarizedStats;
 import com.xresch.hsr.stats.HSRStatsEngineHooks;
-import com.xresch.xrutils.annotation.XRAnnotations;
+import com.xresch.xrutils.base.XR;
 import com.xresch.xrutils.data.XRRecord;
+import com.xresch.xrutils.data.XRValue;
 
 import ch.qos.logback.classic.Logger;
 
@@ -81,6 +78,8 @@ public class PFRCoordinator {
 	private static HSRReporterPeekPoll peekPoll = null;
 	
 	private static boolean isTestRunning = true;
+	
+	private static PFRAgentborneSettings agentborneSettings = null;
 	
 	/*************************************************************
 	 * Start the instance in the defined mode.
@@ -276,7 +275,7 @@ public class PFRCoordinator {
 				
 				PFRAgent current = connectionsAgentsAll.get(i).getAgent();
 
-				builder.append(" ["+current.hostname()+": "+current.uploadProgressPercent()+"%] ");
+				builder.append(" ["+current.getHostname()+": "+current.uploadProgressPercent()+"%] ");
 			}
 			logger.info("Upload Progress:"+builder.toString());
 			
@@ -404,16 +403,16 @@ public class PFRCoordinator {
 			// Filter
 			PFRAgent agent = pool.get(i);
 			
-			if( ! agent.active()) {
+			if( ! agent.isActive()) {
 				agentsInactive.add(agent);
 				continue amountLoop;
 			}
 			
 			for(String filterTag : tags) {
 				if( ! agent.hasTag(filterTag) 
-				&&  ! agent.hostname().equals(filterTag)  
-				&&  ! (agent.port()+"").equals(filterTag)  
-				&&  ! (agent.hostname()+":"+agent.port()).equals(filterTag)  
+				&&  ! agent.getHostname().equals(filterTag)  
+				&&  ! (agent.getPort()+"").equals(filterTag)  
+				&&  ! (agent.getHostname()+":"+agent.getPort()).equals(filterTag)  
 				){
 					agentsSkipped.add(agent);
 					continue amountLoop;
@@ -430,13 +429,13 @@ public class PFRCoordinator {
 			//---------------------------
 			// Check success
 			if(status == null) {
-				logger.warn(" Error connecting to agent: " + agent.hostname() + ":" + agent.port());
+				logger.warn(" Error connecting to agent: " + agent.getHostname() + ":" + agent.getPort());
 				continue;
 			}
 			
 			if(!status.success()) {
 				logger.warn("Error while checking agent status: " 
-								+ agent.hostname() + ":" + agent.port() 
+								+ agent.getHostname() + ":" + agent.getPort() 
 								+ ", Messages: " + PFR.JSON.toJSON(status.messages()) 
 							);
 				continue;
@@ -513,7 +512,7 @@ public class PFRCoordinator {
 			//----------------------------
 			// Create Progress Log
 			PFRAgent agent = current.getAgent();
-			builder.append(" ["+agent.hostname()+": "+
+			builder.append(" ["+agent.getHostname()+": "+
 									((isAgentTestRunning) ? "running" : "done") 
 							 +"] ");
 			
@@ -594,7 +593,7 @@ public class PFRCoordinator {
 	
 					boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
 	
-					builder.append(" ["+current.getAgent().hostname()+": "+(isAgentTestRunning ? "stopping" : "DONE")+"] ");
+					builder.append(" ["+current.getAgent().getHostname()+": "+(isAgentTestRunning ? "stopping" : "DONE")+"] ");
 				}
 				
 				logger.info("Stopping Progress:" + builder.toString());
@@ -707,6 +706,22 @@ public class PFRCoordinator {
 		int agentTotal = CLIArgs.pfr_agentTotal.getValue().getAsInteger();
 		int agentIndex = CLIArgs.pfr_agentIndex.getValue().getAsInteger();
 		boolean isDataAgent = CLIArgs.pfr_agentIsData.getValue().getAsBoolean();
+		XRValue settingsValue = CLIArgs.pfr_agentborneSettings.getValue();
+		
+		agentborneSettings = null;
+		if( ! settingsValue.isNull() ) {
+			String settingsString = settingsValue.getAsString();
+			agentborneSettings = XR.JSON.getGsonInstance()
+										.fromJson(settingsString, PFRAgentborneSettings.class);
+			
+		}
+		
+		//-------------------------------
+		// Check
+		if(agentborneSettings.isCoordinator()) {
+			
+		}
+		
 		
 		//-------------------------------
 		// Initialize Test
