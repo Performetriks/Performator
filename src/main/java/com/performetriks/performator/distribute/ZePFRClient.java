@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import com.performetriks.performator.base.Main.CLIArgs;
 import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.distribute.ZePFRServer.Command;
-import com.xresch.xrutils.base.XR;
 
 /**************************************************************************************************************
  * This class is used to establish a connection between an agent and a controller or vice versa.
@@ -89,7 +88,10 @@ public class ZePFRClient {
 	public ZePFRClient(String remoteHost, int remotePort, String testClass) {
 		this.remoteHost = remoteHost;
 		this.remotePort = remotePort;
-		this.testClass = testClass;
+		
+		if(test != null) {
+			this.testClass = testClass;
+		}
 	}
 	
 	/**********************************************************************************

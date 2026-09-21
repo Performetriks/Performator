@@ -6,7 +6,6 @@ import java.util.HashSet;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFR;
 import com.xresch.xrutils.base.XR;
 
 /**************************************************************************************************************
@@ -185,6 +184,20 @@ public class PFRAgent {
 			this.tags.add(tag);
 		}
 		return this;
+	}
+	
+	/*************************************************************
+	 * Creates a client without a testClass.
+	 *************************************************************/
+	public ZePFRClient toClient() {
+		return toClient(null);
+	}
+	
+	/*************************************************************
+	 * Creates a client with the specified testClass.
+	 *************************************************************/
+	public ZePFRClient toClient(String testClass) {
+		return new ZePFRClient(hostname, port, testClass);
 	}
 	
 	/*************************************************************

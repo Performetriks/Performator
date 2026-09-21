@@ -880,7 +880,7 @@ public class PFRCoordinator {
 		
 		//-------------------------------
 		// Execute the Test
-		executeAuto(test);
+		executeOnAgents(test);
 	}
 	
 	/*************************************************************
