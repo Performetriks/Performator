@@ -3,6 +3,7 @@ package com.performetriks.performator.base;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -18,6 +19,7 @@ import com.performetriks.performator.data.PFRDataSource;
 import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
 import com.performetriks.performator.distribute.PFRAgentborneSettings;
+import com.performetriks.performator.distribute.PFRAgentborneSettings.DBReportSettings;
 import com.performetriks.performator.distribute.RemoteResponse;
 import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
@@ -27,6 +29,7 @@ import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRTestSettings;
 import com.xresch.hsr.reporting.HSRReporterCSV;
+import com.xresch.hsr.reporting.HSRReporterDatabasePostGres;
 import com.xresch.hsr.reporting.HSRReporterHTML;
 import com.xresch.hsr.reporting.HSRReporterJson;
 import com.xresch.hsr.reporting.HSRReporterPeekPoll;
@@ -67,7 +70,7 @@ public class PFRCoordinator {
 	
 	private static ArrayList<PFRExec> executorList = null;
 	
-	private static ArrayList<ZePFRClient> connectionsAgentsAll = new ArrayList<>();
+	private static LinkedHashSet<ZePFRClient> connectionsAgentsAll = new LinkedHashSet<>();
 	private static ArrayList<ZePFRClient> connectionsAgentsLoad = new ArrayList<>();
 	
 	// Note: This will at most contain a single entry, done like this for less code redundancy
@@ -80,7 +83,7 @@ public class PFRCoordinator {
 	private static boolean isTestRunning = true;
 	
 	private static PFRAgentborneSettings agentborneSettings = null;
-	
+		
 	/*************************************************************
 	 * Start the instance in the defined mode.
 	 * 
@@ -129,6 +132,16 @@ public class PFRCoordinator {
 		
 		//This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);
+		
+		executeAuto(test);
+	}
+	
+	/*************************************************************
+	 * Start the instance and run the test either locally or remote
+	 * on agents if agents are defined.
+	 * 
+	 *************************************************************/
+	public static void executeAuto(PFRTest test) {
 		
 		if(test != null) {
 			if(PFRConfig.hasAgents()) {
@@ -247,9 +260,9 @@ public class PFRCoordinator {
 		
 		CountDownLatch latch = new CountDownLatch(connectionsAgentsAll.size());
 		
-		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
+		for(ZePFRClient client : connectionsAgentsAll) {
 			
-			connectionsAgentsAll.get(i).sendJar(latch);
+			client.sendJar(latch);
 		}
 
 		//------------------------------
@@ -269,11 +282,12 @@ public class PFRCoordinator {
 			//----------------------------
 			// Ping agents and create Progress Log
 			StringBuilder builder = new StringBuilder();
-			for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
+			
+			for(ZePFRClient client : connectionsAgentsAll) {
 				
-				connectionsAgentsAll.get(i).ping(); // ping agent to not lose connection during longer upload times.
+				client.ping(); // ping agent to not lose connection during longer upload times.
 				
-				PFRAgent current = connectionsAgentsAll.get(i).getAgent();
+				PFRAgent current = client.getAgent();
 
 				builder.append(" ["+current.getHostname()+": "+current.uploadProgressPercent()+"%] ");
 			}
@@ -306,20 +320,24 @@ public class PFRCoordinator {
 	
 					if(response != null) { 
 				
-						JsonArray recordStatsArray = response.payloadAsArray();
-						
-						for(JsonElement e : recordStatsArray) {
-							if(e.isJsonObject()) {
-								HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
-								
-								String statsId = stats.statsIdentifier();
-								
-								if( !groupedStats.containsKey(statsId) ) {
-									groupedStats.put(statsId,  new ArrayList<>());
+						try {
+							JsonArray recordStatsArray = response.payloadAsArray();
+							
+							for(JsonElement e : recordStatsArray) {
+								if(e.isJsonObject()) {
+									HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
+									
+									String statsId = stats.statsIdentifier();
+									
+									if( !groupedStats.containsKey(statsId) ) {
+										groupedStats.put(statsId,  new ArrayList<>());
+									}
+									
+									groupedStats.get(statsId).add(stats);
 								}
-								
-								groupedStats.get(statsId).add(stats);
 							}
+						}catch(Exception e) {
+							logger.warn("Error while fetching stats from agent: " + current.getHost() + ":" + current.getPort() + ", Response: "+response.toJsonString());
 						}
 						
 					}
@@ -403,7 +421,7 @@ public class PFRCoordinator {
 			// Filter
 			PFRAgent agent = pool.get(i);
 			
-			if( ! agent.isActive()) {
+			if( ! agent.isActive() ) {
 				agentsInactive.add(agent);
 				continue amountLoop;
 			}
@@ -447,11 +465,14 @@ public class PFRCoordinator {
 			logger.info(PFR.JSON.toJSON(payload));
 			
 			if(
-			   isDataAgent // ignore available status as multiple processes need to connect to data agents
-			   ||
 			   (  payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
 			   && payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true
 			   )
+			   || (isDataAgent // ignore available status as multiple processes need to connect to data agents
+			       && (  payload.has(RemoteResponse.FIELD_STATUS_ISDATAAGENT)
+				      && payload.get(RemoteResponse.FIELD_STATUS_ISDATAAGENT).getAsBoolean() == true // do not use coordinators
+					  )	
+			       )
 			){
 				
 				RemoteResponse reserve = connection.reserveAgent(amount, i, isDataAgent);
@@ -501,9 +522,10 @@ public class PFRCoordinator {
 		
 		StringBuilder builder = new StringBuilder();
 
-		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
-			ZePFRClient current = connectionsAgentsAll.get(i);
-			RemoteResponse response = current.ping();
+		for(ZePFRClient client : connectionsAgentsAll) {
+			
+			
+			RemoteResponse response = client.ping();
 
 			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
 			
@@ -511,7 +533,7 @@ public class PFRCoordinator {
 			
 			//----------------------------
 			// Create Progress Log
-			PFRAgent agent = current.getAgent();
+			PFRAgent agent = client.getAgent();
 			builder.append(" ["+agent.getHostname()+": "+
 									((isAgentTestRunning) ? "running" : "done") 
 							 +"] ");
@@ -554,15 +576,15 @@ public class PFRCoordinator {
 		
 		ArrayList<ZePFRClient> agentsToStop = new ArrayList<>();
 		
-		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
-			ZePFRClient current = connectionsAgentsAll.get(i);
-			RemoteResponse response = current.ping();
+		for(ZePFRClient client : connectionsAgentsAll) {
+			
+			RemoteResponse response = client.ping();
 
 			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
 			
 			if(isAgentTestRunning) {
-				agentsToStop.add(current);
-				current.testStop(latch);
+				agentsToStop.add(client);
+				client.testStop(latch);
 			}else {
 				latch.countDown(); // nothing todo
 			}
@@ -621,8 +643,12 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Start all the Tests
-		for(int i = 0 ; i < connectionsAgentsAll.size(); i++) {
-			connectionsAgentsAll.get(i).testStart();
+		if(agentborneSettings != null) {
+			agentborneSettings.setCoordinator(false);
+		}
+		
+		for(ZePFRClient client : connectionsAgentsAll) {
+			client.testStart(agentborneSettings);
 		}
 		
 		//-------------------------
@@ -717,9 +743,11 @@ public class PFRCoordinator {
 		}
 		
 		//-------------------------------
-		// Check
-		if(agentborneSettings.isCoordinator()) {
-			
+		// Handle Coordinator
+		if(agentborneSettings != null 
+		&& agentborneSettings.isCoordinator()) {
+			executeAgentborneAsCoordinator(agentborneSettings);
+			return;
 		}
 		
 		
@@ -742,14 +770,14 @@ public class PFRCoordinator {
 		// Change Reporters
 		HSRConfig.clearReporters();
 		
-		if( ! isDataAgent ) {
-			HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
-			HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
-			HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
-			
-			peekPoll = new HSRReporterPeekPoll();
-			HSRConfig.addReporter(peekPoll);
-		}
+		//if( ! isDataAgent ) {
+		HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
+		HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
+		HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
+		
+		peekPoll = new HSRReporterPeekPoll();
+		HSRConfig.addReporter(peekPoll);
+		//}
 		
 		//-------------------------------
 		// Distribute Load
@@ -781,6 +809,78 @@ public class PFRCoordinator {
 			if( ! isDataAgent ) { agentsDisconnect(); }
 		}
 
+	}
+
+	/*************************************************************
+	 * Executes the Agentborne Process as a Coordinator, not as
+	 * a test process.
+	 * 
+	 *************************************************************/
+	private static void executeAgentborneAsCoordinator(PFRAgentborneSettings agentborneSettings) {
+		
+		//-------------------------------
+		// Variables
+		String testClass = CLIArgs.pfr_test.getValue().getAsString();
+		String targetDir = CLIArgs.pfr_target.getValue().getAsString();
+		//int agentTotal = CLIArgs.pfr_agentTotal.getValue().getAsInteger();
+		//int agentIndex = CLIArgs.pfr_agentIndex.getValue().getAsInteger();
+		//boolean isDataAgent = CLIArgs.pfr_agentIsData.getValue().getAsBoolean();
+		//XRValue settingsValue = CLIArgs.pfr_agentborneSettings.getValue();
+		
+		//-------------------------------
+		// Add Agents
+		ArrayList<PFRAgent> agents = agentborneSettings.getAgents();
+		PFRAgentPool pool = new PFRAgentPool(agents);
+		PFRConfig.setAgentPool(pool);
+		PFRConfig.setDataAgentPool(pool);
+		
+		//-------------------------------
+		// Agent Amount
+		// TODO PFRConfig.setAgentAmount(agentIndex);
+		
+		//-------------------------------
+		// Agent Tags
+		// TODO PFRConfig.setAgentTags(null);
+		// TODO PFRConfig.setDataAgentTags(null);
+				
+		//-------------------------------
+		// Create Test
+
+		//This also loads all the PFRConfig set in the constructor of the test.
+		PFRTest test = createTestInstance(testClass);
+				
+		//-------------------------------
+		// Change Reporters
+		HSRConfig.clearReporters();
+		
+		HSRConfig.addReporter(new HSRReporterCSV(targetDir+"/report/data.csv", ";"));
+		HSRConfig.addReporter(new HSRReporterJson(targetDir+"/report/data.json", true));
+		HSRConfig.addReporter(new HSRReporterHTML(targetDir+"/report/HTMLReport"));
+		
+		peekPoll = new HSRReporterPeekPoll();
+		HSRConfig.addReporter(peekPoll);
+
+		//-------------------------------
+		// Set Coordinator DB Reporter
+		DBReportSettings dbSettings = agentborneSettings.getDbsettings();
+		
+		if(dbSettings.isDefined()) {
+
+			HSRConfig.addReporter(
+				new HSRReporterDatabasePostGres(
+					  dbSettings.getHost()
+					, dbSettings.getPort()
+					, dbSettings.getDbName()
+					, dbSettings.getTableNamePrefix()
+					, dbSettings.getUsername()
+					, dbSettings.getPassword()
+				)
+			);
+		}
+		
+		//-------------------------------
+		// Execute the Test
+		executeAuto(test);
 	}
 	
 	/*************************************************************

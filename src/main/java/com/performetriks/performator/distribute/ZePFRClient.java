@@ -60,6 +60,14 @@ public class ZePFRClient {
 		}
 	}
 	
+	/**********************************************************************************
+	 * Used to make sure the same agent is not connected to twice.
+	 **********************************************************************************/
+	@Override
+	public int hashCode() {
+		return (remoteHost + remotePort).hashCode();
+	}
+	
 	
 	/**********************************************************************************
 	 * Connects this instance to a agent or collector.
@@ -190,7 +198,7 @@ public class ZePFRClient {
 	 * Starts the test on the agent.
 	 **********************************************************************************/
 	public RemoteResponse testStart(){
-		return testStart(test.getClass().getName());
+		return testStart(testClass);
 	}
 		
 	/**********************************************************************************
@@ -203,11 +211,22 @@ public class ZePFRClient {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
+	public RemoteResponse testStart(PFRAgentborneSettings agentSettings){
+		return testStart(testClass, agentSettings);
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
 	public RemoteResponse testStart(String fullyQualifiedClassName, PFRAgentborneSettings agentSettings){
-		return new RemoteRequest(this, Command.teststart, test)
-				.param(PARAM_TESTCLASS, fullyQualifiedClassName)
-				.param(PARAM_AGENT_SETTINGS, agentSettings.toJsonString() )
-				.send(Duration.ofSeconds(10));
+		RemoteRequest request = new RemoteRequest(this, Command.teststart, test)
+				.param(PARAM_TESTCLASS, fullyQualifiedClassName);
+		
+		if(agentSettings != null) {
+			request.param(PARAM_AGENT_SETTINGS, agentSettings.toJsonString() );
+		}
+		
+		return request.send(Duration.ofSeconds(10));
 	}
 	
 	/**********************************************************************************

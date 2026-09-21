@@ -57,7 +57,7 @@ public class PFRAgentborneSettings {
 		return this;
 	}
 	
-	public ArrayList<PFRAgent> setAgents() {
+	public ArrayList<PFRAgent> getAgents() {
 		return agents;
 	}
 
@@ -122,7 +122,7 @@ public class PFRAgentborneSettings {
 	public class DBReportSettings {
 		
 		private String host;
-		private int port;
+		private int port = -1;
 		private String dbName;
 		private String tableNamePrefix;
 		private String username;
@@ -145,6 +145,16 @@ public class PFRAgentborneSettings {
 			this.tableNamePrefix  = tableNamePrefix;
 			this.username         = username;
 			this.password         = password;
+		}
+		
+		
+		public boolean isDefined() {
+			if(this.host != null
+			&& this.port != -1) {
+				return true;
+			}
+			
+			return false;
 		}
 		
 		public String getHost() {

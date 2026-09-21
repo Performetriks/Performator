@@ -30,6 +30,8 @@ public class RemoteResponse {
 	public static final String FIELD_STATUS_HOST = "host";
 	public static final String FIELD_STATUS_AVAILABLE = "available";
 	public static final String FIELD_STATUS_ISTESTRUNNING = "isTestRunning";
+	public static final String FIELD_STATUS_ISCOORDINATOR = "isCoordinator";
+	public static final String FIELD_STATUS_ISDATAAGENT = "isDataAgent";
 	
 	JsonObject response;
 	

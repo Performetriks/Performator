@@ -79,6 +79,7 @@ public class ZePFRServer {
 	private Integer agentTotal = null;
 	private Integer agentIndex = null;
 	private boolean isDataAgent  = false; // set to true if this agent should manage shared data sources
+	private boolean isCoordinator	= false;  // set to true if this agent is executing a Coordinator
 	
 	private Thread threadPingTracker;
 	
@@ -92,8 +93,10 @@ public class ZePFRServer {
 	
 	//------------------------------------
 	// 
-
 	private Boolean isAvailable = true; // Check is in use.
+	
+	// Stop instance if pings are not received. Used to not stop Agentborne processes that are executed as Coordinator
+	private Boolean doStopOnPingTimeout = true; 
 		
 	public enum Command{
 		  /** STEP 1: Fetch the status of a remote process */
@@ -245,8 +248,11 @@ public class ZePFRServer {
 		executor 		= null;
 		agentTotal 		= null;
 		agentIndex 		= null;
-		reservedTestclass= null;
+		reservedTestclass = null;
 		
+		doStopOnPingTimeout = true;
+		
+		isCoordinator	= false;
 		isAvailable		= true;
 	}
 	
@@ -401,6 +407,8 @@ public class ZePFRServer {
 		JsonObject payload = response.payloadAsObject();
 		
 		payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
+		payload.addProperty(RemoteResponse.FIELD_STATUS_ISCOORDINATOR, isCoordinator);
+		payload.addProperty(RemoteResponse.FIELD_STATUS_ISDATAAGENT, isDataAgent);
 		payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, isTestRunning());
 		payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
@@ -497,7 +505,7 @@ public class ZePFRServer {
 			//-------------------------------
 			// Reset
 			isAvailable = false; 
-			startPingTracker();
+			startPingAndExecutionTracker();
 
 		}
 
@@ -655,8 +663,15 @@ public class ZePFRServer {
 				vmargs += CLIArgs.pfr_agentborneSettings.makeCLIArgEncoded(settingsString);
 				
 				//-------------------------------
-				// Add EnvVars and JVM Args
-				if(! agentborneSettings.isCoordinator() ) {
+				// If is Coordinator
+				if(agentborneSettings.isCoordinator() ) {
+					isCoordinator = true;
+					doStopOnPingTimeout = false;
+				}
+				
+				//-------------------------------
+				// Agents: Add EnvVars and JVM Args
+				if( ! agentborneSettings.isCoordinator() ) {
 					
 					envVariables = agentborneSettings.getEnvVariables();
 					
@@ -709,9 +724,30 @@ public class ZePFRServer {
 
 			String info = executor.readOutputOrTimeout(60, -1, -1, false);
 			
-			JsonElement element = XR.JSON.fromJson(info);
-			
-			response.setPayload(element);
+			if( ! Strings.isNullOrEmpty(info)) {
+				
+				//--------------------------------
+				// As users could print sysout,
+				// find where JARInfo is printed
+				int index = info.indexOf("\"tests\": [");
+				for(int i = index; i >= 0; i-- ) {
+					
+					if(info.charAt(i) == '{') {
+						info = info.substring(i);
+						break;
+					}
+				}
+				
+				//--------------------------------
+				// Create JSON
+				try {
+					JsonElement element = XR.JSON.fromJson(info);
+					response.setPayload(element);
+				}catch(Exception e) {
+					logger.error("Error while reading JAR Info: "+info, e);
+					response.addMessage(Level.ERROR, "Error while reading JAR Info: "+info);
+				}
+			}
 		} catch (Exception e) {
 			logger.error("Error while starting process: "+e.getMessage(), e);
 			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
@@ -861,12 +897,6 @@ public class ZePFRServer {
 		// Get Data if Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
 			
-			if(!PFRCoordinator.hasPeekPoll()) {
-				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
-				return;
-			}
-			
-			JsonArray recordStatsArray = null;
 			if(command == Command.teststopgraceful) {	PFRCoordinator.stopTestGracefully(); }
 			else if(command == Command.teststop) {		PFRCoordinator.stopTestNow(); }
 
@@ -945,10 +975,12 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	public void handleCommandDisconnect(RemoteResponse response) {
 		
-		if (executor != null) {
-			executor.kill();
-			executor = null;
-		} 
+		if(!isCoordinator) {
+			if (executor != null) {
+				executor.kill();
+				executor = null;
+			} 
+		}
 		
 		reset();
 	}
@@ -1042,9 +1074,11 @@ public class ZePFRServer {
 	 * a test got interrupted or similar situations.
 	 * 
 	 **********************************************************************************/
-	private void startPingTracker() {
+	private void startPingAndExecutionTracker() {
 		
 		synchronized (SYNC_LOCK_PINGTRACKER) {
+			
+			doStopOnPingTimeout = true;
 			
 			//----------------------------------
 			// Check is already Setup
@@ -1066,7 +1100,27 @@ public class ZePFRServer {
 					// Track Pings
 					setPingNow();
 					logger.info("Start Tracking Pings");
-					while( (System.currentTimeMillis() - lastPingTime) < PING_TIMEOUT) {
+					boolean isPingTimeout = false;
+					boolean isTestStopped = false;
+					while( ! isPingTimeout && ! isTestStopped ) {
+						
+						//-------------------------------
+						// Check Conditions
+						isPingTimeout = doStopOnPingTimeout && PING_TIMEOUT <= (System.currentTimeMillis() - lastPingTime) ;
+						
+						if(executor != null) {
+							isTestStopped = ! executor.checkKeepExecuting();
+						}
+						
+						System.out.println("================= " );
+						System.out.println("keep Loop Going: "+ (!isPingTimeout && ! isTestStopped) );
+						System.out.println("isPingTimeout: "+isPingTimeout);
+						System.out.println("isTestStopped: "+isTestStopped);
+						System.out.println("executor: "+executor);
+
+						
+						//-------------------------------
+						// Wait
 						try {
 							Thread.sleep(5000);
 							logger.trace("ping tracker tracking: "+(System.currentTimeMillis() - lastPingTime) );
@@ -1079,14 +1133,14 @@ public class ZePFRServer {
 					// Stop if not already stopped
 					// Make Agent available again
 					if(!isAvailable) {
-						logger.info("End Tracking Pings");
+						logger.info("Tracker ending process and make agent available.");
 						instance.handleCommandTestStop(null, Command.teststop);
 						instance.handleCommandDisconnect(null);
 					}
 				}
 				
 			});
-			threadPingTracker.setName("Ping Tracker");
+			threadPingTracker.setName("Ping and Execution Tracker");
 			threadPingTracker.start();
 		}
 	}

@@ -33,6 +33,19 @@ public class PFRAgentPool {
 	}
 	
 	/*************************************************************
+	 * Creates an agent pool containing the given agents.
+	 * 
+	 * @param agents the agents to add to this pool
+	 *************************************************************/
+	public PFRAgentPool(ArrayList<PFRAgent> agents) {
+		
+		for(PFRAgent agent : agents) {
+			agentList.add(agent);
+		}
+		
+	}
+	
+	/*************************************************************
 	 * Creates an agent pool by loading them from the specified
 	 * json file.
 	 * 
