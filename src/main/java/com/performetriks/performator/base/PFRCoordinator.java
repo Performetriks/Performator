@@ -831,18 +831,18 @@ public class PFRCoordinator {
 		// Add Agents
 		ArrayList<PFRAgent> agents = agentborneSettings.getAgents();
 		PFRAgentPool pool = new PFRAgentPool(agents);
+		
+		PFRConfig.setAgentAmount(agentborneSettings.getAgentAmount());
+		
 		PFRConfig.setAgentPool(pool);
-		PFRConfig.setDataAgentPool(pool);
+		PFRConfig.setAgentTags(agentborneSettings.getAgentTags());
 		
-		//-------------------------------
-		// Agent Amount
-		// TODO PFRConfig.setAgentAmount(agentIndex);
+		if(agentborneSettings.getUseDataAgent()) {
+			PFRConfig.setDataAgentPool(pool);
+			PFRConfig.setDataAgentTags(agentborneSettings.getDataAgentTags());
+		}
 		
-		//-------------------------------
-		// Agent Tags
-		// TODO PFRConfig.setAgentTags(null);
-		// TODO PFRConfig.setDataAgentTags(null);
-				
+
 		//-------------------------------
 		// Create Test
 
@@ -877,6 +877,9 @@ public class PFRCoordinator {
 				)
 			);
 		}
+		
+		// remove DB settings to not send them to agents
+		agentborneSettings.setDbsettings(null);
 		
 		//-------------------------------
 		// Execute the Test

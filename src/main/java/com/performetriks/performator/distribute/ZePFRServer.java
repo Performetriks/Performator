@@ -1112,13 +1112,13 @@ public class ZePFRServer {
 							isTestStopped = ! executor.checkKeepExecuting();
 						}
 						
-						System.out.println("================= " );
-						System.out.println("keep Loop Going: "+ (!isPingTimeout && ! isTestStopped) );
-						System.out.println("isPingTimeout: "+isPingTimeout);
-						System.out.println("isTestStopped: "+isTestStopped);
-						System.out.println("executor: "+executor);
-
-						
+//						System.out.println("================= " );
+//						System.out.println("keep Loop Going: "+ (!isPingTimeout && ! isTestStopped) );
+//						System.out.println("isPingTimeout: "+isPingTimeout);
+//						System.out.println("isTestStopped: "+isTestStopped);
+//						System.out.println("executor: "+executor);
+//
+//						
 						//-------------------------------
 						// Wait
 						try {

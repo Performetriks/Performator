@@ -15,12 +15,15 @@ public class PFRAgentborneSettings {
 	
 	private ArrayList<String> jvmArgs = new ArrayList<>();
 	
-	private ArrayList<String> tags = new ArrayList<>();
+	
+	private int agentAmount = 1; // amount of agents to use from the pool.
+	private boolean useDataAgent = false; // define if a dataAgent should be selected from the pool
 	
 	private ArrayList<PFRAgent> agents = new ArrayList<>();
+	private ArrayList<String> agentTags = new ArrayList<>();
+	private ArrayList<String> dataAgentTags = new ArrayList<>();
 	
 	private DBReportSettings dbsettings = new DBReportSettings();
-	
 
 	/**************************************************************************************
 	 * Constructor
@@ -28,7 +31,6 @@ public class PFRAgentborneSettings {
 	public PFRAgentborneSettings() {
 		
 	}
-	
 	
 	public boolean isCoordinator() {
 		return isCoordinator;
@@ -57,6 +59,24 @@ public class PFRAgentborneSettings {
 		return this;
 	}
 	
+	public int getAgentAmount() {
+		return agentAmount;
+	}
+	
+	public PFRAgentborneSettings setAgentAmount(int agentAmount) {
+		this.agentAmount = agentAmount;
+		return this;
+	}
+	
+	public boolean getUseDataAgent() {
+		return useDataAgent;
+	}
+	
+	public PFRAgentborneSettings setUseDataAgent(boolean useDataAgent) {
+		this.useDataAgent = useDataAgent;
+		return this;
+	}
+	
 	public ArrayList<PFRAgent> getAgents() {
 		return agents;
 	}
@@ -66,12 +86,21 @@ public class PFRAgentborneSettings {
 		return this;
 	}
 
-	public ArrayList<String> getTags() {
-		return tags;
+	public ArrayList<String> getAgentTags() {
+		return agentTags;
 	}
 
-	public PFRAgentborneSettings setTags(ArrayList<String> tags) {
-		this.tags = tags;
+	public PFRAgentborneSettings setAgentTags(ArrayList<String> agentTags) {
+		this.agentTags = agentTags;
+		return this;
+	}
+	
+	public ArrayList<String> getDataAgentTags() {
+		return dataAgentTags;
+	}
+
+	public PFRAgentborneSettings setDataAgentTags(ArrayList<String> dataAgentTags) {
+		this.dataAgentTags = dataAgentTags;
 		return this;
 	}
 
