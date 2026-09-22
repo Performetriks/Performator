@@ -10,11 +10,11 @@ public class PFRAgentborneSettings {
 
 
 	private boolean isCoordinator = false;
+	private String executionID = null;
 	
 	private LinkedHashMap<String,String> envVariables = new LinkedHashMap<>();
 	
 	private ArrayList<String> jvmArgs = new ArrayList<>();
-	
 	
 	private int agentAmount = 1; // amount of agents to use from the pool.
 	private boolean useDataAgent = false; // define if a dataAgent should be selected from the pool
@@ -32,10 +32,19 @@ public class PFRAgentborneSettings {
 		
 	}
 	
+	public String getExecutionID() {
+		return executionID;
+	}
+
+	public PFRAgentborneSettings setExecutionID(String executionID) {
+		this.executionID = executionID;
+		return this;
+	}
+	
 	public boolean isCoordinator() {
 		return isCoordinator;
 	}
-
+	
 	public PFRAgentborneSettings setCoordinator(boolean isCoordinator) {
 		this.isCoordinator = isCoordinator;
 		return this;

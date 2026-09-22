@@ -990,6 +990,10 @@ public class PFRCoordinator {
 		
 		//-------------------------
 		// Execute
+		if(agentborneSettings != null) {
+			HSRConfig.setExecID( agentborneSettings.getExecutionID() );
+		}
+		
 		HSRConfig.enable();
 		
 		return true;
