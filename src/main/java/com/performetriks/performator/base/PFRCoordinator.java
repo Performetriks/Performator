@@ -842,10 +842,12 @@ public class PFRCoordinator {
 			PFRConfig.setDataAgentTags(agentborneSettings.getDataAgentTags());
 		}
 		
+		//-------------------------------
+		// Set Execution ID
+		HSRConfig.setExecID( agentborneSettings.getExecutionID() );
 
 		//-------------------------------
 		// Create Test
-
 		//This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);
 				
@@ -880,10 +882,11 @@ public class PFRCoordinator {
 		
 		// remove DB settings to not send them to agents
 		agentborneSettings.setDbsettings(null);
-		
+
 		//-------------------------------
 		// Execute the Test
 		executeOnAgents(test);
+
 	}
 	
 	/*************************************************************
@@ -987,13 +990,7 @@ public class PFRCoordinator {
 		//-------------------------
 		// Register Settings
 		registerExecutorSettings();
-		
-		//-------------------------
-		// Execute
-		if(agentborneSettings != null) {
-			HSRConfig.setExecID( agentborneSettings.getExecutionID() );
-		}
-		
+				
 		HSRConfig.enable();
 		
 		return true;
