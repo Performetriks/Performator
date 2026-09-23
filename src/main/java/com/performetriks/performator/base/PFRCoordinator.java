@@ -660,7 +660,7 @@ public class PFRCoordinator {
 			// or max duration being reached
 			long startMillis = System.currentTimeMillis();
 			long endMillis = startMillis;
-			long maxMillis = test.maxDuration().toMillis();
+			long maxMillis = test.maxDuration().toMillis() + 60_000; // Plus 1 minute as agentborne processes need to startup 
 			
 			while(
 					agentsPingIsTestRunning(true)

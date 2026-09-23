@@ -27,7 +27,7 @@ public abstract class PFRTest {
 	
 	private ArrayList<PFRExec> executorList = new ArrayList<>();
 	
-	private Duration maxDuration = Duration.ofHours(1);
+	private Duration maxDuration = Duration.ofMinutes(2);
 	private Duration gracefulStop = Duration.ofMinutes(1);
 	
 	/***************************************************************************
@@ -80,12 +80,19 @@ public abstract class PFRTest {
 	
 	/***************************************************************************
 	 * Sets the maximum duration of the test, default is 1 hour.
+	 * If the maxDuration is smaller than 2 minutes, this method will do nothing.
+	 * This lower limit is needed as else reporting and agent startups might not
+	 * happen in time and will cause missing data for. 
 	 * 
-	 * @param maxDuration
+	 * @param maxDuration equals or bigger than 2 minutes.
+	 * 
 	 * @return instance for chaining
 	 ***************************************************************************/
 	public PFRTest maxDuration(Duration maxDuration){
-		this.maxDuration = maxDuration;
+		
+		if(maxDuration.toMillis() >= 120_000) {
+			this.maxDuration = maxDuration;
+		}
 		return this;
 	}
 	
