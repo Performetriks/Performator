@@ -173,7 +173,9 @@ public class PFRConfig {
 	public static void setAgentTags(HashSet<String> agentTags) {
 		PFRConfig.agentTags.clear();
 		
-		PFRConfig.agentTags.addAll(agentTags);
+		if(agentTags != null) {
+			PFRConfig.agentTags.addAll(agentTags);
+		}
 		
 	}
 	
@@ -188,7 +190,10 @@ public class PFRConfig {
 	 **********************************************************************************/
 	public static void setAgentTags(ArrayList<String> agentTags) {
 		PFRConfig.agentTags.clear();
-		PFRConfig.agentTags.addAll(agentTags);
+		
+		if(agentTags != null) {
+			PFRConfig.agentTags.addAll(agentTags);
+		}
 	}
 	
 	/**********************************************************************************
@@ -203,8 +208,10 @@ public class PFRConfig {
 	public static void setAgentTags(String... agentTags) {
 		PFRConfig.agentTags.clear();
 		
-		for(String tag : agentTags) {
-			PFRConfig.agentTags.add(tag);
+		if(agentTags != null) {
+			for(String tag : agentTags) {
+				PFRConfig.agentTags.add(tag);
+			}
 		}
 	}
 	
@@ -219,9 +226,10 @@ public class PFRConfig {
 	 * @param agentTags
 	 **********************************************************************************/
 	public static void addAgentTags(String... agentTags) {
-		
-		for(String tag : agentTags) {
-			PFRConfig.agentTags.add(tag);
+		if(agentTags != null) {
+			for(String tag : agentTags) {
+				PFRConfig.agentTags.add(tag);
+			}
 		}
 	}
 	
@@ -275,7 +283,9 @@ public class PFRConfig {
 	public static void setDataAgentTags(HashSet<String> dataAgentTags) {
 		PFRConfig.dataAgentTags.clear();
 		
-		PFRConfig.dataAgentTags.addAll(dataAgentTags);
+		if(dataAgentTags != null) {
+			PFRConfig.dataAgentTags.addAll(dataAgentTags);
+		}
 		
 	}
 	
@@ -290,7 +300,10 @@ public class PFRConfig {
 	 **********************************************************************************/
 	public static void setDataAgentTags(ArrayList<String> dataAgentTags) {
 		PFRConfig.dataAgentTags.clear();
-		PFRConfig.dataAgentTags.addAll(dataAgentTags);
+		
+		if(dataAgentTags != null) {
+			PFRConfig.dataAgentTags.addAll(dataAgentTags);
+		}
 	}
 	
 	/**********************************************************************************
@@ -305,8 +318,10 @@ public class PFRConfig {
 	public static void setDataAgentTags(String... dataAgentTags) {
 		PFRConfig.dataAgentTags.clear();
 		
-		for(String tag : dataAgentTags) {
-			PFRConfig.dataAgentTags.add(tag);
+		if(dataAgentTags != null) {
+			for(String tag : dataAgentTags) {
+				PFRConfig.dataAgentTags.add(tag);
+			}
 		}
 	}
 	
@@ -321,9 +336,10 @@ public class PFRConfig {
 	 * @param dataAgentTags
 	 **********************************************************************************/
 	public static void addDataAgentTags(String... dataAgentTags) {
-		
-		for(String tag : dataAgentTags) {
-			PFRConfig.agentTags.add(tag);
+		if(dataAgentTags != null) {
+			for(String tag : dataAgentTags) {
+				PFRConfig.agentTags.add(tag);
+			}
 		}
 	}
 	
