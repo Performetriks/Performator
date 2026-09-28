@@ -669,16 +669,15 @@ public class ZePFRServer {
 					doStopOnPingTimeout = false;
 				}
 				
-				//-------------------------------
-				// Agents: Add EnvVars and JVM Args
-				if( ! agentborneSettings.isCoordinator() ) {
+				//------------------------------------
+				// Add EnvVars and JVM Args
+				// Note: Must also be done for Coordinator
+				envVariables = agentborneSettings.getEnvVariables();
 					
-					envVariables = agentborneSettings.getEnvVariables();
-					
-					for(String jvmArg : agentborneSettings.getJvmArgs()) {
-						vmargs += " " + jvmArg;
-					}
+				for(String jvmArg : agentborneSettings.getJvmArgs()) {
+					vmargs += " " + jvmArg;
 				}
+				
 			}
 			
 			String startCommand = "java " + vmargs + " -jar " + JAR_FILE_NAME;
