@@ -66,7 +66,8 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>42.7.8</version>
-			<scope>provided</scope>
+			<!-- Must always be included for Agentborne as Coordinator to report data to Database -->
+			<!-- scope>provided</scope> -->
 		</dependency>
 		
 		<!-- ========================================================================== -->
