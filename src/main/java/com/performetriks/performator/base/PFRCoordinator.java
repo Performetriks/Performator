@@ -4,6 +4,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -28,6 +29,7 @@ import com.performetriks.performator.executors.PFRExecEmpty;
 import com.xresch.hsr.base.HSR;
 import com.xresch.hsr.base.HSRConfig;
 import com.xresch.hsr.base.HSRTestSettings;
+import com.xresch.hsr.database.HSRDBInterface.LogStatement;
 import com.xresch.hsr.reporting.HSRReporterCSV;
 import com.xresch.hsr.reporting.HSRReporterDatabasePostGres;
 import com.xresch.hsr.reporting.HSRReporterHTML;
@@ -311,36 +313,62 @@ public class PFRCoordinator {
 			public void beforeAggregate() {
 				//-------------------------------------
 				// Fetch data from all agents
-				TreeMap<String, ArrayList<HSRRecordStats>> groupedStats = new TreeMap<>();
+				TreeMap<String, List<HSRRecordStats>> groupedStats = new TreeMap<>();
 				
 				for(int i = 0 ; i < connectionsAgentsLoad.size(); i++) {
 					ZePFRClient current = connectionsAgentsLoad.get(i);
 					
 					RemoteResponse response = current.statsPoll();
 	
-					if(response != null) { 
+					//----------------------------------
+					// Check Success
+					if( response == null ){ 
+						logger.warn("Error while polling data from agent, response was null"); 
+						continue; 
+					}
+					if( ! response.success() ) 	{ 
+						logger.warn("Error while polling data from agent, response not successful:");
+						
+						continue; 
+					}
+					
+
 				
-						try {
-							JsonArray recordStatsArray = response.payloadAsArray();
-							
-							for(JsonElement e : recordStatsArray) {
-								if(e.isJsonObject()) {
-									HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
-									
-									String statsId = stats.statsIdentifier();
-									
-									if( !groupedStats.containsKey(statsId) ) {
-										groupedStats.put(statsId,  new ArrayList<>());
-									}
-									
-									groupedStats.get(statsId).add(stats);
+					try {
+						
+						JsonObject payload = response.payloadAsObject();
+						
+						//--------------------------------------
+						// Read Agent Records
+						JsonArray recordStatsArray = payload.get(ZePFRServer.FIELD_PEEKPOLL_RECORDS).getAsJsonArray();
+						
+						for(JsonElement e : recordStatsArray) {
+							if(e.isJsonObject()) {
+								HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
+								
+								String statsId = stats.statsIdentifier();
+								
+								if( !groupedStats.containsKey(statsId) ) {
+									groupedStats.put(statsId,  new ArrayList<>());
 								}
+								
+								groupedStats.get(statsId).add(stats);
 							}
-						}catch(Exception e) {
-							logger.warn("Error while fetching stats from agent: " + current.getHost() + ":" + current.getPort() + ", Response: "+response.toJsonString());
 						}
 						
+						//--------------------------------------
+						// Read Agent Logs
+						JsonArray logsArray = payload.get(ZePFRServer.FIELD_PEEKPOLL_LOGS).getAsJsonArray();
+						
+						for(JsonElement e : logsArray) {
+							LogStatement log = XR.JSON.getGsonInstance().fromJson(e, LogStatement.class);
+							
+							HSRStatsEngine.addLogStatement(log);
+						}
+					}catch(Exception e) {
+						logger.warn("Error while fetching stats from agent: " + current.getHost() + ":" + current.getPort() + ", ErrorMessage: "+e.getMessage(), e);
 					}
+
 				}
 				
 				//-------------------------------------

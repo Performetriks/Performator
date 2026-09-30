@@ -59,6 +59,9 @@ import ch.qos.logback.classic.Level;
  **************************************************************************************************************/
 public class ZePFRServer {
 	
+	public static final String FIELD_PEEKPOLL_LOGS = "logs";
+	public static final String FIELD_PEEKPOLL_RECORDS = "records";
+	
 	private static final String JAR_FILE_NAME = "received.jar";
 	private long lastPingTime = 0;
 	private long tempStartMillis = 0;
@@ -818,11 +821,11 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	private void handleCommandStatsPeekPoll(RemoteResponse response, Command command) {
-		
+
 		//---------------------------------------------
 		// If agent, forward request to Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENT) {
-			
+			logger.error("handleCommandStatsPeekPoll Mode.AGENT");
 			if(executor != null && executor.checkKeepExecuting()) {
 				
 				ZePFRClient agentClient = getAgenborneClient();
@@ -837,21 +840,34 @@ public class ZePFRServer {
 			}
 			return;
 		}
-		
+
 		//---------------------------------------------
 		// Get Data if Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
-			
+
 			if(!PFRCoordinator.hasPeekPoll()) {
 				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
 				return;
 			}
 			
 			JsonArray recordStatsArray = null;
-			if(command == Command.statspeek) {			recordStatsArray = PFRCoordinator.getPeekPoll().peekRecordsJson(); }
-			else if(command == Command.statspoll) {		recordStatsArray = PFRCoordinator.getPeekPoll().pollRecordsJson(); }
+			JsonArray logsArray = null;
+			if(command == Command.statspeek) {			
+				recordStatsArray = PFRCoordinator.getPeekPoll().peekRecordsJson(); 
+				logsArray = PFRCoordinator.getPeekPoll().peekLogsJson(); 
+				
+			}else if(command == Command.statspoll) {		
+				recordStatsArray = PFRCoordinator.getPeekPoll().pollRecordsJson(); 
+				logsArray = PFRCoordinator.getPeekPoll().pollLogsJson(); 
+			}
 			
-			response.setPayload(recordStatsArray);
+			//-------------------------------
+			// Create Payload
+			JsonObject payload = new JsonObject();
+			payload.add(FIELD_PEEKPOLL_RECORDS, recordStatsArray);
+			payload.add(FIELD_PEEKPOLL_LOGS, logsArray);
+			
+			response.setPayload(payload);
 			
 			return;
 		}
