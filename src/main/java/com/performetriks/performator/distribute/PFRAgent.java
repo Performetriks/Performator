@@ -3,9 +3,14 @@ package com.performetriks.performator.distribute;
 import java.util.Collection;
 import java.util.HashSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.performetriks.performator.distribute.RemoteResponse.AgentStatus;
+import com.performetriks.performator.distribute.RemoteResponse.AgentStatusFields;
 import com.xresch.xrutils.base.XR;
 
 /**************************************************************************************************************
@@ -19,6 +24,8 @@ import com.xresch.xrutils.base.XR;
  **************************************************************************************************************/
 public class PFRAgent {
 	
+	Logger logger = LoggerFactory.getLogger(PFRAgent.class);
+	
 	private String hostname;
 	private int port;
 	private boolean isActive = true;
@@ -26,6 +33,9 @@ public class PFRAgent {
 	
 	// progress in percent of test jar file uploaded
 	private int uploadProgressPercent = 0;
+	
+	// null if not manually set
+	private AgentStatus status = null;
 	
 	/*************************************************************
 	 * Create a new agent with hostname and port.
@@ -244,6 +254,43 @@ public class PFRAgent {
 	 *************************************************************/
 	protected void uploadProgressPercent(int percent) {
 		uploadProgressPercent = percent;
+	}
+	
+	/*************************************************************
+	 * Can be used to fetch the agent status, which can then be 
+	 * retrieved using the method getStatusObject()
+	 * @return RemoteResponse or null
+	 *************************************************************/
+	public RemoteResponse fetchStatus() {
+		
+		RemoteResponse response = toClient().getStatus();
+		
+		if(response == null || !response.success()) {
+			return response;
+		}
+		
+		try {
+			JsonObject payload = response.payload().getAsJsonObject();
+
+			if( payload.has(AgentStatusFields.available.toString()) ){
+				status = XR.JSON.getGsonInstance().fromJson(payload, AgentStatus.class);
+			}else {
+				status = null;
+			}
+		}catch (Exception e) {
+			logger.error("Error while retrieving agent status: "+e.getMessage(), e);
+		}
+		
+		return response;
+	}
+	
+	/*************************************************************
+	 * Call method fetchStatus() first to load the status.
+	 * @return AgentStatus or null
+	 * 
+	 *************************************************************/
+	public AgentStatus getStatusObject() {
+		return status;
 	}
 
 }
