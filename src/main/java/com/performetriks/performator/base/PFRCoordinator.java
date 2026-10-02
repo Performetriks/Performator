@@ -21,6 +21,7 @@ import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
 import com.performetriks.performator.distribute.PFRAgentborneSettings;
 import com.performetriks.performator.distribute.PFRAgentborneSettings.DBReportSettings;
+import com.performetriks.performator.distribute.RemoteResponse.AgentStatusFields;
 import com.performetriks.performator.distribute.RemoteResponse;
 import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
@@ -493,12 +494,12 @@ public class PFRCoordinator {
 			logger.info(PFR.JSON.toJSON(payload));
 			
 			if(
-			   (  payload.has(RemoteResponse.FIELD_STATUS_AVAILABLE)
-			   && payload.get(RemoteResponse.FIELD_STATUS_AVAILABLE).getAsBoolean() == true
+			   (  payload.has(AgentStatusFields.available.toString())
+			   && payload.get(AgentStatusFields.available.toString()).getAsBoolean() == true
 			   )
 			   || (isDataAgent // ignore available status as multiple processes need to connect to data agents
-			       && (  payload.has(RemoteResponse.FIELD_STATUS_ISDATAAGENT)
-				      && payload.get(RemoteResponse.FIELD_STATUS_ISDATAAGENT).getAsBoolean() == true // do not use coordinators
+			       && (  payload.has(AgentStatusFields.isDataAgent.toString())
+				      && payload.get(AgentStatusFields.isDataAgent.toString()).getAsBoolean() == true // do not use coordinators
 					  )	
 			       )
 			){
@@ -555,7 +556,7 @@ public class PFRCoordinator {
 			
 			RemoteResponse response = client.ping();
 
-			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+			boolean isAgentTestRunning = response.payloadMemberAsBoolean(AgentStatusFields.isTestRunning.toString());
 			
 			isAnyTestRunning |= isAgentTestRunning;
 			
@@ -608,7 +609,7 @@ public class PFRCoordinator {
 			
 			RemoteResponse response = client.ping();
 
-			boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+			boolean isAgentTestRunning = response.payloadMemberAsBoolean(AgentStatusFields.isTestRunning.toString());
 			
 			if(isAgentTestRunning) {
 				agentsToStop.add(client);
@@ -641,7 +642,7 @@ public class PFRCoordinator {
 					ZePFRClient current = agentsToStop.get(i);
 					RemoteResponse response = current.getStatus();
 	
-					boolean isAgentTestRunning = response.payloadMemberAsBoolean(RemoteResponse.FIELD_STATUS_ISTESTRUNNING);
+					boolean isAgentTestRunning = response.payloadMemberAsBoolean(AgentStatusFields.isTestRunning.toString());
 	
 					builder.append(" ["+current.getAgent().getHostname()+": "+(isAgentTestRunning ? "stopping" : "DONE")+"] ");
 				}

@@ -36,6 +36,7 @@ import com.performetriks.performator.base.PFRCoordinator;
 import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.performetriks.performator.data.PFRDataSource;
+import com.performetriks.performator.distribute.RemoteResponse.AgentStatusFields;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
@@ -345,7 +346,7 @@ public class ZePFRServer {
 					// vvvvvv fall-through vvvvvvv
 					// vvvvvvvvvvvvvvvvvvvvvvvvvvv
 				case teststatus:
-					response.payloadAsObject().addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, isTestRunning() );
+					response.payloadAsObject().addProperty(AgentStatusFields.isTestRunning.toString(), isTestRunning() );
 				break;
 					
 
@@ -412,22 +413,22 @@ public class ZePFRServer {
 		
 		JsonObject payload = response.payloadAsObject();
 		
-		payload.addProperty(RemoteResponse.FIELD_STATUS_AVAILABLE, isAvailable);
-		payload.addProperty(RemoteResponse.FIELD_STATUS_ISCOORDINATOR, isCoordinator);
-		payload.addProperty(RemoteResponse.FIELD_STATUS_ISDATAAGENT, isDataAgent);
-		payload.addProperty(RemoteResponse.FIELD_STATUS_ISTESTRUNNING, isTestRunning());
-		payload.addProperty(RemoteResponse.FIELD_STATUS_HOST, getLocalhost() );
-		payload.addProperty(RemoteResponse.FIELD_STATUS_PORT, PFRConfig.port() );
-		payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
-		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
-		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
+		payload.addProperty(AgentStatusFields.available.toString(), isAvailable);
+		payload.addProperty(AgentStatusFields.isCoordinator.toString(), isCoordinator);
+		payload.addProperty(AgentStatusFields.isDataAgent.toString(), isDataAgent);
+		payload.addProperty(AgentStatusFields.isTestRunning.toString(), isTestRunning());
+		payload.addProperty(AgentStatusFields.host.toString(), getLocalhost() );
+		payload.addProperty(AgentStatusFields.port.toString(), PFRConfig.port() );
+		payload.addProperty(AgentStatusFields.javaversion.toString(), props.getProperty("java.version"));
+		payload.addProperty(AgentStatusFields.agentMemoryFreeMB.toString(),  ByteSize.MB.convertBytes(runtime.freeMemory()) );
+		payload.addProperty(AgentStatusFields.agentMemoryTotalMB.toString(), ByteSize.MB.convertBytes(runtime.totalMemory()) );
 		
 		//----------------------------------
 		// execID
 		if( agentborneSettings != null) {
-			payload.addProperty(RemoteResponse.FIELD_STATUS_EXECID, agentborneSettings.getExecutionID() );
+			payload.addProperty(AgentStatusFields.execid.toString(), agentborneSettings.getExecutionID() );
 		}else {
-			payload.addProperty(RemoteResponse.FIELD_STATUS_EXECID, "" );
+			payload.addProperty(AgentStatusFields.execid.toString(), "" );
 		}
 		
 	}

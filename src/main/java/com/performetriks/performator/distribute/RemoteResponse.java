@@ -23,18 +23,36 @@ public class RemoteResponse {
 	public static final String FIELD_MESSAGES = "messages";
 	public static final String FIELD_SUCCESS = "success";
 	
-	public static final String FIELD_STATUS_MEMORYTOTAL = "agentMemoryTotalMB";
-	public static final String FIELD_STATUS_MEMORYFREE = "agentMemoryFreeMB";
-	public static final String FIELD_STATUS_JAVAVERSION = "javaversion";
-	public static final String FIELD_STATUS_PORT = "port";
-	public static final String FIELD_STATUS_HOST = "host";
-	public static final String FIELD_STATUS_AVAILABLE = "available";
-	public static final String FIELD_STATUS_ISTESTRUNNING = "isTestRunning";
-	public static final String FIELD_STATUS_ISCOORDINATOR = "isCoordinator";
-	public static final String FIELD_STATUS_ISDATAAGENT = "isDataAgent";
-	public static final String FIELD_STATUS_EXECID = "execid";
-	
 	JsonObject response;
+	
+	public enum AgentStatusFields{
+		  // These names must be the same as the record below
+		  available
+		, isCoordinator
+		, isDataAgent
+		, isTestRunning
+		, execid
+		, host
+		, port
+		, javaversion
+		, agentMemoryTotalMB
+		, agentMemoryFreeMB
+	};
+			
+	public record AgentStatus(
+			  String available
+			, Boolean isCoordinator
+			, Boolean isDataAgent
+			, Boolean isTestRunning
+			, String execid
+			, String host
+			, Integer port
+			, String javaVersion
+			, Long agentMemoryTotalMB
+			, Long agentMemoryFreeMB
+			){
+		
+	};
 	
 	/********************************************************
 	 * 

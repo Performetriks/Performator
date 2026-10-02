@@ -27,7 +27,6 @@ public class PFRAgent {
 	// progress in percent of test jar file uploaded
 	private int uploadProgressPercent = 0;
 	
-	
 	/*************************************************************
 	 * Create a new agent with hostname and port.
 	 * 
