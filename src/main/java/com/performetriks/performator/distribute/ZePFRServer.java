@@ -67,6 +67,7 @@ public class ZePFRServer {
 	private long tempStartMillis = 0;
 	
 	private int agentbornePort = -1;
+	private PFRAgentborneSettings agentborneSettings = null;
 
 	private static final Logger logger = LoggerFactory.getLogger(ZePFRServer.class);
 		
@@ -257,6 +258,8 @@ public class ZePFRServer {
 		
 		isCoordinator	= false;
 		isAvailable		= true;
+		
+		agentborneSettings = null;
 	}
 	
 	/**********************************************************************************
@@ -418,6 +421,14 @@ public class ZePFRServer {
 		payload.addProperty(RemoteResponse.FIELD_STATUS_JAVAVERSION, props.getProperty("java.version"));
 		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYFREE,  ByteSize.MB.convertBytes(runtime.freeMemory()) );
 		payload.addProperty(RemoteResponse.FIELD_STATUS_MEMORYTOTAL, ByteSize.MB.convertBytes(runtime.totalMemory()) );
+		
+		//----------------------------------
+		// execID
+		if( agentborneSettings != null) {
+			payload.addProperty(RemoteResponse.FIELD_STATUS_EXECID, agentborneSettings.getExecutionID() );
+		}else {
+			payload.addProperty(RemoteResponse.FIELD_STATUS_EXECID, "" );
+		}
 		
 	}
 
@@ -633,7 +644,7 @@ public class ZePFRServer {
 			settingsString = parameters.get(ZePFRClient.PARAM_AGENT_SETTINGS);
 		}
 		
-		PFRAgentborneSettings agentborneSettings = null;
+		agentborneSettings = null;
 		if( ! Strings.isNullOrEmpty(settingsString)) {
 			agentborneSettings = XR.JSON.getGsonInstance().fromJson(settingsString,PFRAgentborneSettings.class);
 		}
