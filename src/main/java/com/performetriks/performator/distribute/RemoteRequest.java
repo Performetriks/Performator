@@ -193,7 +193,8 @@ public class RemoteRequest{
 					} catch(InterruptedException e) {
 						Thread.currentThread().interrupt(); // restore interrupt flag
 					} catch (Exception e) {
-						logger.error("Error on remote request.", e);
+						String machine = "["+client.getHostAndPort()+"]";
+						logger.error(machine+" Request Error: "+e.getMessage(), e);
 					}
 				}finally {
 					latch.countDown();
@@ -220,10 +221,11 @@ public class RemoteRequest{
 							HttpResponse.BodyHandlers.ofString());
 			//client.sendAsync(request, HttpResponse.BodyHandlers.discarding());
 			
-			return new RemoteResponse(response.body());
+			return new RemoteResponse(client, response.body());
 
 		} catch (Exception e) {
-			logger.error("Error on remote request.", e);
+			String machine = "["+client.getHostAndPort()+"]";
+			logger.error(machine+" Request Error: "+e.getMessage(), e);
 			return null;
 		}
 	}

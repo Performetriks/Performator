@@ -80,7 +80,7 @@ public abstract class PFRTest {
 	
 	/***************************************************************************
 	 * Sets the maximum duration of the test, default is 1 hour.
-	 * If the maxDuration is smaller than 2 minutes, this method will do nothing.
+	 * If the maxDuration is smaller than 1 minute, this method will do nothing.
 	 * This lower limit is needed as else reporting and agent startups might not
 	 * happen in time and will cause missing data for. 
 	 * 
@@ -90,7 +90,7 @@ public abstract class PFRTest {
 	 ***************************************************************************/
 	public PFRTest maxDuration(Duration maxDuration){
 		
-		if(maxDuration.toMillis() >= 120_000) {
+		if(maxDuration.toMillis() >= 60_000) {
 			this.maxDuration = maxDuration;
 		}
 		return this;

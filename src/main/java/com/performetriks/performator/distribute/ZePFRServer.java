@@ -271,6 +271,8 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void handleRequest(HttpExchange exchange) {
 		
+		RemoteResponse response = new RemoteResponse(); 
+		
 		try {
 			//String path = exchange.getRequestURI().getPath().substring(1);
 			
@@ -284,8 +286,7 @@ public class ZePFRServer {
 			// 		, payload: { ... } or [ ... ]
 			// }
 			
-			RemoteResponse response = new RemoteResponse(); 
-			
+
 			//------------------------
 			// Get Params
 			Map<String, String> parameters = queryToMap(exchange.getRequestURI().getQuery());
@@ -357,16 +358,28 @@ public class ZePFRServer {
 				
 			}
 			
+
+			
+		} catch (Throwable e) {
+			String errorMessage = "Error while creating response: "+e.getMessage();
+			logger.error(errorMessage, e);
+			response.addMessage(Level.ERROR, errorMessage);
+			e.printStackTrace();
+		}finally {
+			
 			//--------------------------------
 			// Write response
 			byte[] json = response.toJsonString().getBytes();
-
+			
 			exchange.getResponseHeaders().add("Content-Type", "application/json");
-			exchange.sendResponseHeaders(200, json.length);
-			exchange.getResponseBody().write(json);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			try {
+				exchange.sendResponseHeaders(200, json.length);
+				exchange.getResponseBody().write(json);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 		
 		exchange.close();
@@ -627,37 +640,34 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void handleCommandTestStart(Map<String, String> parameters, RemoteResponse response) {
 		
-
-		//----------------------------------
-		// Get Test class name
-		if( ! parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
-			response.addMessage(Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
-			isAvailable = true;
-			return;
-		}
-		
-		String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
-		
-		//----------------------------------
-		// Get Agentborne Settings
-		String settingsString = null;
-		if( parameters.containsKey(ZePFRClient.PARAM_AGENT_SETTINGS)) {
-			settingsString = parameters.get(ZePFRClient.PARAM_AGENT_SETTINGS);
-		}
-		
-		agentborneSettings = null;
-		if( ! Strings.isNullOrEmpty(settingsString)) {
-			agentborneSettings = XR.JSON.getGsonInstance().fromJson(settingsString,PFRAgentborneSettings.class);
-		}
-		
-		//----------------------------------
-		// Kill Orphans
-		killOrphanedAgentborne(response);
-		
-		//----------------------------------
-		// Execute Test
 		try {
+			//----------------------------------
+			// Get Test class name
+			if( ! parameters.containsKey(ZePFRClient.PARAM_TESTCLASS)) {
+				response.addMessage(Level.ERROR, "Cannot start test as parameter 'test' was not defined. ");
+				isAvailable = true;
+				return;
+			}
 			
+			String classname = parameters.get(ZePFRClient.PARAM_TESTCLASS);
+			
+			//----------------------------------
+			// Get Agentborne Settings
+			String settingsString = null;
+			if( parameters.containsKey(ZePFRClient.PARAM_AGENT_SETTINGS)) {
+				settingsString = parameters.get(ZePFRClient.PARAM_AGENT_SETTINGS);
+			}
+			
+			agentborneSettings = null;
+			if( ! Strings.isNullOrEmpty(settingsString)) {
+				agentborneSettings = XR.JSON.getGsonInstance().fromJson(settingsString,PFRAgentborneSettings.class);
+			}
+			
+			//----------------------------------
+			// Kill Orphans
+			killOrphanedAgentborne(response);
+			
+
 			//----------------------------------
 			// Prepare Command Line Execution
 			String executionDirectory = jarFilePath.getParent().toAbsolutePath().toString();
@@ -702,8 +712,10 @@ public class ZePFRServer {
 			executor = new PFRCLIExecutor(executionDirectory, startCommand, envVariables);
 			executor.execute();
 			
-		} catch (Exception e) {
-			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
+		} catch (Throwable e) {
+			String errorMessage = "Error while starting process: "+e.getMessage();
+			logger.error(errorMessage, e);
+			response.addMessage(Level.ERROR, errorMessage);
 		}
 	}
 	
@@ -762,7 +774,7 @@ public class ZePFRServer {
 					response.addMessage(Level.ERROR, "Error while reading JAR Info: "+info);
 				}
 			}
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			logger.error("Error while starting process: "+e.getMessage(), e);
 			response.addMessage(Level.ERROR, "Error while starting process: "+e.getMessage());
 		}
@@ -774,41 +786,44 @@ public class ZePFRServer {
 	 * 
 	 **********************************************************************************/
 	private void killOrphanedAgentborne(RemoteResponse response) {
-		
-		if(isPortInUse(agentbornePort)) {
+		try {
 			
-			logger.info("Killing Orphan Process: Port "+agentbornePort +" in use, request process to kill itself.");
-			
-			//----------------------------------
-			// Send Request
-			getAgenborneClient().kill();
-			
-			//----------------------------------
-			// Wait up to 5 seconds for termination
-			try {
+			if(isPortInUse(agentbornePort)) {
+				
+				logger.info("Killing Orphan Process: Port "+agentbornePort +" in use, request process to kill itself.");
+				
+				//----------------------------------
+				// Send Request
+				getAgenborneClient().kill();
+				
+				//----------------------------------
+				// Wait up to 5 seconds for termination
 				long start = System.currentTimeMillis();
 				while(isPortInUse(agentbornePort)
 				&&  System.currentTimeMillis() - start < 5000) {
 					logger.info("Killing Orphan Process: Port wait for process to become unreachable.");
 					Thread.sleep(1000);
 				}
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt(); // restore interrupt flag
+				
+				//----------------------------------
+				// Check
+				if(isPortInUse(agentbornePort)) {
+					response.addMessage(Level.WARN, "Could start agentborne process with port "+agentbornePort
+											+" on host "+getLocalhost()+". Check machine for orphaned processes."
+											);
+					agentbornePort++;
+					while(isPortInUse(agentbornePort)) {
+						agentbornePort++;
+					}
+					
+					response.addMessage(Level.INFO, "Could start agentborne process with port "+agentbornePort);
+				}
 			}
 			
-			//----------------------------------
-			// Check
-			if(isPortInUse(agentbornePort)) {
-				response.addMessage(Level.WARN, "Could start agentborne process with port "+agentbornePort
-										+" on host "+getLocalhost()+". Check machine for orphaned processes."
-										);
-				agentbornePort++;
-				while(isPortInUse(agentbornePort)) {
-					agentbornePort++;
-				}
-				
-				response.addMessage(Level.INFO, "Could start agentborne process with port "+agentbornePort);
-			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupt flag
+		} catch (Throwable e) {
+			logger.warn("Error while killing orphaned agent: "+e.getMessage(), e);
 		}
 	}
 	
@@ -857,8 +872,8 @@ public class ZePFRServer {
 		// Get Data if Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
 
-			if(!PFRCoordinator.hasPeekPoll()) {
-				response.addMessage(Level.WARN, "Couldn't find peek-poll reporter.");
+			if( ! PFRCoordinator.hasPeekPoll() ) {
+				response.addMessage(Level.INFO, "Can't return stats as there was no peek-poll reporter.");
 				return;
 			}
 			

@@ -392,7 +392,9 @@ public abstract class PFRExec {
 		
 		synchronized (GRACEFUL_LOCK) {
 			
-			if(gracefulStopDone) {return; }
+			if(gracefulStopDone) { return; }
+			
+			if(scheduledUserThreadExecutor == null) { return; } // nothing to stop, prevent NullPointers
 			
 			scheduledUserThreadExecutor.shutdown();
 			

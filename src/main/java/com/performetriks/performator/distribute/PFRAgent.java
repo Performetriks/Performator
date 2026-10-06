@@ -24,6 +24,15 @@ import com.xresch.xrutils.base.XR;
  **************************************************************************************************************/
 public class PFRAgent {
 	
+	
+	// 					*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
+	// 					*!*!*!*!*!*!*!* IMPORTANT *!*!*!*!*!*!*!*
+	// 					*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
+	// 					This class must be serializable with GSON
+	//					Do not add any fields to this class that
+	//					without making sure they have also
+	//					a Gson Type Adapter registered.
+
 	Logger logger = LoggerFactory.getLogger(PFRAgent.class);
 	
 	private String hostname;

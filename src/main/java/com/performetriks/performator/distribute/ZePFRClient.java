@@ -342,5 +342,12 @@ public class ZePFRClient {
 	public int getPort(){
 		return remotePort;
 	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public String getHostAndPort() {
+		return remoteHost + ":" + remotePort;
+	}
 
 }

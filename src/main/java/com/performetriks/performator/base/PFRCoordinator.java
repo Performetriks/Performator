@@ -337,10 +337,17 @@ public class PFRCoordinator {
 				
 					try {
 						
+						//--------------------------------------
+						// Get payload
 						JsonObject payload = response.payloadAsObject();
+						if(payload == null) { continue; }
 						
 						//--------------------------------------
 						// Read Agent Records
+						JsonElement element = payload.get(ZePFRServer.FIELD_PEEKPOLL_RECORDS);
+						
+						if(element == null) { continue; } // Prevent null pointer exceptions
+						
 						JsonArray recordStatsArray = payload.get(ZePFRServer.FIELD_PEEKPOLL_RECORDS).getAsJsonArray();
 						
 						for(JsonElement e : recordStatsArray) {
@@ -595,7 +602,7 @@ public class PFRCoordinator {
 	/*************************************************************
 	 * Tell the agents to stop their tests now.
 	 *************************************************************/
-	private static void agentsStopNow(PFRTest test) {
+	private static void agentsStopNow() {
 		logger.info("################################################");
 		logger.info("# Stop Agents");
 		logger.info("################################################");
@@ -735,7 +742,7 @@ public class PFRCoordinator {
 			//-------------------------------
 			// Kill remaining Threads
 			if( agentsPingIsTestRunning(false) ) {
-				agentsStopNow(test);
+				agentsStopNow();
 			}
 			
 			//-------------------------------
@@ -913,6 +920,10 @@ public class PFRCoordinator {
 		agentborneSettings.setDbsettings(null);
 
 		//-------------------------------
+		// Start Server
+		server = new ZePFRServer();
+		
+		//-------------------------------
 		// Execute the Test
 		executeOnAgents(test);
 
@@ -994,8 +1005,10 @@ public class PFRCoordinator {
 		HSRConfig.reset();
 		
 		peekPoll = null;
-		
-		
+		connectionsAgentsAll.clear();
+		connectionsAgentsLoad.clear();
+		connectionsAgentsData.clear();
+
 	}
 		
 	/*************************************************************
@@ -1243,6 +1256,8 @@ public class PFRCoordinator {
 	 *****************************************************************/
 	public static void stopTestGracefully() {
 		
+		agentsStopGracefully();
+		
 		for(PFRExec executor : executorList) {
 			executor.requestGracefulStop();
 		}
@@ -1254,10 +1269,17 @@ public class PFRCoordinator {
 	 *****************************************************************/
 	public static void stopTestNow() {
 		
+		
+		//---------------------------
+		// Stop any running agents
+		agentsStopNow();
+		
 		//---------------------------
 		// Run down the latch
-		while(latch.getCount() > 0) {
-			latch.countDown();
+		if(latch != null) { // check required to prevent Nullpointer on Agentborne Coordinator
+			while(latch.getCount() > 0) {
+				latch.countDown();
+			}
 		}
 		
 		//---------------------------
@@ -1316,6 +1338,8 @@ public class PFRCoordinator {
 		logger.info("Terminate Test Execution");
 		HSRConfig.terminate();
 		isTestRunning = false;
+		
+		resetTestExecution();
 	}
 	
 	/*****************************************************************

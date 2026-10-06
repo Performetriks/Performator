@@ -8,22 +8,29 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.performetriks.performator.base.PFR;
-import com.xresch.xrutils.data.XRRecord;
 import com.xresch.xrutils.data.XRValue;
 
 import ch.qos.logback.classic.Level;
+
+
 
 /**********************************************************************************
  * 
  **********************************************************************************/
 public class RemoteResponse {
+
 	private static final Logger logger = LoggerFactory.getLogger(RemoteResponse.class);
 	
 	public static final String FIELD_PAYLOAD = "payload";
 	public static final String FIELD_MESSAGES = "messages";
 	public static final String FIELD_SUCCESS = "success";
 	
+	private static final String MESSAGEFIELD_MSG = "message";
+	private static final String MESSAGEFIELD_LEVEL = "level";
+	
 	JsonObject response;
+	
+	private ZePFRClient client;
 	
 	public enum AgentStatusFields{
 		  // These names must be the same as the record below
@@ -80,6 +87,14 @@ public class RemoteResponse {
 		}
 	}
 	
+	/********************************************************
+	 * 
+	 ********************************************************/
+	public RemoteResponse(ZePFRClient client, String json) {
+		this(json);
+		this.client = client;
+	}
+		
 	/********************************************************
 	 * 
 	 ********************************************************/
@@ -142,8 +157,27 @@ public class RemoteResponse {
 	 ********************************************************/
 	private void handleMessages() {
 		
-		for(JsonElement message : this.messages()) {
-			logger.error("Message from remote machine: "+PFR.JSON.toJSON(message));
+		for(JsonElement element : this.messages()) {
+			JsonObject object = element.getAsJsonObject();
+			
+			String level = object.get(MESSAGEFIELD_LEVEL).getAsString();
+			String message = object.get(MESSAGEFIELD_MSG).getAsString();
+			
+			String messagePrefix = "Message from remote machine: ";
+			if(client != null) {
+				messagePrefix = "Message from ["+client.getHostAndPort()+"]: ";
+			}
+			
+			switch(level.toUpperCase()) {
+				case "ERROR":	logger.error(messagePrefix + message); break;
+				case "WARN":	logger.warn(messagePrefix + message); break;
+				case "INFO":	logger.info(messagePrefix + message); break;
+				case "DEBUG":	logger.debug(messagePrefix + message); break;
+				case "TRACE":	logger.trace(messagePrefix + message); break;
+				default:		logger.info(messagePrefix + " [" + level +"] " + message); break;
+
+			}
+			
 		}
 
 	}
@@ -192,14 +226,14 @@ public class RemoteResponse {
 	/**********************************************************************************
 	 * 
 	 **********************************************************************************/
-	public void addMessage( Level level, String message) {
+	public void addMessage(Level level, String message) {
 		
 		if(response != null) {
 			JsonArray messages = response.get(RemoteResponse.FIELD_MESSAGES).getAsJsonArray();
 			
 			JsonObject messageObject = new JsonObject();
-			messageObject.addProperty("level", level.toString());
-			messageObject.addProperty("message", message);
+			messageObject.addProperty(MESSAGEFIELD_LEVEL, level.toString());
+			messageObject.addProperty(MESSAGEFIELD_MSG, message);
 			
 			messages.add(messageObject);
 			
