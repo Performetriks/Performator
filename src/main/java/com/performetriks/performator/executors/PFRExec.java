@@ -300,7 +300,7 @@ public abstract class PFRExec {
 			};
 			
 			scheduledUserThreadExecutor = Executors.newScheduledThreadPool(threadPoolSize, factory);
-			
+
 			//-------------------------------
 			// Make sure to kill that pest
 			String name = this.getClass().getSimpleName();

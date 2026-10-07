@@ -2,19 +2,18 @@ package com.performetriks.performator.executors;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
-import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 import com.xresch.xrutils.data.XRRecord;
 
 import ch.qos.logback.classic.Logger;
@@ -80,8 +79,19 @@ public class PFRExecCustom extends PFRExec {
 	private String usecaseName;
 //	private ScheduledFuture<?> future;
 	
+	//---------------------------------
+	// Create Graceful Scheduler
+	private ThreadFactory factory = runnable -> {
+	    Thread t = new Thread(runnable);
+	    t.setName("ZePFRServer-HTTPThread");
+	    t.setDaemon(true);
+	    return t;
+	};
+	
+	ExecutorService threadPool = Executors.newFixedThreadPool(10, factory);
+	
 	// Scheduler used for delayed graceful kills so we don't block the main pattern thread
-    private ScheduledExecutorService gracefulScheduler = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService gracefulScheduler = Executors.newScheduledThreadPool(1, factory);
     
     // Central storage for running user tasks
     private ArrayList<ScheduledFuture<?>> futureList = new ArrayList<>();

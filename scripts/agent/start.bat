@@ -32,6 +32,6 @@ if "%JAR%"=="" (
 rem #####################################################
 rem Execute Agent
 rem #####################################################
-java -Dpfr_mode=agent -Dpfr_port=%PORT% -Dpfr_agentbornePort=%AGENTBORNEPORT% -Dpfr_loglevel=%LOGLEVEL% -jar %JAR%
+java -Dpfr_mode=agent -Dpfr_port=%PORT% -Dpfr_agentbornePort=%AGENTBORNEPORT% -Dpfr_loglevel=%LOGLEVEL% %* -jar %JAR%
 
 pause

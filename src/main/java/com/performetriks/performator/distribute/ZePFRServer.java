@@ -16,7 +16,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadFactory;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -206,6 +209,17 @@ public class ZePFRServer {
 			server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
 
 			//---------------------------------
+			// Create Thread Pool
+			ThreadFactory factory = runnable -> {
+			    Thread t = new Thread(runnable);
+			    t.setName("ZePFRServer-HTTPThread");
+			    t.setDaemon(true);
+			    return t;
+			};
+			
+			ExecutorService threadPool = Executors.newFixedThreadPool(10, factory);
+			
+			//---------------------------------
 			// Setup Server and start
 			server.createContext("/api", new HttpHandler() {
 				@Override
@@ -214,7 +228,8 @@ public class ZePFRServer {
 				}
 			});
 			
-			server.setExecutor(Executors.newFixedThreadPool(10));
+
+			server.setExecutor(threadPool);
 			server.start();
 
 			logger.info("HTTPS Server listening on port " + PFRConfig.port());
@@ -222,6 +237,14 @@ public class ZePFRServer {
 		} catch (Exception e) {
 			logger.error("Server error", e);
 		}
+	}
+	
+	/**********************************************************************************
+	 * Stop this server.
+	 * 
+	  **********************************************************************************/
+	public void stop(){
+		server.stop(0);
 	}
 	
 	/**********************************************************************************
@@ -860,7 +883,10 @@ public class ZePFRServer {
 				RemoteResponse agentborneResponse = null;
 				if(command == Command.statspeek) {			agentborneResponse = agentClient.statsPeek(); }
 				else if(command == Command.statspoll) {		agentborneResponse = agentClient.statsPoll(); }
-				agentborneResponse.overrideResponse(response);
+				
+				if(agentborneResponse != null) {
+					agentborneResponse.overrideResponse(response);
+				}
 				
 			}else {
 				response.addMessage(Level.INFO, "Test already finished, no metrics to peek.");
@@ -920,7 +946,8 @@ public class ZePFRServer {
 				ZePFRClient agentborneClient = getAgenborneClient();
 				
 				RemoteResponse agentborneResponse = null;
-				if(command == Command.teststopgraceful) {	agentborneResponse = agentborneClient.testStopGracefully(); }
+				if(command == Command.teststopgraceful) {	
+					agentborneResponse = agentborneClient.testStopGracefully(); }
 				else if(command == Command.teststop) {		
 					agentborneResponse = agentborneClient.testStop(); 
 				}
@@ -1153,14 +1180,15 @@ public class ZePFRServer {
 						if(executor != null) {
 							isTestStopped = ! executor.checkKeepExecuting();
 						}
+						// This cannot be done, as pin tracker is started before transferring jar and executions are started
+						// else { isTestStopped = true; }
 						
 //						System.out.println("================= " );
 //						System.out.println("keep Loop Going: "+ (!isPingTimeout && ! isTestStopped) );
 //						System.out.println("isPingTimeout: "+isPingTimeout);
 //						System.out.println("isTestStopped: "+isTestStopped);
 //						System.out.println("executor: "+executor);
-//
-//						
+					
 						//-------------------------------
 						// Wait
 						try {

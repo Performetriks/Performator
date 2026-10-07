@@ -843,6 +843,11 @@ public class PFRCoordinator {
 			//------------------------------
 			// Disconnect Data Agents
 			if( ! isDataAgent ) { agentsDisconnect(); }
+			
+			//------------------------------
+			// Stop the HTTP Server
+			server.stop();
+			
 		}
 
 	}
@@ -920,12 +925,16 @@ public class PFRCoordinator {
 		agentborneSettings.setDbsettings(null);
 
 		//-------------------------------
-		// Start Server
+		// Start HTTP Server
 		server = new ZePFRServer();
 		
 		//-------------------------------
 		// Execute the Test
 		executeOnAgents(test);
+		
+		//------------------------------
+		// Stop the HTTP Server
+		server.stop();
 
 	}
 	
@@ -1008,7 +1017,7 @@ public class PFRCoordinator {
 		connectionsAgentsAll.clear();
 		connectionsAgentsLoad.clear();
 		connectionsAgentsData.clear();
-
+		
 	}
 		
 	/*************************************************************
@@ -1336,10 +1345,13 @@ public class PFRCoordinator {
 	 *****************************************************************/
 	private static void terminateTest() {
 		logger.info("Terminate Test Execution");
-		HSRConfig.terminate();
-		isTestRunning = false;
 		
-		resetTestExecution();
+			HSRConfig.terminate();
+			isTestRunning = false;
+			
+			resetTestExecution();
+			
+		logger.info("Terminate Test Execution Finished");
 	}
 	
 	/*****************************************************************
