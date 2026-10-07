@@ -38,6 +38,8 @@ public class RemoteResponse {
 		, isCoordinator
 		, isDataAgent
 		, isTestRunning
+		, starttime
+		, maxDuration
 		, execid
 		, host
 		, port
@@ -51,6 +53,8 @@ public class RemoteResponse {
 			, Boolean isCoordinator
 			, Boolean isDataAgent
 			, Boolean isTestRunning
+			, Long starttime
+			, Long maxDuration
 			, String execid
 			, String host
 			, Integer port

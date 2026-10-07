@@ -19,7 +19,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadFactory;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -36,6 +35,7 @@ import com.performetriks.performator.base.PFR;
 import com.performetriks.performator.base.PFRConfig;
 import com.performetriks.performator.base.PFRConfig.Mode;
 import com.performetriks.performator.base.PFRCoordinator;
+import com.performetriks.performator.base.PFRTest;
 import com.performetriks.performator.cli.PFRCLIExecutor;
 import com.performetriks.performator.cli.PFRReadableOutputStream;
 import com.performetriks.performator.data.PFRDataSource;
@@ -45,6 +45,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
 import com.xresch.hsr.base.HSR;
+import com.xresch.hsr.base.HSRConfig;
 import com.xresch.xrutils.base.XR;
 import com.xresch.xrutils.data.ByteSize;
 import com.xresch.xrutils.data.XRRecord;
@@ -447,6 +448,8 @@ public class ZePFRServer {
 	 **********************************************************************************/
 	private void handleCommandStatus(RemoteResponse response) {
 		
+		//---------------------------------------------
+		// Values for this instance
 		JsonObject payload = response.payloadAsObject();
 		
 		payload.addProperty(AgentStatusFields.available.toString(), isAvailable);
@@ -459,12 +462,68 @@ public class ZePFRServer {
 		payload.addProperty(AgentStatusFields.agentMemoryFreeMB.toString(),  ByteSize.MB.convertBytes(runtime.freeMemory()) );
 		payload.addProperty(AgentStatusFields.agentMemoryTotalMB.toString(), ByteSize.MB.convertBytes(runtime.totalMemory()) );
 		
-		//----------------------------------
-		// execID
-		if( agentborneSettings != null) {
-			payload.addProperty(AgentStatusFields.execid.toString(), agentborneSettings.getExecutionID() );
-		}else {
-			payload.addProperty(AgentStatusFields.execid.toString(), "" );
+		
+		//============================================================
+		// If test is running, forward to agentborne
+		//============================================================
+		if(PFRConfig.executionMode() == Mode.AGENT) {
+			
+			if(executor != null && executor.checkKeepExecuting()) {
+				
+				ZePFRClient agentborneClient = getAgenborneClient();
+				
+				//----------------------------
+				// Try get response from Agent
+				RemoteResponse agentborneResponse = agentborneClient.getStatus(); 
+				
+				if(agentborneResponse != null) {
+					
+					JsonObject statusObject = agentborneResponse.payloadAsObject();
+					
+					if(statusObject != null) {
+						String agentborneExecID = statusObject.get(AgentStatusFields.execid.toString()).getAsString();
+						Long starttime = statusObject.get(AgentStatusFields.starttime.toString()).getAsLong();
+						Long maxDuration = statusObject.get(AgentStatusFields.maxDuration.toString()).getAsLong();
+						
+						payload.addProperty(AgentStatusFields.execid.toString(), agentborneExecID );
+						payload.addProperty(AgentStatusFields.starttime.toString(), starttime );
+						payload.addProperty(AgentStatusFields.maxDuration.toString(), maxDuration );
+						return;
+					}
+					
+				}
+			}
+		//============================================================
+		// Else take values from this instance
+		//============================================================
+		} else {
+		
+			//----------------------------------
+			// execID
+			if( agentborneSettings != null) {
+				payload.addProperty(AgentStatusFields.execid.toString(), agentborneSettings.getExecutionID() );
+			}else if(PFRCoordinator.isTestRunning()) {
+				payload.addProperty(AgentStatusFields.execid.toString(), HSRConfig.getExecID() );
+			}else {
+				payload.addProperty(AgentStatusFields.execid.toString(), "" );
+			}
+			
+			//----------------------------------
+			// Starttime and Duration
+			if(PFRCoordinator.isTestRunning()) {
+				
+				payload.addProperty(AgentStatusFields.starttime.toString(), HSRConfig.getStarttime() );
+			
+				PFRTest runningTest = PFRCoordinator.getRunningTest();
+				
+				long maxDuration = -1;
+				if(runningTest != null) {
+					maxDuration = runningTest.maxDuration().toMillis();
+				}
+				
+				payload.addProperty(AgentStatusFields.maxDuration.toString(), maxDuration );
+				
+			}
 		}
 		
 	}

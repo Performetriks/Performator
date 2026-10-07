@@ -21,8 +21,8 @@ import com.performetriks.performator.distribute.PFRAgent;
 import com.performetriks.performator.distribute.PFRAgentPool;
 import com.performetriks.performator.distribute.PFRAgentborneSettings;
 import com.performetriks.performator.distribute.PFRAgentborneSettings.DBReportSettings;
-import com.performetriks.performator.distribute.RemoteResponse.AgentStatusFields;
 import com.performetriks.performator.distribute.RemoteResponse;
+import com.performetriks.performator.distribute.RemoteResponse.AgentStatusFields;
 import com.performetriks.performator.distribute.ZePFRClient;
 import com.performetriks.performator.distribute.ZePFRServer;
 import com.performetriks.performator.executors.PFRExec;
@@ -84,6 +84,7 @@ public class PFRCoordinator {
 	private static HSRReporterPeekPoll peekPoll = null;
 	
 	private static boolean isTestRunning = true;
+	private static PFRTest runningTest = null;
 	
 	private static PFRAgentborneSettings agentborneSettings = null;
 		
@@ -203,6 +204,7 @@ public class PFRCoordinator {
 		if( ! checkCanExecute(test) ) { return; }
 		
 		try {
+			
 			//------------------------------
 			// Reserve Agents
 			agentsDisconnect();
@@ -220,7 +222,6 @@ public class PFRCoordinator {
 			//------------------------------
 			// Start Test
 			agentsStartTest(test);
-			
 			
 			
 		} catch (InterruptedException e) {
@@ -334,7 +335,6 @@ public class PFRCoordinator {
 					}
 					
 
-				
 					try {
 						
 						//--------------------------------------
@@ -1014,6 +1014,8 @@ public class PFRCoordinator {
 		HSRConfig.reset();
 		
 		peekPoll = null;
+		runningTest = null;
+		
 		connectionsAgentsAll.clear();
 		connectionsAgentsLoad.clear();
 		connectionsAgentsData.clear();
@@ -1033,6 +1035,8 @@ public class PFRCoordinator {
 		executorList = test.getExecutors();
 		
 		if( !checkCanExecute(test) ) { return false; }
+		
+		runningTest = test;
 		
 		//-------------------------
 		// Set Test Name
@@ -1337,6 +1341,13 @@ public class PFRCoordinator {
 	 *****************************************************************/
 	public static boolean isTestRunning() {
 		return isTestRunning;
+	}
+	
+	/*****************************************************************
+	 * Returns true if a test is running.
+	 *****************************************************************/
+	public static PFRTest getRunningTest() {
+		return runningTest;
 	}
 	
 	/*****************************************************************

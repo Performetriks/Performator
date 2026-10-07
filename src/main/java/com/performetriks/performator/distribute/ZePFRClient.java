@@ -165,14 +165,7 @@ public class ZePFRClient {
 
 	}
 
-	/**********************************************************************************
-	 * 
-	 **********************************************************************************/
-	public RemoteResponse getStatus(){
-		
-		return new RemoteRequest(this, Command.status, test)
-						.send(Duration.ofSeconds(5));
-	}
+
 	
 	/**********************************************************************************
 	 * 
@@ -271,6 +264,15 @@ public class ZePFRClient {
 	 **********************************************************************************/
 	public RemoteResponse ping(){
 		return new RemoteRequest(this, Command.ping, test)
+						.send(Duration.ofSeconds(5));
+	}
+	
+	/**********************************************************************************
+	 * 
+	 **********************************************************************************/
+	public RemoteResponse getStatus(){
+		
+		return new RemoteRequest(this, Command.status, test)
 						.send(Duration.ofSeconds(5));
 	}
 	
