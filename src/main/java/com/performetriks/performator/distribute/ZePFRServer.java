@@ -866,13 +866,16 @@ public class ZePFRServer {
 	 * Checks if there is a process still running under the agentborne port and 
 	 * tries to kill it if it exists.
 	 * 
+	 * @return boolean true if process port was in use, false otherwise
 	 **********************************************************************************/
-	private void killOrphanedAgentborne(RemoteResponse response) {
+	private boolean killOrphanedAgentborne(RemoteResponse response) {
 		try {
 			
-			if(isPortInUse(agentbornePort)) {
+			if( ! isPortInUse(agentbornePort) ) {
+				return false;
+			}else {
 				
-				logger.info("Killing Orphan Process: Port "+agentbornePort +" in use, request process to kill itself.");
+				logger.info("Killing Existing Process: Port "+agentbornePort +" in use, request process to kill itself.");
 				
 				//----------------------------------
 				// Send Request
@@ -882,7 +885,7 @@ public class ZePFRServer {
 				// Wait up to 5 seconds for termination
 				long start = System.currentTimeMillis();
 				while(isPortInUse(agentbornePort)
-				&&  System.currentTimeMillis() - start < 5000) {
+				&&  System.currentTimeMillis() - start < 10000) {
 					logger.info("Killing Orphan Process: Port wait for process to become unreachable.");
 					Thread.sleep(1000);
 				}
@@ -890,23 +893,31 @@ public class ZePFRServer {
 				//----------------------------------
 				// Check
 				if(isPortInUse(agentbornePort)) {
-					response.addMessage(Level.WARN, "Could start agentborne process with port "+agentbornePort
+					response.addMessage(Level.WARN, "Couldn't kill process running on port "+agentbornePort
 											+" on host "+getLocalhost()+". Check machine for orphaned processes."
 											);
+					
+					//-----------------------------
+					// Fallback by using higher port number
 					agentbornePort++;
 					while(isPortInUse(agentbornePort)) {
 						agentbornePort++;
 					}
 					
-					response.addMessage(Level.INFO, "Could start agentborne process with port "+agentbornePort);
+					logger.info("Port still in use, fallback to start agentborne process with port "+agentbornePort);
+				}else {
+					
+					response.addMessage(Level.INFO, "Existing test process was successfully killed.");
 				}
 			}
 			
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt(); // restore interrupt flag
 		} catch (Throwable e) {
-			logger.warn("Error while killing orphaned agent: "+e.getMessage(), e);
+			logger.warn("Error while killing existing process: "+e.getMessage(), e);
 		}
+		
+		return true;
 	}
 	
 	/**********************************************************************************
@@ -1011,7 +1022,9 @@ public class ZePFRServer {
 					agentborneResponse = agentborneClient.testStop(); 
 				}
 				
-				agentborneResponse.overrideResponse(response);
+				if(agentborneResponse != null) {
+					agentborneResponse.overrideResponse(response);
+				}
 				
 			}else {
 				if(response != null) {
@@ -1045,32 +1058,21 @@ public class ZePFRServer {
 		//---------------------------------------------
 		// If agent, forward request to Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENT) {
-			
-			if(executor != null && executor.checkKeepExecuting()) {
-				
-				ZePFRClient agentborneClient = getAgenborneClient();
-				
-				RemoteResponse agentborneResponse = null;
-				agentborneResponse = agentborneClient.kill(); 
 
-				agentborneResponse.overrideResponse(response);
-				
-			}else {
-				if(response != null) {
-					response.addMessage(Level.INFO, "Test already finished, no thing to stop.");
-				}
+			if( ! killOrphanedAgentborne(response) )  {
+				response.addMessage(Level.INFO, "No test process is running, nothing to kill.");
 			}
 			return;
 		}
 		
 		//---------------------------------------------
-		// Get Data if Agentborne
+		// Stop test if Agentborne
 		if(PFRConfig.executionMode() == Mode.AGENTBORNE) {
 			
 			PFRCoordinator.stopTestNow(); 
 			
 			//--------------------------------
-			// Write response
+			// Write response before Exiting JVM
 			try {
 				byte[] json = response.toJsonString().getBytes();
 
@@ -1078,12 +1080,14 @@ public class ZePFRServer {
 			
 				exchange.sendResponseHeaders(200, json.length);
 				exchange.getResponseBody().write(json);
+				exchange.getResponseBody().flush();
 				
 			} catch (IOException e) {
 				logger.warn("IOException while killing process: "+e.getMessage(),e);
 			}
 			
-			
+			//--------------------------------
+			// Exit JVM
 			System.exit(0);
 			
 			return;

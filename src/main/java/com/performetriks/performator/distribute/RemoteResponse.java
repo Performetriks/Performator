@@ -19,14 +19,14 @@ import ch.qos.logback.classic.Level;
  **********************************************************************************/
 public class RemoteResponse {
 
-	private static final Logger logger = LoggerFactory.getLogger(RemoteResponse.class);
+	public static final Logger logger = LoggerFactory.getLogger(RemoteResponse.class);
 	
 	public static final String FIELD_PAYLOAD = "payload";
 	public static final String FIELD_MESSAGES = "messages";
 	public static final String FIELD_SUCCESS = "success";
 	
-	private static final String MESSAGEFIELD_MSG = "message";
-	private static final String MESSAGEFIELD_LEVEL = "level";
+	public static final String MESSAGEFIELD_MSG = "message";
+	public static final String MESSAGEFIELD_LEVEL = "level";
 	
 	JsonObject response;
 	
@@ -254,6 +254,13 @@ public class RemoteResponse {
 	}
 	
 	/********************************************************
+	 * @return the client accosiated with this response, or null
+	 ********************************************************/
+	public ZePFRClient getClient() {
+		return client;
+	}
+	
+	/********************************************************
 	 * Override the data in the given response object with
 	 * what this RemoteResponse instance contains.
 	 ********************************************************/
@@ -285,9 +292,22 @@ public class RemoteResponse {
 		if(otherResponse == null) { return;}
 		
 		otherResponse.setSuccess(this.success());
-		otherResponse.setMessages(this.messages());
 		otherResponse.setPayload(this.payload());
-
+		otherResponse.setMessages(this.messages());
+		
+		//------------------------------------
+		// Add client details
+		if(this.client != null) {
+			
+			for(JsonElement element : this.messages()) {
+				JsonObject messageObject = element.getAsJsonObject();
+				
+				String message = messageObject.get(MESSAGEFIELD_MSG).getAsString();
+				
+				String newMessage = client.getHostAndPort() + " - " + message;
+				messageObject.addProperty(MESSAGEFIELD_MSG, newMessage);
+			}
+		}
 	}
 	
 }
