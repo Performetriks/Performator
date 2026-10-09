@@ -1,6 +1,7 @@
 package com.performetriks.performator.base;
 
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -795,6 +796,10 @@ public class PFRCoordinator {
 		PFRTest test = createTestInstance(testClass);
 		
 		//-------------------------------
+		// Apply Agentborne Settings
+		applyAgentborneSettings(test);
+		
+		//-------------------------------
 		// Change Executors
 		if(isDataAgent) {
 			test.clearExecutors();
@@ -851,6 +856,25 @@ public class PFRCoordinator {
 		}
 
 	}
+	
+	/*************************************************************
+	 *  
+	 *************************************************************/
+	public static void applyAgentborneSettings(PFRTest test) {
+		
+		if(agentborneSettings != null) {
+			long millis = agentborneSettings.getMaxDuration();
+			if(millis > 0) {
+				test.maxDuration(Duration.ofMillis(millis));
+			}
+			
+			int interval = agentborneSettings.getReportInterval();
+			if(interval > 0) {
+				HSRConfig.setInterval(interval);
+			}
+		}
+		
+	}
 
 	/*************************************************************
 	 * Executes the Agentborne Process as a Coordinator, not as
@@ -891,7 +915,9 @@ public class PFRCoordinator {
 		// Create Test
 		//This also loads all the PFRConfig set in the constructor of the test.
 		PFRTest test = createTestInstance(testClass);
-				
+		
+		applyAgentborneSettings(test);
+		
 		//-------------------------------
 		// Change Reporters
 		HSRConfig.clearReporters();

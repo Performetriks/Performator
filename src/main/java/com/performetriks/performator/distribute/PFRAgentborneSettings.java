@@ -12,6 +12,9 @@ public class PFRAgentborneSettings {
 	private boolean isCoordinator = false;
 	private String executionID = null;
 	
+	private int reportInterval = 15; // seconds
+	private long maxDuration = 1000 * 60 * 2; // millis Default 2 minutes
+	
 	private LinkedHashMap<String,String> envVariables = new LinkedHashMap<>();
 	
 	private ArrayList<String> jvmArgs = new ArrayList<>();
@@ -65,6 +68,24 @@ public class PFRAgentborneSettings {
 
 	public PFRAgentborneSettings setJvmArgs(ArrayList<String> jvmArgs) {
 		this.jvmArgs = jvmArgs;
+		return this;
+	}
+	
+	public int getReportInterval() {
+		return reportInterval;
+	}
+	
+	public PFRAgentborneSettings setReportInterval(int reportInterval) {
+		this.reportInterval = reportInterval;
+		return this;
+	}
+	
+	public long getMaxDuration() {
+		return maxDuration;
+	}
+	
+	public PFRAgentborneSettings setMaxDuration(long maxDuration) {
+		this.maxDuration = maxDuration;
 		return this;
 	}
 	
