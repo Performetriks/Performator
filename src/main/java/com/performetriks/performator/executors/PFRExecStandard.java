@@ -7,10 +7,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonObject;
-import com.performetriks.performator.base.PFRContext;
 import com.performetriks.performator.base.PFRUsecase;
 import com.xresch.hsr.base.HSR;
-import com.xresch.hsr.stats.HSRRecord.HSRRecordStatus;
 
 import ch.qos.logback.classic.Logger;
 
