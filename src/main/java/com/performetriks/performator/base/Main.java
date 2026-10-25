@@ -78,12 +78,31 @@ public class Main {
 		 *****************************************************/
 		public XRValue getValue() { 
 
+			//-------------------------------
+			// Retrieve Value & Check Null
 			String property = System.getProperty(this.toString(), defaultissimo);
-			if(property != null && property.startsWith(BASE64_PREFIX)) {
+			
+			if(property == null) {
+				return XRValue.newFromString(type, property);
+			}
+			
+			//-------------------------------
+			// Sanitize
+			// Strip double quotes because linux/windows seem to once again have differences
+			property = property
+						.replaceAll("^\"|\"$", "")
+						.replaceAll("^\"|\"$", "")
+						;
+			
+			//-------------------------------
+			// Decode
+			if(property.startsWith(BASE64_PREFIX)) {
 				property = property.replaceFirst(BASE64_PREFIX, "");
 				property = new String( Base64.getDecoder().decode(property) );
 			}
 			
+			//-------------------------------
+			// Return
 			return XRValue.newFromString(type, property);
 		}
 		
