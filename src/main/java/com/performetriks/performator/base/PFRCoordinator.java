@@ -317,6 +317,7 @@ public class PFRCoordinator {
 				//-------------------------------------
 				// Fetch data from all agents
 				TreeMap<String, List<HSRRecordStats>> groupedStats = new TreeMap<>();
+				long timeMillis = System.currentTimeMillis(); // make sure every record has the exact time, needed for proper stacked charts
 				
 				for(int i = 0 ; i < connectionsAgentsLoad.size(); i++) {
 					ZePFRClient current = connectionsAgentsLoad.get(i);
@@ -355,6 +356,7 @@ public class PFRCoordinator {
 							if(e.isJsonObject()) {
 								HSRRecordStats stats = new HSRRecordStats(e.getAsJsonObject());
 								
+								stats.time(timeMillis);
 								String statsId = stats.statsIdentifier();
 								
 								if( !groupedStats.containsKey(statsId) ) {
@@ -389,6 +391,7 @@ public class PFRCoordinator {
 				for(HSRRecordStats stats : summary.finalRecords()) {
 					HSRStatsEngine.addRecordStats(stats);
 				}
+
 				
 			}
 		});
@@ -595,7 +598,6 @@ public class PFRCoordinator {
 		for(int i = 0 ; i < connectionsAgentsLoad.size(); i++) {
 			ZePFRClient current = connectionsAgentsLoad.get(i);
 			current.testStopGracefully();
-			
 		}
 		
 	}
