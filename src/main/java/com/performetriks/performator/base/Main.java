@@ -203,7 +203,7 @@ public class Main {
 	}
 	
 	/*****************************************************************************************
-	 * Prints an awesome title with celtic know border. Has lots of escape characters, looks
+	 * Prints an awesome title with celtic knot border. Has lots of escape characters, looks
 	 * much better when printed onto console than in code.
 	 *****************************************************************************************/
 	public static void printPerformatorAsciiArtTitleOfAwesomeness() {
