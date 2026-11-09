@@ -13,12 +13,12 @@ import com.xresch.xrutils.annotation.XRAnnotations;
 
 public class PFRJARInfo {
 
-	private static final String FIELDNAME_DATASOURCES = "datasources";
-	private static final String FIELDNAME_TESTS = "tests";
-	private static final String FIELDNAME_PROPERTIES = "systemProperties";
-	private static final String FIELDNAME_ENVIRONMENT = "environmentVars";
+	public static final String FIELDNAME_DATASOURCES = "datasources";
+	public static final String FIELDNAME_TESTS = "tests";
+	public static final String FIELDNAME_PROPERTIES = "systemProperties";
+	//public static final String FIELDNAME_ENVIRONMENT = "environmentVars";
 	
-	private JsonObject infoObject = new JsonObject();
+	public JsonObject infoObject = new JsonObject();
 	
 	
 	/**************************************************************************************
@@ -68,7 +68,7 @@ public class PFRJARInfo {
 		infoObject.add(FIELDNAME_TESTS, testArray);
 		infoObject.add(FIELDNAME_DATASOURCES, PFRDataSource.getRegisteredSourcesInfo());
 		infoObject.add(FIELDNAME_PROPERTIES, properties);
-		infoObject.add(FIELDNAME_ENVIRONMENT, environment);
+		//infoObject.add(FIELDNAME_ENVIRONMENT, environment);
 		
 	}
 	
@@ -99,13 +99,13 @@ public class PFRJARInfo {
 	/**************************************************************************************
 	 * @return JsonObject with environment variables, or empty object if not found.
 	 **************************************************************************************/
-	public JsonObject getEnvVariables() {
-		if(infoObject.has(FIELDNAME_ENVIRONMENT)) {
-			return infoObject.get(FIELDNAME_ENVIRONMENT).getAsJsonObject();
-		}
-		
-		return new JsonObject();
-	}
+//	public JsonObject getEnvVariables() {
+//		if(infoObject.has(FIELDNAME_ENVIRONMENT)) {
+//			return infoObject.get(FIELDNAME_ENVIRONMENT).getAsJsonObject();
+//		}
+//		
+//		return new JsonObject();
+//	}
 	
 	/**************************************************************************************
 	 * @return JsonObject with environment variables, or empty object if not found.
