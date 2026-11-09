@@ -198,6 +198,7 @@ public class RemoteRequest{
 					}
 				}finally {
 					latch.countDown();
+					monitoredPublisher = null; // cleanup to avoid potential memory leaks
 				}
 			}
 		});
@@ -227,6 +228,8 @@ public class RemoteRequest{
 			String machine = "["+client.getHostAndPort()+"]";
 			logger.error(machine+" Request Error: "+e.getMessage(), e);
 			return null;
+		} finally {
+			monitoredPublisher = null; // cleanup to avoid potential memory leaks
 		}
 	}
 
@@ -278,7 +281,7 @@ public class RemoteRequest{
 	/********************************************************
 	 * Send a request and return a response.
 	 ********************************************************/
-	public class MonitoredBodyPublisher implements BodyPublisher {
+	public static class MonitoredBodyPublisher implements BodyPublisher {
 
 	    private BodyPublisher delegate;
 	    private AtomicLong bytesSent = new AtomicLong();
